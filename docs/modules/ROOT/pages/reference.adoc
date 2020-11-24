@@ -1,4 +1,4 @@
-= Diagrams
+= Reference
 
 This example shows how to embed a text-based ((diagram)) in your documentation.
 

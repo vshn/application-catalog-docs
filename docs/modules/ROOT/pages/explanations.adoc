@@ -1,4 +1,4 @@
-= Math Formulas
+= Explanations
 
 This page shows how to integrate ((math)) content in your documentation.
 

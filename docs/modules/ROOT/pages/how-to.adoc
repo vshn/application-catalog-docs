@@ -1,4 +1,4 @@
-= Second Page
+= How To
 
 This is the second page. Words and phrases surrounded with `((` and `))` will be added to the PDF index. They are ignored in all other formats.
 

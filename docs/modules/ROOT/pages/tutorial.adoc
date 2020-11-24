@@ -1,4 +1,4 @@
-= Source Code
+= Tutorial
 
 This page demonstrates the insertion of source code in a page.
 
