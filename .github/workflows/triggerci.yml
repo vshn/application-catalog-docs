@@ -1,0 +1,18 @@
+name: Trigger Antora GitLab CI Job
+
+on:
+  push:
+    branches:
+    - master
+
+jobs:
+  trigger:
+    name: Trigger
+    runs-on: ubuntu-latest
+    steps:
+    - name: Trigger Job
+      uses: appleboy/gitlab-ci-action@master
+      with:
+        url: "https://git.vshn.net"
+        token: ${{ secrets.GITLABCI_TRIGGER_TOKEN }}
+        project_id: ${{ secrets.GITLAB_PROJECT_ID }}
