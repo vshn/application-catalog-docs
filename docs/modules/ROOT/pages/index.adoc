@@ -8,3 +8,5 @@ Here you’ll find all the technical documentation.
 Use the search field at the top of this page, navigate through topics with the tree on the left or see the links below.
 
 The product documentation can be found under https://products.docs.vshn.ch/[products.docs.vshn.ch].
+
+TIP: The VSHN Application Catalog is a new offering from VSHN. It concerns running applications on Kubernetes and OpenShift.
