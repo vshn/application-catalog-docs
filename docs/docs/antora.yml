@@ -1,0 +1,6 @@
+name: managed-service
+title: VSHN Managed Service
+version: master # --> versionless
+start_page: ROOT:index.adoc
+nav:
+- modules/ROOT/nav.adoc

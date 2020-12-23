@@ -1,6 +1,6 @@
-name: ac
+name: app-catalog
 title: VSHN Application Catalog
 version: master
 start_page: ROOT:index.adoc
 nav:
-- modules/ROOT/nav.adoc
+- modules/ROOT/partials/nav.adoc

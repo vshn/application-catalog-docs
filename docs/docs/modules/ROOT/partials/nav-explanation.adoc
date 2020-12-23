@@ -1,0 +1,14 @@
+* BURP Backup
+** xref:managed-service:ROOT:explanations/backup_concept.adoc[Backup Concept]
+** xref:managed-service:ROOT:explanations/lvm_snapshots_burp.adoc[LVM Snapshots]
+** xref:managed-service:ROOT:explanations/mongodb_burp.adoc[MongoDB]
+** xref:managed-service:ROOT:explanations/postgresql_burp.adoc[PostgreSQL]
+** xref:managed-service:ROOT:explanations/s3_backup_restores.adoc[S3 Backup and Restores]
+** xref:managed-service:ROOT:explanations/solr_backup_restore.adoc[Solr Backup and Restore]
+** xref:managed-service:ROOT:explanations/vcs_repos_burp.adoc[VCS Repositories]
+
+* DNS
+** xref:managed-service:ROOT:explanations/dns_cnames_root.adoc[DNS CNAMEs on Root of Domain]
+
+* Monitoring
+** xref:managed-service:ROOT:explanations/monitoring_concept.adoc[Monitoring Concept]
