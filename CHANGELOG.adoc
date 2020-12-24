@@ -1,9 +1,0 @@
-= CHANGELOG
-
-== Version 1.0
-
-* Project created by Tobias Brunner <tobias.brunner@vshn.ch>>
-* First version
-
-TODO: Remember to update this file regularly
-

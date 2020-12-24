@@ -1,47 +1,47 @@
-= VSHN Application Catalog
+= VSHN Application Catalog Documentation
 
-This is an https://antora.org/[Antora] documentation website, available at https://application-catalog.docs.vshn.ch.
+This repository contains all the content of the VSHN Application Catalog documentation hosted at https://kb.vshn.ch/app-catalog/.
 
-== Basic Antora Setup
+The content is written in https://asciidoctor.org/docs/what-is-asciidoc/[AsciiDoc] and rendered using https://docs.antora.org/[Antora].
 
-* The documentation pages are stored in the `docs/modules/ROOT/pages` folder.
-* Images are stored in the `docs/modules/ROOT/assets/images` folder.
-* E-book specific files are located in the `docs/ebook` folder, including the https://www.gimp.org/[Gimp] template of the cover.
+[TIP]
+====
+* Writing AsciiDoc is best done using Visual Studio Code with https://marketplace.visualstudio.com/items?itemName=asciidoctor.asciidoctor-vscode[the AsciiDoc addon].
+* For a reference what you can do with AsciiDoc, have a look at https://asciidoctor.org/docs/asciidoc-writers-guide/[AsciiDoc Writer’s Guide].
+* Antora is capable of doing many great things with documentation. See https://docs.antora.org/[the Antora docs] to gain insights into the tooling.
+====
 
-== Different Kinds of Antora Websites
+== Documentation structure
 
-There are two possible Antora projects:
+The documentation structure is inspired by the https://documentation.divio.com/[Divio's documentation structure]:
 
-* Those including both a `playbook.yml` and `docs/antora.yml` files; and
-* Those only including one of them and not the other.
+Tutorials (Learning-oriented):: A lesson which teaches you something.
+Location: `docs/modules/ROOT/pages/tutorials`.
 
-The file `docs/antora.yml` defines a documentation component including several modules. It specifies the name and entry point of a component.
+How-to guides (Problem-oriented):: Step-by-step guides to achieve a goal. Location: `docs/modules/ROOT/pages/how-tos`.
 
-On the other hand, the file `playbook.yml` is used to coalesce various documentation components into one website. It specifies the build order and the style to apply to the final website.
+Technical reference (Information-oriented):: Description about the inner ongoings. Location: `docs/modules/ROOT/pages/tutorials`.
 
-If your project only requires to be documented, but does _not_ take the responsibility for the build process of the documentation, you can remove the `.gitlab-ci.yml`, `Makefile`, and `playbook.yml` files.
+Explanation (Understanding-oriented):: Explains the background. Location: `docs/modules/ROOT/pages/explanations`.
 
-On the other hand, projects in charge of documentation building do not always include documentation themselves; in those cases the `docs` folder can be safely deleted, only leaving the `playbook.yml` file.
+== Contributing
 
-== Usage
+Create a new branch to make the changes. After you're satisfied with the changes open a Pull Request against the `master` branch.
 
-. `make preview` to launch a "live preview" version of the documentation.
-. `make html` to create the Antora website in the `_public` subfolder.
-. `make pdf epub kindle manpage` to create the corresponding e-books in the `_public` subfolder.
-. `make clean` to remove all build products.
+=== Previewing Changes
 
-== Docker
+To preview your changes locally, make sure you have Docker or Podman installed.
 
-You can create a Docker image out of this project:
+Just type `make preview` and open your browser at http://localhost:2020. This even provides support for live reload when working on the content. See https://github.com/vshn/antora-preview#livereload[this documentation] for more information about it.
 
-[source,bash]
-----
-$ docker build -t application-catalog -f deployment/main/Dockerfile .
-$ docker run --rm --detach --publish 8080:8080 application-catalog
-----
+=== Adding a New Page
 
-The project includes sample YAML files for a suitable Kubernetes deployment.
+. Create new AsciiDoc (`.adoc`) file in the best matching folder according to the described structure under `docs/modules/ROOT/pages/`.
+. Add the file to the navigation under `docs/modules/ROOT/partials/`
 
-== GitLab
+For removing pages just do the opposite: Remove the file and remove the entry in the navigation.
 
-This project includes a ready-to-use `.gitlab-ci.yml` file for GitLab integration.
+== Deployment
+
+This repository only holds https://docs.antora.org/antora/2.3/standard-directories/[Antora content], no plumbing and tooling (aka the Antora https://docs.antora.org/antora/2.3/run-antora/[`playbook.yml`] and `Dockerfile`) to build and deploy it.
+All pushes to the `master` branch trigger a GitHub action (`.github/worflows/triggerci.yml`) which in turn triggers the https://git.vshn.net/vshn/docs/kb/-/blob/master/.gitlab-ci.yml[GitLab CI job] to build and deploy the content using Antora.
