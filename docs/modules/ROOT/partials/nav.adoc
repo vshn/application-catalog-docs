@@ -1,5 +1,8 @@
 * xref:index.adoc[Home]
 
+.Applications
+* xref:vault.adoc[Vault]
+
 .Tutorials
 include::partial$nav-tutorials.adoc[]
 

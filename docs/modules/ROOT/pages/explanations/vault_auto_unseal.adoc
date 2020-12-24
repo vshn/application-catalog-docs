@@ -1,4 +1,4 @@
-= Auto Unseal
+= Vault: Auto Unseal
 
 A Vault instance needs to be unsealed in order to provide any functionality. See the https://www.vaultproject.io/docs/concepts/seal[docs] for more details.
 
