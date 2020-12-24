@@ -1,3 +1,6 @@
+* Crossplane
+** xref:app-catalog:ROOT:explanations/crossplane_service_broker.adoc[Service Broker]
+
 * Vault
 ** xref:app-catalog:ROOT:explanations/vault_auto_unseal.adoc[Auto Unseal]
 ** xref:app-catalog:ROOT:explanations/vault_backup_restore.adoc[Backup and Restore]
