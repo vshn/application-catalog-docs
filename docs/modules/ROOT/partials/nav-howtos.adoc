@@ -1,0 +1,2 @@
+* Crossplane
+** xref:app-catalog:ROOT:how-tos/investigate_service_instances.adoc[Investigate Service]
