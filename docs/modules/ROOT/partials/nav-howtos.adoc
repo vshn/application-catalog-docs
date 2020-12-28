@@ -1,8 +1,10 @@
 * Crossplane
-** xref:app-catalog:ROOT:how-tos/investigate_service_instances.adoc[Investigate Service]
+** xref:app-catalog:ROOT:how-tos/crossplane/investigate_service_instances.adoc[Investigate Service]
 
 * Redis
-** xref:app-catalog:ROOT:how-tos/redis_sentinel_debug.adoc[Debug Redis Sentinel]
+** xref:app-catalog:ROOT:how-tos/redis/debug_sentinel.adoc[Debug Redis Sentinel]
 
 * MariaDB Galera
-** xref:app-catalog:ROOT:how-tos/mariadb_galera_debug.adoc[Debug MariaDB Galera]
+** xref:app-catalog:ROOT:how-tos/mariadbgalera/debug.adoc[Debug MariaDB Galera]
+** xref:app-catalog:ROOT:how-tos/mariadbgalera/find_cluster_for_instance.adoc[Find the Service Cluster]
+** xref:app-catalog:ROOT:how-tos/mariadbgalera/bootstrap_node.adoc[Bootstrap DB Node]

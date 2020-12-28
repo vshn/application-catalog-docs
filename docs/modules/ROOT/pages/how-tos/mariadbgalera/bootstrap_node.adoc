@@ -1,0 +1,69 @@
+= Bootstraping a Node (other than Node 0)
+
+To restart a Galera Cluster, you might need to bootstrap the cluster from an other node than 0 (after a ungraceful shutdown).
+You can basically follow the steps described in the Helm Chart: https://github.com/bitnami/charts/tree/master/bitnami/mariadb-galera/#bootstraping-a-node-other-than-0[Bootstraping a node other than 0].
+
+In order to change Helm Values, you first need to find the Helm release object:
+
+.Get the compositemariadbinstances
+[source,shell]
+----
+kubectl get compositemariadbinstances.syn.tools f1600418-cf59-4ec0-b4d9-d0270559dbcf -o yaml
+----
+
+This gives you all resources in this composite:
+
+[source,yaml]
+----
+[...]
+spec:
+  compositionRef:
+    name: d8ba1fe4-2b19-11eb-adc1-0242ac120002
+  resourceRefs:
+  - apiVersion: helm.crossplane.io/v1alpha1
+    kind: Release
+    name: f1600418-cf59-4ec0-b4d9-d0270559dbcf-wlt5g
+    uid: 7093f2e0-f16f-481c-9ccf-9c03e65f7d67
+  - apiVersion: helm.crossplane.io/v1alpha1
+    kind: Release
+    name: f1600418-cf59-4ec0-b4d9-d0270559dbcf-4xp5n
+    uid: 19b4bf1d-88d0-4085-a9ea-e3062f082f63
+  - apiVersion: v1
+    kind: Secret
+    name: f1600418-cf59-4ec0-b4d9-d0270559dbcf
+    uid: a0dab152-9e72-4bde-a913-e0acd8addd2c
+  - apiVersion: mysql.sql.crossplane.io/v1alpha1
+    kind: ProviderConfig
+    name: f1600418-cf59-4ec0-b4d9-d0270559dbcf
+    uid: b825adcc-b671-4963-a049-cfea30fcfda2
+[...]
+----
+
+The second (Helm) `Release` should be the MariaDB Helm release, in this example it is `f1600418-cf59-4ec0-b4d9-d0270559dbcf-4xp5n`.
+
+.Verify if it's the release of the mariadb-galera cluster
+[source,shell]
+----
+kubectl get releases.helm.crossplane.io f1600418-cf59-4ec0-b4d9-d0270559dbcf-4xp5n
+
+NAME                                         CHART            VERSION   SYNCED   READY   STATE      REVISION   DESCRIPTION        AGE
+f1600418-cf59-4ec0-b4d9-d0270559dbcf-4xp5n   mariadb-galera   5.2.1     True     True    deployed   19         Upgrade complete   14d
+----
+
+To change values for the safe bootstraping just edit this release and set the values based on your findings (node number to bootstrap from and the `podManagementPolicy`. As you cannot change a `StatefulSet` first delete the mariadb `StatefulSet` and then apply your changes to the release object (this will recreate the `StatefulSet` again).
+
+When your cluster is up and running again (all 3 pods ready), first scale down to 1 replica and wait until only one Pod remains and then scale down to 0 replicas.
+This makes sure that you can bootstrap from the first node again:
+
+[source,shell]
+----
+# Scale to 1 replica
+kubectl scale sts mariadb --replicas=1
+
+# Wait
+# Scale to 0 replica
+kubectl scale sts mariadb --replicas=0
+----
+
+Delete the `StatefulSet` again and then reverse your changes in the helm release.
+Now the Galera Service should start again without errors.
