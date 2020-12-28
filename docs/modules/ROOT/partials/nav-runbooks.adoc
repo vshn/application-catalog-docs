@@ -8,3 +8,12 @@
 ** xref:app-catalog:ROOT:runbooks/redis/RedisOutOfMemory.adoc[RedisOutOfMemory]
 ** xref:app-catalog:ROOT:runbooks/redis/RedisMemoryHigh.adoc[RedisMemoryHigh]
 ** xref:app-catalog:ROOT:runbooks/redis/RedisKeyEviction.adoc[RedisKeyEviction]
+
+* MariaDB Galera
+** xref:app-catalog:ROOT:runbooks/mariadbgalera/MySQLGaleraNotReady.adoc[MySQLGaleraNotReady]
+** xref:app-catalog:ROOT:runbooks/mariadbgalera/MySQLGaleraOutOfSync.adoc[MySQLGaleraOutOfSync]
+** xref:app-catalog:ROOT:runbooks/mariadbgalera/MySQLGaleraDonorFallingBehind.adoc[MySQLGaleraDonorFallingBehind]
+** xref:app-catalog:ROOT:runbooks/mariadbgalera/MySQLInnoDBLogWaits.adoc[MySQLInnoDBLogWaits]
+** xref:app-catalog:ROOT:runbooks/mariadbgalera/MySQLGaleraClusterEvenNodes.adoc[MySQLGaleraClusterEvenNodes]
+** xref:app-catalog:ROOT:runbooks/mariadbgalera/MySQLGaleraNotOperational.adoc[MySQLGaleraNotOperational]
+** xref:app-catalog:ROOT:runbooks/mariadbgalera/MySQLGaleraNotConnected.adoc[MySQLGaleraNotConnected]

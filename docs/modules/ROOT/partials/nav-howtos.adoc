@@ -3,3 +3,6 @@
 
 * Redis
 ** xref:app-catalog:ROOT:how-tos/redis_sentinel_debug.adoc[Debug Redis Sentinel]
+
+* MariaDB Galera
+** xref:app-catalog:ROOT:how-tos/mariadb_galera_debug.adoc[Debug MariaDB Galera]

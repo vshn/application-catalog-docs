@@ -1,0 +1,21 @@
+= Alert rule: MySQLInnoDBLogWaits
+
+== icon:glasses[] Overview
+
+TODO
+
+[source,yaml]
+----
+- alert: MySQLInnoDBLogWaits
+  expr: |
+    rate(mysql_global_status_innodb_log_waits[15m]) > 10
+  labels:
+    severity: warning
+  annotations:
+    description: "The innodb logs on node `{{$labels.instance}}` are waiting for disk at a rate of {{$value}} / second"
+    summary: "MySQL innodb log writes stalling on node `{{$labels.instance}}`"
+----
+
+== icon:bug[] Steps for Debugging
+
+TODO

@@ -1,4 +1,4 @@
-= How to debug Redis Sentinel
+= How to Debug Redis Sentinel
 
 Connect to a Redis Sentinel Pod and start a `redis-cli`.
 

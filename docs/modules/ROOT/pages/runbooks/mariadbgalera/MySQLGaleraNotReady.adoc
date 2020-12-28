@@ -1,0 +1,22 @@
+= Alert rule: MySQLGaleraNotReady
+
+== icon:glasses[] Overview
+
+TODO
+
+[source,yaml]
+----
+- alert: MySQLGaleraNotReady
+  expr: |
+    mysql_global_status_wsrep_ready != 1
+  for: 5m
+  labels:
+    severity: warning
+  annotations:
+    description: "A Galera cluster node on `{{$labels.instance}}` has not been ready during the last 5m"
+    summary: "Galera cluster node on `{{$labels.instance}}` not ready"
+----
+
+== icon:bug[] Steps for Debugging
+
+TODO

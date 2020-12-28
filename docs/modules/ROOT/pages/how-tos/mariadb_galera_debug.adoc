@@ -1,0 +1,11 @@
+= How to Debug MariaDB Galera
+
+Start a shell in one of the Galera cluster Pods.
+Use the `mysql` client to connect to the cluster.
+
+[source,shell]
+----
+kubectl exec -n e233ba2b-b8f0-4d25-9291-4b36bb934da9 mariadb-0 -it -- sh
+----
+
+When connected to the Galera cluster these SQL commands may be useful to debug what's wrong: https://galeracluster.com/library/documentation/monitoring-cluster.html[Using Status Variables].
