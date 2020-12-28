@@ -1,0 +1,5 @@
+= MariaDB Galera Service Details
+
+== Service Access
+
+See xref:explanations/mariadb_galera_lb_with_haproxy.adoc[HAProxy for MariaDB Galera Load Balancing] for more details.

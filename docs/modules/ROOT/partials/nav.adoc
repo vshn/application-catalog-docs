@@ -2,6 +2,7 @@
 
 .Applications
 * xref:redis.adoc[Redis]
+* xref:mariadb_galera.adoc[MariaDB Galera]
 * xref:vault.adoc[Vault]
 
 .Tutorials

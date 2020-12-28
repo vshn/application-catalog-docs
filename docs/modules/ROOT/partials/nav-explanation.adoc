@@ -5,6 +5,9 @@
 ** xref:app-catalog:ROOT:explanations/redis_sentinel_lb_with_haproxy.adoc[Redis Sentinel with HAProxy]
 ** xref:app-catalog:ROOT:explanations/redis_fake_sentinel.adoc[Redis Fake Sentinel]
 
+* xref:app-catalog:ROOT:explanations/mariadb_galera.adoc[MariaDB Galera]
+** xref:app-catalog:ROOT:explanations/mariadb_galera_lb_with_haproxy.adoc[MariaDB Galera with HAProxy]
+
 * Vault
 ** xref:app-catalog:ROOT:explanations/vault_auto_unseal.adoc[Auto Unseal]
 ** xref:app-catalog:ROOT:explanations/vault_backup_restore.adoc[Backup and Restore]

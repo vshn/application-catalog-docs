@@ -1,0 +1,55 @@
+= MariaDB Galera
+
+> tbd
+
+See xref:explanations/mariadb_galera.adoc[Explanation -> MariaDB Galera] for a more detailed technical description of the service.
+
+== Plans
+
+Available plans by default:
+
+[cols=6*,options="header"]
+|===
+|
+|xsmall
+|small
+|medium
+|large
+|xlarge
+
+|Storage Capacity
+|10 GiB
+|20 GiB
+|40 GiB
+|80 GiB
+|240 GiB
+
+|Memory
+|1 GiB
+|2 GiB
+|4 GiB
+|8 Gib
+|24 GiB
+
+|Max. Databases
+|unlimited
+|unlimited
+|unlimited
+|unlimited
+|unlimited
+
+|Max. Concurrent Connections
+|unlimited
+|unlimited
+|unlimited
+|unlimited
+|unlimited
+
+|TLS enabled
+|no
+|no
+|no
+|no
+|no
+
+|===
