@@ -1,11 +1,22 @@
 pages   := $(shell find . -type f -name '*.adoc')
 
-ifeq ($(shell command -v podman &> /dev/null; echo $$?),0)
-	engine_cmd  ?= podman
-	engine_opts ?= --rm --tty --userns=keep-id
+# Choose container engine
+engine_cmd_podman  ?= podman
+engine_opts_podman ?= --rm --tty --userns=keep-id
+engine_cmd_docker  ?= docker
+engine_opts_docker ?= --rm --tty --user "$$(id -u)"
+ifeq ($(CONTAINER_ENGINE),podman)
+	engine_cmd  ?= $(engine_cmd_podman)
+	engine_opts ?= $(engine_opts_podman)
+else ifeq ($(CONTAINER_ENGINE),docker)
+	engine_cmd  ?= $(engine_cmd_docker)
+	engine_opts ?= $(engine_opts_docker)
+else ifeq ($(shell command -v podman &> /dev/null; echo $$?),0)
+	engine_cmd  ?= $(engine_cmd_podman)
+	engine_opts ?= $(engine_opts_podman)
 else
-	engine_cmd  ?= docker
-	engine_opts ?= --rm --tty --user "$$(id -u)"
+	engine_cmd  ?= $(engine_cmd_docker)
+	engine_opts ?= $(engine_opts_docker)
 endif
 
 preview_cmd ?= $(engine_cmd) run --rm --publish 35729:35729 --publish 2020:2020 --volume "${PWD}":/preview/antora vshn/antora-preview:2.3.4 --antora=docs --style=vshn
