@@ -6,6 +6,9 @@
 .Tutorials
 include::partial$nav-tutorials.adoc[]
 
+.Runbooks
+include::partial$nav-runbooks.adoc[]
+
 .How-to guides
 include::partial$nav-howtos.adoc[]
 

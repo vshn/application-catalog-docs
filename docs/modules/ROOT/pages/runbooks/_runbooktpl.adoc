@@ -1,0 +1,14 @@
+= Alert rule: ALERTRULENAME
+
+== icon:glasses[] Overview
+
+INTRO
+
+[source,yaml]
+----
+THEALERTRULE
+----
+
+== icon:bug[] Steps for Debugging
+
+DETAILEDSTEPS

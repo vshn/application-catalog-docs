@@ -1,0 +1,25 @@
+= Alert rule: RedisDisconnectedSlaves
+
+== icon:glasses[] Overview
+
+Checks if there are Redis slaves which are not connected to a Redis master for more than 5 minutes.
+If so it will inform which Pod is affected.
+
+[source,yaml]
+----
+- alert: RedisDisconnectedSlaves
+  expr: |
+    count without (instance, job) (redis_connected_slaves) - sum without (instance, job) (redis_connected_slaves) - 1 > 1
+  for: 5m
+  labels:
+    severity: critical
+  annotations:
+    summary: Redis disconnected slaves (instance {{ $labels.instance }})
+    description: |
+      Redis not replicating for all slaves. Consider reviewing the redis replication status.\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}
+----
+
+== icon:bug[] Steps for Debugging
+
+Check why the affected Pod is not connected to a Redis master Pod.
+For commands how to check the Redis master, see xref:runbooks/redis/RedisDown.adoc#_steps_for_debugging[RedisDown] debugging section.

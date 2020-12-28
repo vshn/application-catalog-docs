@@ -1,2 +1,5 @@
 * Crossplane
 ** xref:app-catalog:ROOT:how-tos/investigate_service_instances.adoc[Investigate Service]
+
+* Redis
+** xref:app-catalog:ROOT:how-tos/redis_sentinel_debug.adoc[Debug Redis Sentinel]
