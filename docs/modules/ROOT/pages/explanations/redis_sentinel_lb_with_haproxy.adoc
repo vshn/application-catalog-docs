@@ -1,0 +1,17 @@
+= Redis Sentinel Load Balancing with HAProxy
+
+== Installation and Configuration
+
+For installing and configuring HAProxy, the https://github.com/appuio/charts/tree/master/haproxy[APPUiO HAProxy Helm Chart] is being used.
+It contains a https://github.com/appuio/charts/blob/master/haproxy/templates/configmap-redisk8s.yaml[ConfigMap (redisk8s)] which configures the details.
+
+HAProxy will check the 3 Sentinel instances which are available via the `redis-headless` service on port `26379`. This service points to the master `redis-node-X` Pod.
+These Pods are also available through the `redis-headless` service on port `6379`.
+
+Using a custom TCP health check, the role of each Redis instance is checked and only instances which return `role:master` will be counted as healthy.
+
+== Caveat
+
+This approach has the small caveat that a restarted instance of Redis might come up in a master state until Sentinel reconfigured it to be a slave of the actual master.
+This could be solved by configuring each Redis instance with `slaveof 0.0.0.0 6739` so on startup it will never be a slave.
+See https://selivan.github.io/2016/06/10/redis-no-splitbrain-on-network-partition.html

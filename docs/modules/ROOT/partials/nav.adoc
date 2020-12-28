@@ -1,6 +1,7 @@
 * xref:index.adoc[Home]
 
 .Applications
+* xref:redis.adoc[Redis]
 * xref:vault.adoc[Vault]
 
 .Tutorials

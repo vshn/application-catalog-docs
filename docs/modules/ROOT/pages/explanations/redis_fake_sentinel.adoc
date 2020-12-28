@@ -1,0 +1,78 @@
+= Redis Fake Sentinel with HAProxy
+
+We combine the xref:explanations/redis_sentinel_lb_with_haproxy.adoc[HAProxy for Redis Sentinel load-balancing approach] with the fake Sentinel. This is used so that existing applications which require a Sentinel to connect to and query for the master instance are supported without any changes on client side.
+
+The idea is to provide a single IP on which one port (`6379`) always routes to the current Redis master instance and another port (`26379`) routes to a fake Sentinel instance which will always return the aforementioned IP as master.
+
+== Example Configuration
+
+The test setup was done using the https://github.com/bitnami/charts/tree/master/bitnami/redis[Bitnami Redis Helm Chart] using the following values:
+
+[source,yaml]
+----
+password: VERYS3CUR3
+usePasswordFile: true
+ 
+cluster:
+  slaveCount: 3
+ 
+sentinel:
+  enabled: true
+  downAfterMilliseconds: 3000
+  failoverTimeout: 5000
+  staticID: true
+  resources:
+    requests:
+      cpu: 50m
+      memory: 8Mi
+    limits:
+      cpu: 100m
+      memory: 16Mi
+ 
+slave:
+  resources:
+    requests:
+      memory: 1Gi
+      cpu: 100m
+    limits:
+      memory: 1Gi
+      cpu: 500m
+----
+
+For the HAProxy and Sentinel deployment, the https://github.com/appuio/charts/tree/master/haproxy[APPUiO HAProxy Helm Chart] was used as a base and extended with the HAProxy config from xref:explanations/redis_sentinel_lb_with_haproxy.adoc[HAProxy for Redis-Sentinel LoadBalancing] and a Sentinel sidecar:
+
+[source,yaml]
+----
+- name: sentinel
+  image: docker.io/bitnami/redis-sentinel:6.0.9-debian-10-r14
+  env:
+  - name: REDIS_MASTER_SET
+    value: fake
+  - name: REDIS_MASTER_PASSWORD
+    value: 'fake-password'
+  - name: REDIS_MASTER_HOST
+    value: 'redis-access-haproxy.redis-sentinel-test.ext.cluster.local'
+  - name: REDIS_SENTINEL_QUORUM
+    value: '1'
+  - name: REDIS_SENTINEL_DOWN_AFTER_MILLISECONDS
+    value: '604800000'
+  - name: REDIS_SENTINEL_FAILOVER_TIMEOUT
+    value: '604800000'
+  ports:
+  - name: sentinel
+    containerPort: 26379
+  securityContext:
+    privileged: false
+    runAsUser: 10001
+----
+
+Setting a fake password in the `REDIS_MASTER_PASSWORD` env var prevents this fake Sentinel from reconfiguring the Redis master and slave instances.
+Additionally it's important to use another master group name (`fake`) in the fake Sentinel to not interfere with the real group name (`mymaster`).
+The high values for down-after and failover-timeout are chosen because there's no failover to be done by this Sentinel anyway.
+
+Using the `k8s_external` CoreDNS plugin we can even use a DNS name that resolves to the LoadBalancer IP: https://coredns.io/plugins/k8s_external/.
+In this test the zone `ext.cluster.local` was configured on the cluster's CoreDNS config (ConfigMap `kube-system/coredns`):
+
+----
+k8s_external ext.cluster.local
+----
