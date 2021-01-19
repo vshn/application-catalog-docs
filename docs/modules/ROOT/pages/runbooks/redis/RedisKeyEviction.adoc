@@ -6,20 +6,6 @@ Redis can be configured to automatically purge keys as necessary.
 If so configured, Redis will only use a maximum amount of memory, and if it nears the limit, remove keys per some criteria.
 If there are evicted keys this alert will be triggered.
 
-[source,yaml]
-----
-- alert: RedisKeyEviction
-  expr: |
-    increase(redis_evicted_keys_total{service="redis-metrics"}[5m]) > 0
-  for: 1s
-  labels:
-    severity: error
-  annotations:
-    description: |
-      Redis instance {{ $labels.instance }} has evicted {{ $value }} keys in the last 5 minutes.
-    summary: Redis instance {{ $labels.instance }} has evicted keys
-----
-
 == icon:bug[] Steps for Debugging
 
 Check if there are any evicted (removed) keys.

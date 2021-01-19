@@ -2,20 +2,7 @@
 
 == icon:glasses[] Overview
 
-This check alerts if a cluster node has not connected to Galera for more than 5 minutes.
-
-[source,yaml]
-----
-- alert: MySQLGaleraNotConnected
-  expr: |
-    (mysql_global_status_wsrep_connected != 1)
-  for: 5m
-  labels:
-    severity: critical
-  annotations:
-    summary: "Galera cluster node on `{{$labels.instance}}` not connected"
-    description: "A Galera cluster node on `{{$labels.instance}}` has not been connected to the cluster during the last 5m"
-----
+This check alerts if a cluster node hasn't connected to Galera for more than 5 minutes.
 
 == icon:bug[] Steps for Debugging
 

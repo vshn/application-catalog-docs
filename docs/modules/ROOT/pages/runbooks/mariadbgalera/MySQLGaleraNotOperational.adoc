@@ -2,22 +2,8 @@
 
 == icon:glasses[] Overview
 
-Checks if a Galera Cluster is not working properly.
+Checks if a Galera Cluster isn't working properly.
 This could be the case in loss of Quorum or in a split-brain situation.
-
-[source,yaml]
-----
-- alert: MySQLGaleraNotOperational
-  expr: |
-    (mysql_global_status_wsrep_cluster_status != 1)
-  for: 1m
-  labels:
-    service: mysql
-    severity: critical
-  annotations:
-    summary: "Galera Cluster node on `{{$labels.instance}}` not operational"
-    description: "A Galera Cluster node on `{{$labels.instance}}` had not been operational during the last 1m. It may occur in cases of multiple membership changes that result in a loss of quorum or in cases of split-brain situations"
-----
 
 == icon:bug[] Steps for Debugging
 

@@ -3,21 +3,7 @@
 == icon:glasses[] Overview
 
 Checks if the Galera cluster has an even number of Pods configured.
-If it is an even number, this alert will be triggered.
-
-[source,yaml]
-----
-- alert: MySQLGaleraClusterEvenNodes
-  expr: |
-    (mysql_global_status_wsrep_cluster_size % 2 != 1)
-  for: 5m
-  labels:
-    service: mysql
-    severity: warning
-  annotations:
-    summary: "Galera Cluster on `{{$labels.instance}}` has even # of nodes"
-    description: "Galera Cluster on `{{$labels.instance}}` had an even number of nodes ({{$value}}) during the last 5m"
-----
+If it's an even number, this alert will be triggered.
 
 == icon:bug[] Steps for Debugging
 

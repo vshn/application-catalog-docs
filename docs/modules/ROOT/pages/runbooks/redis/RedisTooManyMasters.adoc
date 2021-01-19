@@ -5,20 +5,6 @@
 Checks if there are more than 1 master configured for more than 5 minutes.
 If so, it will alert and display the instance.
 
-[source,yaml]
-----
-- alert: RedisTooManyMasters
-  expr: |
-    sum by (namespace) (redis_instance_info{role="master"} > 1)
-  for: 5m
-  labels:
-    severity: critical
-  annotations:
-    summary: Redis too many masters (instance {{ $labels.instance }})
-    description: |
-      Redis cluster has too many nodes marked as master.\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}
-----
-
 == icon:bug[] Steps for Debugging
 
 Check all the Redis Pods in the namespace of the affected Pod and see why there are 2 elected master Pods.

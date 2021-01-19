@@ -4,19 +4,6 @@
 
 This alert is being triggered if a Galera Cluster node is out of Sync for the past 5 minutes.
 
-[source,yaml]
-----
-- alert: MySQLGaleraOutOfSync
-  expr: |
-    (mysql_global_status_wsrep_local_state != 4 and mysql_global_variables_wsrep_desync == 0)
-  for: 5m
-  labels:
-    severity: warning
-  annotations:
-    description: "A Galera cluster node on `{{$labels.instance}}` has not been in sync ({{$value}} != 4) during the last 5m"
-    summary: "Galera cluster node on `{{$labels.instance}}` out of sync"
-----
-
 == icon:bug[] Steps for Debugging
 
 DETAILEDSTEPS
