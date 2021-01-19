@@ -1,6 +1,6 @@
-= Bootstraping a Node (other than Node 0)
+= How to Bootstrap a Cluster (other than from Node 0)
 
-To restart a Galera Cluster, you might need to bootstrap the cluster from an other node than 0 (after a ungraceful shutdown).
+To restart a Galera Cluster, you might need to bootstrap the cluster from another node than 0 (after a ungraceful shutdown).
 You can basically follow the steps described in the Helm Chart: https://github.com/bitnami/charts/tree/master/bitnami/mariadb-galera/#bootstraping-a-node-other-than-0[Bootstraping a node other than 0].
 
 In order to change Helm Values, you first need to find the Helm release object:
@@ -8,7 +8,7 @@ In order to change Helm Values, you first need to find the Helm release object:
 .Get the compositemariadbinstances
 [source,shell]
 ----
-kubectl get compositemariadbinstances.syn.tools f1600418-cf59-4ec0-b4d9-d0270559dbcf -o yaml
+kubectl describe compositemariadbinstances.syn.tools f1600418-cf59-4ec0-b4d9-d0270559dbcf
 ----
 
 This gives you all resources in this composite:
@@ -50,7 +50,8 @@ NAME                                         CHART            VERSION   SYNCED  
 f1600418-cf59-4ec0-b4d9-d0270559dbcf-4xp5n   mariadb-galera   5.2.1     True     True    deployed   19         Upgrade complete   14d
 ----
 
-To change values for the safe bootstraping just edit this release and set the values based on your findings (node number to bootstrap from and the `podManagementPolicy`. As you cannot change a `StatefulSet` first delete the mariadb `StatefulSet` and then apply your changes to the release object (this will recreate the `StatefulSet` again).
+To change values for the safe bootstraping just edit this release and set the values based on your findings (node number to bootstrap from and the `podManagementPolicy`.
+As you cannot change a `StatefulSet` first delete the mariadb `StatefulSet` and then apply your changes to the release object (this will recreate the `StatefulSet` again).
 
 When your cluster is up and running again (all 3 pods ready), first scale down to 1 replica and wait until only one Pod remains and then scale down to 0 replicas.
 This makes sure that you can bootstrap from the first node again:

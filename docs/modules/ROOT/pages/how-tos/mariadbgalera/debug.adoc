@@ -1,11 +1,32 @@
 = How to Debug MariaDB Galera
 
-Start a shell in one of the Galera cluster Pods.
-Use the `mysql` client to connect to the cluster.
+
+== Connect to the DB
+
+Start a shell in one of the Galera cluster Pods and use the `mysql` client to connect to the DB.
 
 [source,shell]
 ----
-kubectl exec -n e233ba2b-b8f0-4d25-9291-4b36bb934da9 mariadb-0 -it -- sh
+kubectl exec -n $INSTANCE_ID mariadb-2 \
+    -it -c mariadb-galera \
+    -- bash -c "mysql -uroot --password=\$MARIADB_ROOT_PASSWORD"
 ----
 
 When connected to the Galera cluster these SQL commands may be useful to debug what's wrong: https://galeracluster.com/library/documentation/monitoring-cluster.html[Using Status Variables].
+
+
+== Show MariaDB logs
+
+To see the logs of a single node:
+[source,shell]
+----
+k -n $INSTANCE_ID logs -c mariadb-galera mariadb-0 -f
+----
+
+To see the logs of all nodes:
+[source,shell]
+----
+kubectl -n $INSTANCE_ID logs -c mariadb-galera \
+    -l app.kubernetes.io/name=mariadb-galera \
+    --prefix -f
+----

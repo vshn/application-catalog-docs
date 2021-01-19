@@ -1,4 +1,4 @@
-= How to find the Cluster for a Database Instance
+= How to Find the Cluster for a Database Instance
 
 To find the service cluster on which a database instance was created:
 
@@ -7,7 +7,7 @@ To find the service cluster on which a database instance was created:
 ----
 # Get the cluster instance UID
 CLUSTER_INSTANCE_ID=$(kubectl get compositemariadbdatabaseinstance $INSTANCE_ID -ojsonpath='{.spec.parameters.parent_reference}')
- 
+
 # Get the cluster instance
 kubectl get compositemariadbinstance ${CLUSTER_INSTANCE_ID}
 ----
