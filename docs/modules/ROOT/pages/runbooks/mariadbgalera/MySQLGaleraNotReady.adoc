@@ -2,21 +2,12 @@
 
 == icon:glasses[] Overview
 
-TODO
+This alert triggers, if any of the nodes' `wsrep_ready` is 0.
 
-[source,yaml]
-----
-- alert: MySQLGaleraNotReady
-  expr: |
-    mysql_global_status_wsrep_ready != 1
-  for: 5m
-  labels:
-    severity: warning
-  annotations:
-    description: "A Galera cluster node on `{{$labels.instance}}` has not been ready during the last 5m"
-    summary: "Galera cluster node on `{{$labels.instance}}` not ready"
-----
+The global variable https://galeracluster.com/library/documentation/galera-status-variables.html#wsrep-ready[`wsrep_ready`] shows whether the server is ready to accept queries.
 
 == icon:bug[] Steps for Debugging
 
-TODO
+See xref:how-tos/mariadbgalera/debug.adoc#_show_mariadb_logs[logs of MariaDB].
+
+If the cluster won't start up on itselfe again, xref:how-tos/mariadbgalera/reset_cluster.adoc[a manual reset] is necessary.
