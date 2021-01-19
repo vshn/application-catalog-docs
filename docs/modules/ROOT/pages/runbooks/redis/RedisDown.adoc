@@ -4,7 +4,7 @@
 
 This rule checks if a Redis Pod is down.
 If a Pod is down for 2 minutes, this rule will alert.
-It will inform which Pod that is affected, for example `instance="11.32.186.10:9121"`.
+It will inform which Pod is affected, for example `pos="redis-node-1"`.
 
 == icon:bug[] Steps for Debugging
 

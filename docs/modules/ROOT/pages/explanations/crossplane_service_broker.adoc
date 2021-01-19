@@ -198,9 +198,9 @@ Service bindings are used to get information about provisioned service to be use
 
 ==== MariaDB
 
-The MariaDB service provides two service offerings: the MariaDB cluster and a MariaDB database (DB). The cluster itself is not bindable (`"bindable": false`) to an application and a DB needs to be created for an existing cluster. A binding can then be created for a DB. This will create a new user and password for the selected database. The binding contains the database name, credentials (username/password) and the IP/port where the cluster is reachable.
+The MariaDB service provides two service offerings: the MariaDB cluster and a MariaDB database (DB). The cluster itself isn't bindable (`"bindable": false`) to an application and a DB needs to be created for an existing cluster. A binding can then be created for a DB. This will create a new user and password for the selected database. The binding contains the database name, credentials (username/password) and the IP/port where the cluster is reachable.
 
-In this case the binding is represented by another XRD (e.g. `DatabaseUserInstance`) and the according _Composition_ which creates a `User` CR for the https://github.com/crossplane-contrib/provider-sql[provider-sql]. Therefore an https://github.com/openservicebrokerapi/servicebroker/blob/master/spec.md#synchronous-and-asynchronous-operations[asynchronous] operation is done and the binding information needs to be polled once the binding is ready.
+In this case the binding is represented by another XRD (for example `DatabaseUserInstance`) and the according _Composition_ which creates a `User` CR for the https://github.com/crossplane-contrib/provider-sql[provider-sql]. Therefore an https://github.com/openservicebrokerapi/servicebroker/blob/master/spec.md#synchronous-and-asynchronous-operations[asynchronous] operation is done and the binding information needs to be polled once the binding is ready.
 
 ==== Redis
 
@@ -276,7 +276,7 @@ OSB Binding::
 
 === Metadata
 
-The service offerings and bindings contain various metadata. Some of it is required (id, name) and some of it optional. To store this data on the XRDs and Compositions Kubernetes https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/[labels] and https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/[annotations]. The base for all labels and annotations is `service.syn.tools/`.
+The service offerings and bindings contain various metadata. Some of it's required (id, name) and some of it optional. To store this data on the XRDs and Compositions Kubernetes https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/[labels] and https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/[annotations]. The base for all labels and annotations is `service.syn.tools/`.
 
 > Labels allow for efficient queries and watches and are ideal for use in UIs and CLIs. Non-identifying information should be recorded using https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/[annotations].
 
@@ -339,9 +339,9 @@ Crossplane has a concept of connection secrets. These secrets are created by pro
 
 ==== Service Broker Implementation
 
-To retrieve the information for a service binding (e.g. username/password, IP/port) the service broker connects to the Kubernetes cluster where the respective service instance is deployed on. It does so by using the provider config of the used Crossplane provider. In the case of the https://github.com/crossplane-contrib/provider-helm[provider-helm] this is a reference to a secret containing a kubeconfig file. This kubeconfig can be used to instantiate a client-go to access the cluster. Since each service instance is deployed to a namespace with the instance UUID as its name, the broker can discover whichever information it needs in said namespace. This could for example be a service of type `LoadBalancer` to retrieve the IP and port or a secret containing the credentials.
+To retrieve the information for a service binding (for example username/password, IP/port) the service broker connects to the Kubernetes cluster where the respective service instance is deployed on. It does so by using the provider config of the used Crossplane provider. In the case of the https://github.com/crossplane-contrib/provider-helm[provider-helm] this is a reference to a secret containing a kubeconfig file. This kubeconfig can be used to instantiate a client-go to access the cluster. Since each service instance is deployed to a namespace with the instance UUID as its name, the broker can discover whichever information it needs in said namespace. This could for example be a service of type `LoadBalancer` to retrieve the IP and port or a secret containing the credentials.
 
-This is an interim solution and will be replaced by Crossplane native connection secrets once they are available for all providers.
+This is an interim solution and will be replaced by Crossplane native connection secrets once they're available for all providers.
 
 ==== Crossplane Connection Secrets
 

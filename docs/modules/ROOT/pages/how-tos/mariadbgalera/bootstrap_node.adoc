@@ -39,7 +39,7 @@ spec:
 [...]
 ----
 
-The second (Helm) `Release` should be the MariaDB Helm release, in this example it is `f1600418-cf59-4ec0-b4d9-d0270559dbcf-4xp5n`.
+The second (Helm) `Release` should be the MariaDB Helm release, in this example it's `f1600418-cf59-4ec0-b4d9-d0270559dbcf-4xp5n`.
 
 .Verify if it's the release of the mariadb-galera cluster
 [source,shell]
@@ -51,7 +51,7 @@ f1600418-cf59-4ec0-b4d9-d0270559dbcf-4xp5n   mariadb-galera   5.2.1     True    
 ----
 
 To change values for the safe bootstraping just edit this release and set the values based on your findings (node number to bootstrap from and the `podManagementPolicy`.
-As you cannot change a `StatefulSet` first delete the mariadb `StatefulSet` and then apply your changes to the release object (this will recreate the `StatefulSet` again).
+As you can't change a `StatefulSet` first delete the mariadb `StatefulSet` and then apply your changes to the release object (this will recreate the `StatefulSet` again).
 
 When your cluster is up and running again (all 3 pods ready), first scale down to 1 replica and wait until only one Pod remains and then scale down to 0 replicas.
 This makes sure that you can bootstrap from the first node again:
