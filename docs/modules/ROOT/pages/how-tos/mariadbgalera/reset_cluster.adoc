@@ -1,6 +1,6 @@
 = How to Reset a Cluster (from node 0)
 
-If the cluster lost a mjority of nodes, it won't be able to start again on it's own.
+If the cluster lost a majority of nodes, it won't be able to start again on it's own.
 Since it can't know which node has the latest data, you need to force the bootstrap.
 
 See xref:how-tos/mariadbgalera/bootstrap_node.adoc[Bootstraping a Node] if you have to reset the cluster from another node than node 0.
