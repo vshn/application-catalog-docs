@@ -4,19 +4,6 @@
 
 TODO
 
-[source,yaml]
-----
-- alert: MySQLGaleraDonorFallingBehind
-  expr: |
-    (mysql_global_status_wsrep_local_state == 2 and mysql_global_status_wsrep_local_recv_queue > 100)
-  for: 5m
-  labels:
-    severity: warning
-  annotations:
-    description: "A Galera cluster node on `{{$labels.instance}}` is a donor (hotbackup) and has been falling behind (queue size {{$value}}) during the last 5m"
-    summary: "Galera xtradb cluster donor node on `{{$labels.instance}}` falling behind"
-----
-
 == icon:bug[] Steps for Debugging
 
 TODO

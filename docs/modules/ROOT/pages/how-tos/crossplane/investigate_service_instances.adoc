@@ -1,8 +1,8 @@
 = How to Investigate a Service
 
-This page shows how a service instance can be investigated. It provides several steps and inputs how to analyze issues, it is generic for all services.
+This page shows how a service instance can be investigated. It provides several steps and inputs how to analyze issues, it's generic for all services.
 
-Each code block indicates if the commands need to be run on the "control cluster" or on the respective "service cluster".
+Each code block indicates if the commands need to be run on the control cluster or on the respective service cluster.
 
 == Find a Specific Service Instance
 
@@ -30,8 +30,8 @@ kubectl describe compositeredisinstances.syn.tools $INSTANCE_ID
 The following labels contain metadata about an instance:
 
 * `service.syn.tools/cluster` - on which cluster this instance should be deployed
-* `service.syn.tools/name` - Name of the service (i.e. "redis-k8s")
-* `service.syn.tools/id` - UID of the service (i.e. Redis = 8d4b8039-6bcc-4f68-98f0-0e8efa5ab0e2)
+* `service.syn.tools/name` - Name of the service ("redis-k8s")
+* `service.syn.tools/id` - UID of the service (Redis = 8d4b8039-6bcc-4f68-98f0-0e8efa5ab0e2)
 * `service.syn.tools/instance` - UID of this instance (same as `.metadata.name`)
 * `service.syn.tools/plan` - Name of the plan
 * `crossplane.io/composite` - UID of the plan (name of the composition)
@@ -43,7 +43,7 @@ The "Resource Refs" references the various K8s resources that were created for t
 
 == Instance not Ready
 
-If an instance is not in a ready state and the marketplace shows it as "Installing" or similar, it means that some of the resources that were created for this instance are not ready. To figure out why, go through all referenced resources and see if they provide further info.
+If an instance isn't in a ready state and the marketplace shows it as "Installing" or similar, it means that some of the resources that were created for this instance aren't ready. To figure out why, go through all referenced resources and see if they provide further info.
 
 .Control Cluster
 [source,shell]
@@ -91,7 +91,7 @@ kubectl -n $INSTANCE_ID get pods
 
 When an instance is deleted (deprovisioned) the composite object and all its referenced resources will be deleted on the control cluster. This will uninstall the Helm release on the respective service cluster which will remove all resources from the instance's namespace.
 
-Since the namespace itself and the PVCs are not created directly by the Helm chart, they are left in place. This enables restoring of a deleted service, by instantiating the service again with the same UID.
+Since the namespace itself and the PVCs aren't created directly by the Helm chart, they're left in place. This enables restoring of a deleted service, by instantiating the service again with the same UID.
 
 When a service is being deprovisioned, its namespace will be marked with a label `service.syn.tools/deleted=true` and an annotation `service.syn.tools/deletionTimestamp` indicating the deletion timestamp. Periodically all marked namespaces need to be deleted:
 
@@ -113,7 +113,7 @@ kubectl delete ns -l service.syn.tools/deleted=true
 To access the data in a PVC, there's two scenarios:
 
 . The pod which has the PVC mounted is up and running.
-. The pod is not running.
+. The pod isn't running.
 
 For the scenario where the pod is still running, you can connect to it and see the PVC:
 

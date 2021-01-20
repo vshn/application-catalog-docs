@@ -4,20 +4,6 @@
 
 This will check if the replication between a Redis master and Redis slave is broken for more than 5 minutes and therefore no data replication could be done.
 
-[source,yaml]
-----
-- alert: RedisReplicationBroken
-  expr: |
-    delta(redis_connected_slaves[1m]) < 0
-  for: 5m
-  labels:
-    severity: critical
-  annotations:
-    summary: Redis replication broken (instance {{ $labels.instance }})
-    description: |
-      Redis instance lost a slave\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}
-----
-
 == icon:bug[] Steps for Debugging
 
 Check the replication state between of the Redis slaves and masters.

@@ -2,21 +2,7 @@
 
 == icon:glasses[] Overview
 
-This alert will be thrown if a Redis Pod does not have enough free memory left in the past 5 minutes.
-
-[source,yaml]
-----
-- alert: RedisMemoryHigh
-  expr: |
-    redis_memory_used_bytes{service="redis-metrics"} * 100 / redis_memory_max_bytes{service="redis-metrics"} > 90
-  for: 2m
-  labels:
-    severity: error
-  annotations:
-    description: |
-      Redis instance {{ $labels.instance }} is using {{ $value }}% of its available memory.
-    summary: Redis instance {{ $labels.instance }} is using too much memory
-----
+This alert will be thrown if a Redis Pod doesn't have enough free memory left in the past 5 minutes.
 
 == icon:bug[] Steps for Debugging
 

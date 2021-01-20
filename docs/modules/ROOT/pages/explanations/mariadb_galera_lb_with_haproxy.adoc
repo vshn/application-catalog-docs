@@ -1,7 +1,7 @@
 = HAProxy for MariaDB Galera Load Balancing 
 
 The HAProxy forwards requests to the available MariaDB Galera cluster nodes.
-We use DNS discovery based on https://www.haproxy.com/de/blog/dns-service-discovery-haproxy/ to configure HAProxy backend.
+We use DNS discovery based on https://www.haproxy.com/de/blog/dns-service-discovery-haproxy/ to configure HAProxy backends.
 A Kubernetes service type `LoadBalancer` is used for client access to the HAProxy instance.
 The HAProxy instance is scaled to two replicas for redundancy.
 

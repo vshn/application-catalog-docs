@@ -5,20 +5,6 @@
 This Alert will be thrown if a Redis cluster has no master configured (no Redis Pod has `role=master`) for more than 5 minutes.
 It will inform which Pod is affected, for example `instance="11.32.186.10:9121"`.
 
-[source,yaml]
-----
-- alert: RedisMissingMaster
-  expr: |
-    sum by (namespace) (redis_instance_info{role="master"} < 1)
-  for: 5m
-  labels:
-    severity: critical
-  annotations:
-    summary: Redis missing master (instance {{ $labels.instance }})
-    description: |
-      Redis cluster has no node marked as master.\n  VALUE = {{ $value }}\n  LABELS: {{ $labels }}
-----
-
 == icon:bug[] Steps for Debugging
 
 Check all the Redis Pods in the namespace of the affected Pod and see why no Pod is elected as master.

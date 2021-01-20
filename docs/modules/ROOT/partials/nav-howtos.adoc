@@ -8,3 +8,7 @@
 ** xref:app-catalog:ROOT:how-tos/mariadbgalera/debug.adoc[Debug MariaDB Galera]
 ** xref:app-catalog:ROOT:how-tos/mariadbgalera/find_cluster_for_instance.adoc[Find the Service Cluster]
 ** xref:app-catalog:ROOT:how-tos/mariadbgalera/bootstrap_node.adoc[Bootstrap DB Node]
+** xref:app-catalog:ROOT:how-tos/mariadbgalera/reset_cluster.adoc[Reset DB Cluster]
+
+* HAProxy
+** xref:app-catalog:ROOT:how-tos/haproxy/stats.adoc[Access Stats Page]
