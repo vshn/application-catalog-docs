@@ -41,6 +41,13 @@ kubectl -n $INSTANCE_ID set env statefulset/mariadb \
 kubectl -n $INSTANCE_ID delete pods -l app.kubernetes.io/name=mariadb-galera
 ----
 
+.Disable force bootstrap again
+[source,shell]
+----
+kubectl -n $INSTANCE_ID set env statefulset/mariadb -c mariadb-galera \
+    MARIADB_GALERA_FORCE_SAFETOBOOTSTRAP="no"
+----
+
 == Restore cluster to 3 nodes
 
 .Once the single node is bootstrapped and running, scale the cluster to 3
@@ -50,9 +57,7 @@ kubectl -n $INSTANCE_ID scale statefulset mariadb \
     --replicas 3
 ----
 
-.Finally disable force bootstrap again
-[source,shell]
-----
-kubectl -n $INSTANCE_ID set env statefulset/mariadb -c mariadb-galera \
-    MARIADB_GALERA_FORCE_SAFETOBOOTSTRAP="no"
-----
+[WARNING]
+====
+Always make sure to disable force bootstrap before scaling a cluster up.
+====
