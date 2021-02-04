@@ -1,5 +1,10 @@
 = How to Bootstrap a Cluster (other than from Node 0)
 
+[WARNING]
+====
+If you bootstrap from any other node than the one that has proceeded the furthest in transactions, this will result in data loss.
+====
+
 To restart a Galera Cluster, you might need to bootstrap the cluster from another node than 0 (after a ungraceful shutdown).
 You can basically follow the steps described in the Helm Chart: https://github.com/bitnami/charts/tree/master/bitnami/mariadb-galera/#bootstraping-a-node-other-than-0[Bootstraping a node other than 0].
 
