@@ -19,7 +19,7 @@ The following diagram shows the mapping of Service Broker https://github.com/ope
 @startuml
 !include C4_Container.puml
 
-LAYOUT_LEFT_RIGHT
+LAYOUT_LEFT_RIGHT()
 
 title Mapping of Service Broker Terms to Crossplane Resources
 
