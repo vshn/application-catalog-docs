@@ -3,6 +3,7 @@
 [WARNING]
 ====
 If any other node than node 0 has further proceeded in transactions, this will result in data loss.
+Always take a backup of the data directory before taking any further steps.
 ====
 
 If the cluster lost a majority of nodes, it won't be able to start again on it's own.

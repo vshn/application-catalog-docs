@@ -3,6 +3,7 @@
 [WARNING]
 ====
 If you bootstrap from any other node than the one that has proceeded the furthest in transactions, this will result in data loss.
+Always take a backup of the data directory before taking any further steps.
 ====
 
 To restart a Galera Cluster, you might need to bootstrap the cluster from another node than 0 (after a ungraceful shutdown).
