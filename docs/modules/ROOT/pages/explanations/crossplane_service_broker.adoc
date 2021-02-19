@@ -209,7 +209,7 @@ In this case the binding is represented by another XRD (for example `DatabaseUse
 
 ==== Redis
 
-Since Redis doesn't have a concept of users, roles or databases like MariaDB does, there's only one service offering: Redis. It instantiate a Redis setup (master/slave & Sentinel) and create a password which is required to access it. A subsequent binding for this service will return the password and connection information (IP/port) of the Redis and Sentinel instances. This has the drawback that all bindings will reuse the same password and to rotate one of them, all of them need to be rotated.
+Since Redis doesn't have a concept of users, roles or databases like MariaDB does, there's only one service offering: Redis. It instantiates a Redis setup (master/slave & Sentinel) and creates a password which is required to access it. A subsequent binding for this service will return the password and connection information (IP/port) of the Redis and Sentinel instances. This has the drawback that all bindings will reuse the same password and to rotate one of them, all of them need to be rotated.
 
 In this implementation the bindings won't be persisted in any Kubernetes resource. Every request to create or fetch a binding will return the same information (password,IP/port). Therefore a https://github.com/openservicebrokerapi/servicebroker/blob/master/spec.md#synchronous-and-asynchronous-operations[synchronous] operation is done and the binding information is directly returned from the request.
 
