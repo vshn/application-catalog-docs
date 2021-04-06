@@ -78,7 +78,7 @@ Always make sure to disable force bootstrap before scaling a cluster up.
 
 == Force bootstrap from other node than 0
 
-To restart a Galera Cluster, you might need to bootstrap the cluster from another node than 0 (after a ungraceful shutdown).
+To restart a Galera Cluster, you might need to bootstrap the cluster from another node than 0 (after an ungraceful shutdown).
 You can basically follow the steps described in the Helm Chart: https://github.com/bitnami/charts/tree/master/bitnami/mariadb-galera/#bootstraping-a-node-other-than-0[Bootstraping a node other than 0].
 
 === Find Helm release
