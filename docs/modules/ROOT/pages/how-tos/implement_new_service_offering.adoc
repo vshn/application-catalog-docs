@@ -115,7 +115,7 @@ metadata:
   name: 43905323-ed5f-466a-9d7f-ddc16cb74864 # uuidgen | tr '[:upper:]' '[:lower:]'
   labels:
     service.syn.tools/cluster: prod-cluster-01
-    service.syn.tools/id: 6ca63cdb-0cfa-4c5e-b080-72f22ff5f3e6
+    service.syn.tools/id: 6ca63cdb-0cfa-4c5e-b080-72f22ff5f3e6 # This is the ID from 'compositefooinstances.syn.tools' above
     service.syn.tools/name: foo-k8s
     service.syn.tools/plan: small
     service.syn.tools/updatable: "true"
@@ -211,10 +211,10 @@ spec:
 To simplify the creation of these Crossplane resources the https://git.vshn.net/swisscompks/component-spks-crossplane[spks-crossplane component] exists.
 It will generate the required resources based on the configured input in the configuration hierarchy.
 
-Especially to define multiple plans this approach helps to keep the config more DRY and maintainable.
+This approach especially helps in defining multiple plans in order to keep the config more DRY and maintainable.
 
 ==== Example
-This example setup will generate the same Crossplane resoruces as showcased in the previous examples.
+This example setup will generate the same Crossplane resources as showcased in the previous examples.
 [source,yaml]
 ----
 parameters:
