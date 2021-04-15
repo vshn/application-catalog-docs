@@ -1,3 +1,5 @@
+* xref:app-catalog:ROOT:how-tos/implement_new_service_offering.adoc[Implement New Service Offering]
+
 * Crossplane
 ** xref:app-catalog:ROOT:how-tos/crossplane/investigate_service_instances.adoc[Investigate Service]
 
@@ -7,8 +9,7 @@
 * MariaDB Galera
 ** xref:app-catalog:ROOT:how-tos/mariadbgalera/debug.adoc[Debug MariaDB Galera]
 ** xref:app-catalog:ROOT:how-tos/mariadbgalera/find_cluster_for_instance.adoc[Find the Service Cluster]
-** xref:app-catalog:ROOT:how-tos/mariadbgalera/bootstrap_node.adoc[Bootstrap DB Node]
-** xref:app-catalog:ROOT:how-tos/mariadbgalera/reset_cluster.adoc[Reset DB Cluster]
+** xref:app-catalog:ROOT:how-tos/mariadbgalera/bootstrap_cluster.adoc[Bootstrap Cluster]
 
 * HAProxy
 ** xref:app-catalog:ROOT:how-tos/haproxy/stats.adoc[Access Stats Page]

@@ -286,6 +286,7 @@ Service Offering (XRD)::
 
 * `service.syn.tools/id`: Service UUID
 * `service.syn.tools/name`: Service Name
+* `service.syn.tools/updatable`: Whether the service instances can be updated
 
 Service Plan (Composition)::
 
@@ -294,6 +295,7 @@ Service Plan (Composition)::
 * `service.syn.tools/cluster`: Cluster Name
 * `service.syn.tools/id`: Referenced service UUID
 * `service.syn.tools/name`: Referenced service name
+* `service.syn.tools/updatable`: Whether the service instances can be updated
 
 Service Instance (XR)::
 
