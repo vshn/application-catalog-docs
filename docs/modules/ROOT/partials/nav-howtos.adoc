@@ -2,6 +2,7 @@
 
 * Crossplane
 ** xref:app-catalog:ROOT:how-tos/crossplane/investigate_service_instances.adoc[Investigate Service]
+** xref:app-catalog:ROOT:how-tos/crossplane/setup_crossplane_service_broker.adoc[Setup _Crossplane Service Broker_]
 
 * Redis
 ** xref:app-catalog:ROOT:how-tos/redis/debug_sentinel.adoc[Debug Redis Sentinel]

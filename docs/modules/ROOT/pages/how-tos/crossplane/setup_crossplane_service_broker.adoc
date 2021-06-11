@@ -1,0 +1,418 @@
+= Use the Crossplane Service Broker
+
+This is a guide on how to install the _Crossplane Service Broker_ as a service in your cluster
+and how to use _Bearer Tokens_ to authenticate against that _Crossplane Service Broker_ service.
+
+== Components
+
+The final setup consists of three components:
+
+- The _Service Catalog_ is the entry-point for users that look to instantiate new services.
+  Its interface is a well-defined REST-API which provides an overview over all available and instantiated services.
+  It connects to one (or many) _Crossplane Service Brokers_, which provide this information.
+  (It may also connect to other kinds of Service Brokers which provide other services.)
+- One _Crossplane Service Broker_ knows which services it offers and what instances its responsible for.
+  When a user wants to instantiate a certain service, it creates _Crossplane custom resources_ in the Kubernetes cluster in which it runs.
+- Crossplane will then react on those _Crossplane custom resources_ and manages the lifecycle of the actual service instance.
+
+[NOTE]
+======
+Note that the _Service Catalog_ and the _Crossplane Service Broker_ don't have to necessarily run on the same Kubernetes cluster.
+Also note that services managed by Crossplane may not necessarily be provisioned on the cluster on the same cluster which Crossplane is installed on.
+======
+
+TIP:  To learn more about the _Service Catalog_ concept, https://kubernetes.io/docs/concepts/extend-kubernetes/service-catalog/[read the relevant Kubernetes documentation, which is excellent.]
+
+== Requirements
+
+- Have at least one Kubernetes cluster with Crossplane installed.
+- Know the _service id_ of at least one service which Crossplane manages.
+- Have access to an authentication server which issues Bearer Tokens and which has a JWKS endpoint.
+- https://svc-cat.io/docs/install/#installing-the-service-catalog-cli[Have `svcat` installed on your computer.]
+
+[TIP]
+=====
+If you don't have a Crossplane setup with services configured, then follow along this guide, have a look at the https://github.com/vshn/application-catalog-demo[vshn/application-catalog-demo].
+It explains how to setup Crossplane and how to prepare services that are later recognized by the Crossplane Service Broker.
+
+Note that it the service id used in that demo is `redis-k8s`.
+Use it instead of the UUIDs when defining `OSB_SERVICE_IDS` in the `deployment.yaml`.
+=====
+
+== Install the Service Catalog
+
+The service catalog will provide a single, well-defined API to manage services provided by one or many service brokers.
+
+NOTE: Sometimes the term _application catalog_ is used instead of _service catalog_. They usually mean the same thing.
+
+This will install the _service catalog_ service in your current Kubernetes cluster in the `catalog` namespace using Helm:
+
+```bash
+helm install catalog \
+  --values values.yaml \
+  --create-namespace --namespace catalog \
+  --repo https://kubernetes-sigs.github.io/service-catalog \
+  catalog
+```
+
+== Install the Crossplane Service Broker
+
+The _Crossplane Service Broker_ will manage _Crossplane custom resources_ in the same cluster, as it runs itself.
+It must be provided with a least one _service id_ to handle.
+
+The _Crossplane Service Broker_ is configured through environment variables.
+A typical deployment may look like this the following yaml.
+To apply it, run:
+
+```bash
+kubectl apply -f deployment.yml
+```
+
+.deployment.yml
+```yaml
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: service-broker-test
+  namespace: service-broker
+  labels:
+    name: service-broker-test
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: test
+      app.kubernetes.io/name: service-broker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: test
+        app.kubernetes.io/name: service-broker
+        name: service-broker-test
+    spec:
+      containers:
+        - name: service-broker
+          image: quay.io/vshn/crossplane-service-broker:v0.4.1
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: OSB_NAMESPACE
+              value: crossplane-services
+            - name: OSB_PASSWORD
+              value: changeMeEventually
+            - name: OSB_USERNAME
+              value: test
+            - name: OSB_SERVICE_IDS
+              value: redis-k8s,3a385e26-cdfc-46bc-961b-69892684af8b,16379f5f-0c5f-4c55-a119-fd063af62919
+            - # Used for Bearer Token Validation
+              name: OSB_JWT_KEYS_JWK_URL
+              value: https://auth.corp.internal/jwks
+          resources:
+            limits:
+              cpu: 500m
+              memory: 128Mi
+            requests:
+              cpu: 200m
+              memory: 64Mi
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+              scheme: HTTP
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+              scheme: HTTP
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          imagePullPolicy: Always
+          securityContext:
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: ClusterFirst
+      serviceAccountName: service-broker
+      serviceAccount: service-broker
+      schedulerName: default-scheduler
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 25%
+  minReadySeconds: 30
+  revisionHistoryLimit: 10
+  progressDeadlineSeconds: 600
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: service-broker-test
+  namespace: service-broker
+  labels:
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/name: service-broker
+    name: service-broker-test
+spec:
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: http
+  selector:
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/name: service-broker
+  type: ClusterIP
+  sessionAffinity: None
+```
+
+Take note of the environment vars that are configured in the above `deployment.yml`:
+
+[cols="1,3,2"]
+|===
+| Variable Name
+| Description
+| Example Value
+
+| `OSB_SERVICE_IDS`
+| The _Crossplane Service Broker_ must know which services it's responsible for.
+  The ID can be any arbitrary string, though often this is a UUID.
+| `redis-k8s,3a385e26-cdfc-46bc-961b-69892684af8b,16379f5f-0c5f-4c55-a119-fd063af62919`
+
+| `OSB_NAMESPACE`
+| This is the namespace, in which the _Crossplane Service Broker_ will create it the relevant _Crossplane custom resources_.
+| `crossplane-services`
+
+| `OSB_USERNAME`
+| This is the username which is used when doing Basic auth between the _Service Catalog_ and the _Service Broker_.
+  If you don't use basic auth, choose a random string here.
+| `test`
+
+| `OSB_PASSWORD`
+| This is the password which is used when doing Basic auth between the _Service Catalog_ and the _Service Broker_.
+  If you don't use basic auth, choose a random string here.
+| `changeMeEventually`
+
+| `OSB_JWT_KEYS_JWK_URL`
+| This URL is queried _during the startup_ of the service broker.
+  It contains the public keys in https://tools.ietf.org/html/rfc7517[JWK-format] that should be used to verify the validity of the https://tools.ietf.org/html/rfc7519[JWT tokens].
+| `https://auth.corp.internal/jwks`
+|===
+
+== Setup Bearer Token Authentication
+
+[TIP]
+=====
+To run `curl` from your cluster, create an ad-hoc container using `kubectl run`:
+
+```bash
+kubectl run \
+  --namespace default \
+  -i --tty --rm \
+  "curl-$(date +%s)" \
+  --command /bin/sh \
+  --image=quay.com/curlimages/curl --
+```
+
+Now you get a terminal in which you can then run `curl` commands, for example `curl --version`.
+
+[NOTE]
+======
+If you prefer `wget`, here's a solution for that:
+
+```bash
+kubectl run \
+  --namespace default \
+  -i --tty --rm \
+  "busybox-$(date +%s)" \
+  --image=quay.com/prometheus/busybox --
+```
+======
+=====
+
+=== Inspect OpenID configuration
+
+If you (or your company) use an OpenID compliant authentication server, you should be able to learn about the JWKS URL from the `.well-known/openid-configuration` JSON:
+
+```bash
+curl https://auth.corp.internal/.well-known/openid-configuration
+```
+
+The JSON will look like this:
+
+```json
+{
+  "issuer": "auth.corp.internal",
+  "token_endpoint": "auth.corp.internal/token",
+  "jwks_uri": "auth.corp.internal/jwks",
+  "revocation_endpoint": "auth.corp.internal/revoke",
+  "scopes_supported": ["openid"],
+  "response_types_supported": [],
+  "response_modes_supported": [],
+  "grant_types_supported": ["client_credentials"],
+  "acr_values_supported": [],
+  "subject_types_supported": ["public"],
+  "id_token_signing_alg_values_supported": ["ES256"],
+  "token_endpoint_auth_methods_supported": ["client_secret_post"],
+  "token_endpoint_auth_signing_alg_values_supported": ["ES256"],
+  "claims_supported": [
+    "aud",
+    "exp",
+    "iat",
+    "iss",
+    "allow_list",
+    "cluster_id",
+    "client_id",
+    "sub"
+  ],
+  "code_challenge_methods_supported": []
+}
+```
+
+Look for the `jwks_uri`.
+
+=== JWK Store
+
+To verify that you can access that URL, you may want to check the response:
+
+```bash
+curl https://auth.corp.internal/jwks
+```
+
+This should return a JSON like the following:
+
+```json
+{
+  "keys": [
+    {
+      "kty": "EC",
+      "crv": "P-256",
+      "x": "6ze…",
+      "y": "O5K…"
+    }
+  ]
+}
+```
+
+NOTE: The values for `"x"` and `"y"` have been shortened in the above example.
+
+=== Get a token
+
+In order to get a token, you need to be in the possetion of a `client_id` and a `client_secret`.
+Those should allow you to request a token from the authentication server on the `/token` endpoint:
+
+```bash
+curl \
+  --silent --request POST \
+  --data "grant_type=client_credentials" \
+  --data "client_id=950aaaa5-a656-4a8c-8515-aa505a550a52" \
+  --data "client_secret=5a2924a5-050a-445a-aa5a-0a50a445a845" \
+  "https://auth.corp.internal/token" \
+```
+
+This usually returns a JSON like this:
+
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.zJrV44Lhr1Ck4vg1dMnldql0adLgut241jo0FbFXMlI",
+  "token_type": "Bearer",
+  "expires_in": 600
+}
+```
+
+[TIP]
+=====
+Here's a shortcut to grab the token directly:
+
+```bash
+kubectl run \
+  --namespace default \
+  --attach true --rm --quiet \
+  "curl-$(date +%s)" \
+  --image=docker.io/curlimages/curl -- \
+  --silent --request POST \
+  --data "grant_type=client_credentials" \
+  --data "client_id=950aaaa5-a656-4a8c-8515-aa505a550a52" \
+  --data "client_secret=5a2924a5-050a-445a-aa5a-0a50a445a845" \
+  "https://auth.corp.internal/token" \
+| jq -r .access-token
+```
+=====
+
+== Connect the _Service Catalog_ to the _Crossplane Service Broker_
+
+For the following instructions, change to the `catalog` namespace of your cluster:
+
+```bash
+kubectl config set-context --current --namespace=catalog
+```
+
+Next we need to fetch the Bearer token and create a Kubernetes secret with it:
+
+```bash
+TOKEN=$(kubectl run \
+  --namespace default \
+  --attach --rm --quiet \
+  "curl-$(date +%s)" \
+  --image=docker.io/curlimages/curl -- \
+  --silent --request POST \
+  --data "grant_type=client_credentials" \
+  --data "client_id=950aaaa5-a656-4a8c-8515-aa505a550a52" \
+  --data "client_secret=5a2924a5-050a-445a-aa5a-0a50a445a845" \
+  "https://auth.corp.internal/token" | jq -r .access_token)
+printf "----BEGIN TOKEN----\n${TOKEN}\n----END TOKEN----\n\n"
+kubectl create secret generic bearer-creds "--from-literal=token=${TOKEN}" --dry-run=client -o yaml | kubectl apply -f -
+```
+
+[IMPORTANT]
+====
+This token may only be valid for a short time.
+(The token which was shown above is only valid for 600 seconds, that's 5 minutes.)
+We're currently working on a way to automatically refresh the token before it expires.
+
+Once the token expires, you need to deregister the broker and re-register it (see further below).
+
+```bash
+svcat deregister servicebroker-test
+```
+====
+
+And finally, we can tell the _Service Catalog_ that there our _Crossplane Service Broker_ is ready to provide its services.
+
+```bash
+svcat register servicebroker-test --bearer-secret bearer-creds --url "http://service-broker-test.service-broker"
+```
+
+It should now be possible to interact with this instance of the _Crossplane Service Broker_ through the _Service Catalog_:
+
+```bash
+# List all registered service brokers and their status
+svcat get brokers
+
+# Show the available products
+svcat marketplace
+```
+
+[TIP]
+=====
+It's not strictly necessary, but sometimes it's nice to confirm that the svcat-connection works at least with basic auth.
+To do that, first create a secret that contains the username and the password.
+Then register the _Crossplane Service Broker_ through the basic authentication mechanism:
+
+```bash
+# Create a new secret containing the Basic authentication secrets
+kubectl create secret generic basic-creds --from-literal=username=test --from-literal=password=changeMeEventually
+
+# Unregister the Crossplane Service Broker if you already registered it previously
+svcat unregister servicebroker-test
+
+# Register the Crossplane Service Broker using the Basic authentication secret
+svcat register servicebroker-test --basic-secret basic-creds --url "http://service-broker-test.service-broker"
+
+# Check the Crossplane Service Broker's status
+svcat get brokers
+```
+=====
