@@ -4,7 +4,7 @@ This is a guide on how to install the _Crossplane Service Broker_ as a service i
 
 [TIP]
 =====
-This guide assumes some basic knowledge about how a _Service Catalog_ and a (generic) _Service Broker_ work together.
+This tutorial assumes some basic knowledge about how a _Service Catalog_ and a (generic) _Service Broker_ work together.
 To learn more about the whole _Service Catalog / Service Broker_ concept, https://kubernetes.io/docs/concepts/extend-kubernetes/service-catalog/[read the relevant Kubernetes documentation], which is excellent.
 =====
 
@@ -46,6 +46,9 @@ It explains how to setup _Crossplane_ and how to prepare services that are later
 
 Note that the _service id_ used in that demo is `redis-k8s`.
 Use it instead of the UUIDs when defining `OSB_SERVICE_IDS` in the `deployment.yaml`.
+
+Furthermore, you may also want to have a look at the  xref:app-catalog:ROOT:how-tos/crossplane/implement_new_service_offering.adoc[Implement a New Service] how-to.
+It explains the intricate details of how a service must be defined such that the _Crossplane Service Broker_ can make use of it.
 =====
 
 == Install the Service Catalog
@@ -221,7 +224,7 @@ spec:
 
 Take note of the environment vars that are configured in the above `deployment.yaml`:
 
-[cols="1,3,2",options="header"]
+[cols="3,5,4",options="header"]
 |===
 | Variable Name
 | Description
@@ -252,184 +255,6 @@ Take note of the environment vars that are configured in the above `deployment.y
 | `https://auth.corp.internal/jwks`
 |===
 
-== Setup _Bearer Token_ Authentication
-
-This section will prepare us for the final step, which will be to connect the _Service Catalog_ to the _Crossplane Service Catalog_.
-In order to do that, we'll need credentials, which the _Service Catalog_ will present to the _Crossplane Service Catalog_.
-Getting these credentials is what this sections is about.
-
-[TIP]
-=====
-Below are `curl` commands shown.
-Depending on your configuration, your authentication server can only be reached from your Kubernetes cluster, but not from your personal computer.
-In these cases you can refer to the commands just below.
-
-To run `curl` from your cluster, create an ad-hoc container using `kubectl run`:
-
-```bash
-kubectl run \
-  --namespace default \
-  -i --tty --rm \
-  "curl-$(date +%s)" \
-  --command /bin/sh \
-  --image=quay.io/curlimages/curl --
-```
-
-Now you get a terminal in which you can then run `curl` commands, for example `curl --version`.
-
----
-
-If you are more comfortable using `wget`, here's a solution for that:
-
-```bash
-kubectl run \
-  --namespace default \
-  -i --tty --rm \
-  "busybox-$(date +%s)" \
-  --image=quay.io/prometheus/busybox --
-```
-
-Now you get a terminal in which you can then run `wget` commands, for example `wget --version`.
-=====
-
-=== Inspect the OpenID configuration
-
-If you (or your company) use an OpenID compliant authentication server, you should be able to learn about the JWKS URL from the `.well-known/openid-configuration` JSON:
-
-```bash
-curl https://auth.corp.internal/.well-known/openid-configuration
-```
-
-The JSON will look like this:
-
-```json
-{
-  "issuer": "auth.corp.internal",
-  "token_endpoint": "auth.corp.internal/token", <2>
-  "jwks_uri": "auth.corp.internal/jwks", <1>
-  "revocation_endpoint": "auth.corp.internal/revoke",
-  "scopes_supported": ["openid"],
-  "response_types_supported": [],
-  "response_modes_supported": [],
-  "grant_types_supported": ["client_credentials"],
-  "acr_values_supported": [],
-  "subject_types_supported": ["public"],
-  "id_token_signing_alg_values_supported": ["ES256"],
-  "token_endpoint_auth_methods_supported": ["client_secret_post"],
-  "token_endpoint_auth_signing_alg_values_supported": ["ES256"],
-  "claims_supported": [
-    "aud",
-    "exp",
-    "iat",
-    "iss",
-    "allow_list",
-    "cluster_id",
-    "client_id",
-    "sub"
-  ],
-  "code_challenge_methods_supported": []
-}
-```
-<1> Look for the `jwks_uri`.
-    It's the URL we're interested in.
-<2> Also note down the `token_endpoint`.
-    We'll need it later.
-
-=== JWK Store
-
-To verify that the _Crossplane Service Broker_ will be able to access this URL, check the response now:
-
-```bash
-curl https://auth.corp.internal/jwks
-```
-
-This should return a JSON like the following:
-
-NOTE: The values for `x` and `y` have been shortened in the example below.
-
-```json
-{
-  "keys": [
-    {
-      "kty": "EC",
-      "crv": "P-256",
-      "x": "6ze…",
-      "y": "O5K…"
-    }
-  ]
-}
-```
-
-=== Get a _Bearer Token_
-
-In order to get a _Bearer Token_, you need to be in the possession of a `client_id` and a `client_secret`.
-Create these on your authentication server or request them from authorized personnel.
-Those should allow you to request a token from the authentication server on the `/token` endpoint:
-
-[NOTE]
-======
-The `/token` endpoint might be called differently on your server.
-See the section <<_inspect_the_openid_configuration>> above and look for the `token_endpoint` URL.
-======
-
-```bash
-curl \
-  --silent --request POST \
-  --data "grant_type=client_credentials" \
-  --data "client_id=950aaaa5-a656-4a8c-8515-aa505a550a52" \
-  --data "client_secret=5a2924a5-050a-445a-aa5a-0a50a445a845" \
-  "https://auth.corp.internal/token"
-```
-
-This usually returns a JSON like this:
-
-```json
-{
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.zJrV44Lhr1Ck4vg1dMnldql0adLgut241jo0FbFXMlI", <1>
-  "token_type": "Bearer",
-  "expires_in": 600
-}
-```
-<1> The value-part here is your actual _Bearer Token_.
-    The quotes (`"`) are just JSON syntax and don't belong to the token itself.
-
-TIP: You can check the content of the token on https://jwt.io/#debugger-io[jwt.io].
-
-[TIP]
-=====
-Here's a shortcut to grab the token directly:
-
-```bash
-kubectl run \
-  --namespace default \
-  --attach true --rm --quiet \
-  "curl-$(date +%s)" \
-  --image=docker.io/curlimages/curl -- \
-  --silent --request POST \
-  --data "grant_type=client_credentials" \
-  --data "client_id=950aaaa5-a656-4a8c-8515-aa505a550a52" \
-  --data "client_secret=5a2924a5-050a-445a-aa5a-0a50a445a845" \
-  "https://auth.corp.internal/token" \
-| jq -r .access_token
-```
-
-On macOS, you can also copy the token directly to your clipboard like this:
-
-```bash
-kubectl run \
-  --namespace default \
-  --attach true --rm --quiet \
-  "curl-$(date +%s)" \
-  --image=docker.io/curlimages/curl -- \
-  --silent --request POST \
-  --data "grant_type=client_credentials" \
-  --data "client_id=950aaaa5-a656-4a8c-8515-aa505a550a52" \
-  --data "client_secret=5a2924a5-050a-445a-aa5a-0a50a445a845" \
-  "https://auth.corp.internal/token" \
-| jq -r .access-token \
-| pbcopy
-```
-=====
 
 == Connect the _Service Catalog_ to the _Crossplane Service Broker_
 
@@ -504,23 +329,9 @@ svcat marketplace
 [TIP]
 =====
 If you don't need to use _Bearer Token_ authentication, you may want to fall back to _Basic_ authentication.
-This would typically be the case when your _Crossplane Service Broker_ is only serving one team, group or customer anyways.
+This would typically be the case when your _Crossplane Service Broker_ is only serving one team, group or customer anyways, or in other words:
+It's a single tenant system instance.
 (The advantage of the _Bearer Token_ authentication is that the _Crossplane Service Broker_ can restrict the offered services based on information provided in the _Bearer Token_.)
 
-To configure _Basic_ authentication, first create a secret that contains the username and the password.
-Then register the _Crossplane Service Broker_ through the basic authentication mechanism:
-
-```bash
-# Create a new secret containing the Basic authentication secrets
-kubectl create secret generic basic-creds --from-literal=username=test --from-literal=password=changeMeEventually
-
-# Unregister the Crossplane Service Broker if you already registered it previously
-svcat unregister servicebroker-test
-
-# Register the Crossplane Service Broker using the Basic authentication secret
-svcat register servicebroker-test --basic-secret basic-creds --url "http://service-broker-test.service-broker"
-
-# Check the Crossplane Service Broker's status
-svcat get brokers
-```
+See xref:app-catalog:ROOT:how-tos/crossplane/basic_authentication.adoc[Setup HTTP _Basic_ authentication] on how to achieve that.
 =====
