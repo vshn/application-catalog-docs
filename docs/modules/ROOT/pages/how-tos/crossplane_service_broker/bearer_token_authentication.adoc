@@ -1,7 +1,7 @@
 == Prepare HTTP _Bearer Token_ Authentication
 
 This how-to will prepare you for the final step, which will be xref:app-catalog:ROOT:how-tos/crossplane_service_broker/connect_service_catalog_to_service_broker.adoc[to connect the _Service Catalog_ to the _Service Broker_].
-In order to do that, you'll need the credentials that the _Service Catalog_ will need to present to the _Crossplane Service Catalog_.
+In order to do that, you'll need the credentials that the _Service Catalog_ will need to present to the _Crossplane Service Broker_.
 Getting these credentials is what this how-to is about.
 
 === Preparations
