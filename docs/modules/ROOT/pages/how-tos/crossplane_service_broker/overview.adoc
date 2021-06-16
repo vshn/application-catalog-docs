@@ -1,4 +1,5 @@
 = Overview
+// tag::main[]
 
 The setup around a _Crossplane Service Broker_ consists of three main components:
 
@@ -19,3 +20,4 @@ Additionally, services managed by _Crossplane_ may be provisioned outside of the
 For example, _Crossplane_ supports instantiating cloud resources from providers such as Google Cloud, Azure or AWS.
 Naturally, such resources don't run on the cluster on which _Crossplane_ is installed.
 ======
+// end::main[]

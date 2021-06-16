@@ -8,6 +8,7 @@ It must be provided with a least one _service id_ to handle.
 - Have access to a Kubernetes cluster with Crossplane installed.
 
 == Configuration
+// tag::main[]
 
 The _Crossplane Service Broker_ is configured through environment variables.
 A typical deployment may look like the following YAML.
@@ -167,3 +168,4 @@ Take note of the environment variables that are configured in the above `deploym
   Learn more about this in the xref:app-catalog:ROOT:how-tos/crossplane_service_broker/bearer_token_authentication.adoc[HTTP _Bearer Token_ authentication] how-to.
 | `\https://auth.corp.internal/jwks`
 |===
+// end::main[]

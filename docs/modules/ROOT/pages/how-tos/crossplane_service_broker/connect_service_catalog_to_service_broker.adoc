@@ -10,6 +10,7 @@ This how-to will explain how a _Service Catalog_ is connected to the _Crossplane
 - https://svc-cat.io/docs/install/#installing-the-service-catalog-cli[Have `svcat` installed on your computer.]
 
 == Configuring HTTP _Bearer Token_ Authentication
+// tag::main[]
 
 For the following instructions, change to the `catalog` namespace of your cluster:
 
@@ -90,3 +91,4 @@ svcat get brokers
 # Show the services that are available to order.
 svcat marketplace
 ```
+// end::main[]

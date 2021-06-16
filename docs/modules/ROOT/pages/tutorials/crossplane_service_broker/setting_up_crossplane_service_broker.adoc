@@ -1,6 +1,8 @@
+:includedir: ../../how-tos/crossplane_service_broker
+
 = Setting up the Crossplane Service Broker
 
-This is a guide on how to install the _Crossplane Service Broker_ as a service in your cluster and how to use _Bearer Tokens_ to authenticate the _Service Catalog_ against that _Crossplane Service Broker_ service.
+This is a tutorial on how to install the https://github.com/vshn/crossplane-service-broker/[_Crossplane Service Broker_] as a service in your cluster and how to use _Bearer Tokens_ to authenticate the https://svc-cat.io/[_Service Catalog_] against that _Crossplane Service Broker_ service.
 
 [TIP]
 =====
@@ -8,40 +10,22 @@ This tutorial assumes some basic knowledge about how a _Service Catalog_ and a (
 To learn more about the whole _Service Catalog / Service Broker_ concept, https://kubernetes.io/docs/concepts/extend-kubernetes/service-catalog/[read the relevant Kubernetes documentation], which is excellent.
 =====
 
-== Involved Components
+== Overview
 
-The final setup consists of three components:
-
-- The _Service Catalog_ is the entry-point for users who want to instantiate new services.
-  Its interface is a well-defined REST-API which provides an overview over all available and all instantiated services.
-  It connects to one (or many) _Crossplane Service Brokers_, which provide this information back to the _Service Catalog_.
-  (The _Service Catalog_ may also connect to other kinds of Service Brokers in order to provide more services.)
-- One _Crossplane Service Broker_ which knows which services it offers and what already instantiated services it's responsible for.
-  When a user wants to instantiate a certain service (via the _Service Catalog_), the _Crossplane Service Broker_ creates the respective _Crossplane custom resources_ in the Kubernetes cluster in which it runs.
-- _Crossplane_ will then react on those _Crossplane custom resources_ and from then on manage the lifecycle of the actual service instance, for example _Redis_.
-
-[NOTE]
-======
-The _Service Catalog_ and the _Crossplane Service Broker_ don't necessarily have to run on the same Kubernetes cluster.
-For example, a _Service Catalog_ can be installed on the Kubernetes cluster of a customer, while the _Crossplane Service Broker_ might be running on a central and dedicated cluster.
-
-Additionally, services managed by _Crossplane_ may be provisioned outside of the cluster on which _Crossplane_ is installed on.
-For example, _Crossplane_ supports instantiating cloud resources from providers such as Google Cloud, Azure or AWS.
-Naturally, such resources don't run on the cluster on which _Crossplane_ is installed.
-======
+include::{includedir}/overview.adoc[tag=main,leveloffset=+1]
 
 == Preparations
 
-This guide assumes that you have some resources and services already at your disposal and already configured:
+This tutorial assumes that you have some resources and services already at your disposal and already configured:
 
-- Have at least one Kubernetes cluster with Crossplane installed.
-- Know the _service id_ of at least one service which Crossplane manages.
-- Have access to an authentication server which issues _Bearer Tokens_ and which has a JWKS endpoint, like https://www.keycloak.org/[Keycloak] for example.
+- Have at least one Kubernetes cluster https://crossplane.io/docs/[with Crossplane installed].
+- Know xref:app-catalog:ROOT:how-tos/crossplane/implement_new_service_offering.adoc[the _service id_] of at least one service which Crossplane manages.
+- Have access to an authentication server which issues xref:app-catalog:ROOT:how-tos/crossplane/implement_new_service_offering.adoc[_Bearer Tokens_] and which has a https://datatracker.ietf.org/doc/html/rfc7517#section-5[JWKS endpoint], like https://www.keycloak.org/[Keycloak] for example.
 - https://svc-cat.io/docs/install/#installing-the-service-catalog-cli[Have `svcat` installed on your computer.]
 
 [TIP]
 =====
-If you don't have a _Crossplane_ setup with services configured, then in order to follow along this guide have a look at https://github.com/vshn/application-catalog-demo[vshn/application-catalog-demo]:
+If you don't have a _Crossplane_ setup with services configured, then, in order to follow along this guide, have a look at https://github.com/vshn/application-catalog-demo[vshn/application-catalog-demo]:
 It explains how to setup _Crossplane_ and how to prepare services that are later recognized by the _Crossplane Service Broker_.
 
 Note that the _service id_ used in that demo is `redis-k8s`.
@@ -53,278 +37,19 @@ It explains the intricate details of how a service must be defined such that the
 
 == Install the Service Catalog
 
-The _service catalog_ provides a single, well-defined API to manage services provided by one or many service brokers.
-
-[NOTE]
-=====
-Sometimes the term _application catalog_ is used instead of _service catalog_.
-They usually mean the same thing.
-=====
-
-The command below will install the _service catalog_ service in your current Kubernetes cluster using Helm in the `catalog` namespace.
-The namespace will be created if it doesn't already exist.
-
-Before you can run the command below, you need to create a file called `values.yaml` with the following content:
-
-.values.yaml
-```yaml
-image: quay.io/kubernetes-service-catalog/service-catalog:v0.3.1 <1>
-securityContext: { runAsUser: 1001 } <2>
-```
-<1> The specific Docker image of the service catalog that will be deployed.
-<2> Configuring the service catalog such that it doesn't run as root.
-    This may not be necessary in your cluster.
-
-Then you can run the following command to install the _service catalog_:
-
-```bash
-helm install \
-  catalog \ <1>
-  --values values.yaml \ <2>
-  --namespace catalog \ <3>
-  --create-namespace \ <4>
-  --repo https://kubernetes-sigs.github.io/service-catalog \ <5>
-  catalog <6>
-```
-<1> The name of the service in your Kubernetes cluster.
-<2> Read configuration options from `values.yaml` file.
-<3> The namespace in which the _service catalog_ will be installed into.
-<4> The previously defined namespace will be created if it doesn't yet exist.
-<5> The Helm repository that contains the chart for the _service catalog_.
-<6> The name of the chart which Helm shall apply.
+include::{includedir}/setup_service_catalog.adoc[tag=main,leveloffset=+1]
 
 == Install the Crossplane Service Broker
 
-The _Crossplane Service Broker_ will manage _Crossplane custom resources_ in the same cluster as it runs itself.
-It must be provided with a least one _service id_ to handle.
+include::{includedir}/setup_crossplane_service_broker.adoc[tag=main,leveloffset=+1]
 
-The _Crossplane Service Broker_ is configured through environment variables.
-A typical deployment may look like this the following yaml.
+== Get a _Bearer Token_
 
-After you created the file `deployment.yaml` below, run this command:
-
-```bash
-kubectl apply -f deployment.yaml
-```
-
-.deployment.yaml
-```yaml
-kind: Namespace # <1>
-apiVersion: v1
-metadata:
-  labels:
-    name: service-broker
-  name: service-broker
----
-kind: Deployment # <2>
-apiVersion: apps/v1
-metadata:
-  name: service-broker-test # <3>
-  namespace: service-broker
-  labels:
-    name: service-broker-test
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app.kubernetes.io/instance: test
-      app.kubernetes.io/name: service-broker
-  template:
-    metadata:
-      labels:
-        app.kubernetes.io/instance: test
-        app.kubernetes.io/name: service-broker
-        name: service-broker-test
-    spec:
-      containers:
-        - name: service-broker
-          image: quay.io/vshn/crossplane-service-broker:v0.4.1
-          ports:
-            - name: http
-              containerPort: 8080
-              protocol: TCP
-          env: # <4>
-            - name: OSB_NAMESPACE
-              value: crossplane-services
-            - name: OSB_USERNAME
-              value: test
-            - name: OSB_PASSWORD
-              value: changeMeEventually
-            - name: OSB_SERVICE_IDS
-              value: redis-k8s,3a385e26-cdfc-46bc-961b-69892684af8b,16379f5f-0c5f-4c55-a119-fd063af62919
-            - # Used for Bearer Token Validation
-              name: OSB_JWT_KEYS_JWK_URL
-              value: https://auth.corp.internal/jwks
-          resources:
-            limits:
-              cpu: 500m
-              memory: 128Mi
-            requests:
-              cpu: 200m
-              memory: 64Mi
-          livenessProbe:
-            httpGet:
-              path: /healthz
-              port: http
-              scheme: HTTP
-          readinessProbe:
-            httpGet:
-              path: /healthz
-              port: http
-              scheme: HTTP
-          terminationMessagePath: /dev/termination-log
-          terminationMessagePolicy: File
-          imagePullPolicy: Always
-          securityContext:
-            runAsNonRoot: true
-            readOnlyRootFilesystem: true
-      restartPolicy: Always
-      terminationGracePeriodSeconds: 30
-      dnsPolicy: ClusterFirst
-      serviceAccountName: service-broker
-      serviceAccount: service-broker
-      schedulerName: default-scheduler
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxUnavailable: 25%
-      maxSurge: 25%
-  minReadySeconds: 30
-  revisionHistoryLimit: 10
-  progressDeadlineSeconds: 600
----
-kind: Service # <5>
-apiVersion: v1
-metadata:
-  name: service-broker-test
-  namespace: service-broker
-  labels:
-    app.kubernetes.io/instance: test
-    app.kubernetes.io/name: service-broker
-    name: service-broker-test
-spec:
-  ports:
-    - name: http
-      protocol: TCP
-      port: 80
-      targetPort: http
-  selector:
-    app.kubernetes.io/instance: test
-    app.kubernetes.io/name: service-broker
-  type: ClusterIP
-  sessionAffinity: None
-```
-<1> This part of the YAML ensures that a Kubernetes namespace called `service-broker` exists.
-<2> This part of the YAML initiates the actual Deployment of the service broker.
-<3> This line defines the name of your _Crossplane Service Broker_.
-    Don't change it for now, as this guide relies on it being called `service-broker-test`.
-<4> See below for an explanation of the environment variables that are defined here.
-<5> In order for the service catalog to discover and access the _Crossplane Service Broker_, a Kubernetes `Service` is created.
-    It conveniently also takes care of the load balancing between the two instances of the _Crossplane Service Broker_ that get deployed.
-
-Take note of the environment vars that are configured in the above `deployment.yaml`:
-
-[cols="3,5,4",options="header"]
-|===
-| Variable Name
-| Description
-| Example Value
-
-| `OSB_SERVICE_IDS`
-| The _Crossplane Service Broker_ must know which services it's responsible for.
-  The ID can be any arbitrary string, though often this is a UUID.
-| `redis-k8s,3a385e26-cdfc-46bc-961b-69892684af8b,16379f5f-0c5f-4c55-a119-fd063af62919`
-
-| `OSB_NAMESPACE`
-| This is the namespace in which the _Crossplane Service Broker_ will create it the relevant _Crossplane custom resources_.
-| `crossplane-services`
-
-| `OSB_USERNAME`
-| This is the username which is used when doing Basic auth between the _Service Catalog_ and the _Service Broker_.
-  If you don't use basic auth, choose a random string here.
-| `test`
-
-| `OSB_PASSWORD`
-| This is the password which is used when doing Basic auth between the _Service Catalog_ and the _Service Broker_.
-  If you don't use basic auth, choose a random string here.
-| `changeMeEventually`
-
-| `OSB_JWT_KEYS_JWK_URL`
-| This URL is queried _during the startup_ of the service broker.
-  It contains the public keys in https://tools.ietf.org/html/rfc7517[JWK-format] that should be used to verify the validity of the https://tools.ietf.org/html/rfc7519[JWT tokens].
-| `https://auth.corp.internal/jwks`
-|===
-
+include::{includedir}/bearer_token_authentication.adoc[tag=main,leveloffset=+1]
 
 == Connect the _Service Catalog_ to the _Crossplane Service Broker_
 
-For the following instructions, change to the `catalog` namespace of your cluster:
-
-```bash
-kubectl config set-context --current --namespace=catalog
-```
-
-In order to connect the _Service Catalog_ to the _Crossplane Service Broker_, we'll have to provide the _Service Catalog_ with some credentials.
-These credentials are used by the _Service Catalog_ to identify itself to the _Crossplane Service Broker_.
-In this guide, we focus on _Bearer Token_ authentication.
-
-The _Service Catalog_ will read the _Bearer Token_ from a Kubernetes secret resource.
-Therefore we need to get the _Bearer Token_ from the authentication server and create a Kubernetes secret with it:
-
-```bash
-TOKEN=$(kubectl run \
-  --namespace default \
-  --attach --rm --quiet \
-  "curl-$(date +%s)" \
-  --image=docker.io/curlimages/curl -- \
-  --silent --request POST \
-  --data "grant_type=client_credentials" \
-  --data "client_id=950aaaa5-a656-4a8c-8515-aa505a550a52" \
-  --data "client_secret=5a2924a5-050a-445a-aa5a-0a50a445a845" \
-  "https://auth.corp.internal/token" | jq -r .access_token)
-printf "----BEGIN TOKEN----\n${TOKEN}\n----END TOKEN----\n\n"
-kubectl create secret generic bearer-creds "--from-literal=token=${TOKEN}" --dry-run=client -o yaml | kubectl apply -f -
-```
-
-NOTE: Don't forget to change the values `client_id`, `client_secret` and the URL in the command above.
-
-[IMPORTANT]
-====
-The token that's issued by the authentication server may only be valid for a short time.
-(The token which was shown further above in the <<_get_a_bearer_token>> section was only valid for 600 seconds, that's just 10 minutes.)
-
-We're currently working on a way to automatically refresh the token before it expires.
-If you don't strictly need _Bearer Token_ authentication (which is when you don't have multiple clients, such as multiple teams), then you can also fall back to _Basic_ authentication, which is explained at the bottom.
-
-But until then:
-Once the token expires, you need to deregister the broker, update the token (see above), and then re-register it (see further below on how to do that).
-
-The command to deregister the _Crossplane Service Broker_ is as follows:
-
-```bash
-svcat deregister servicebroker-test
-```
-====
-
-Now, finally, we must register the _Crossplane Service Broker_ on the  _Service Catalog_.
-The _Service Catalog_ will then subsequently query the _Crossplane Service Broker_ about the services it offers.
-It then updates its catalog of all the services that can be provided by our (and all other) registered service brokers.
-
-To register the _Crossplane Service Broker_ run the following command.
-
-```bash
-svcat register servicebroker-test --bearer-secret bearer-creds --url "http://service-broker-test.service-broker"
-```
-
-It should then be possible to interact with this instance of the _Crossplane Service Broker_ through the _Service Catalog_:
-
-```bash
-# List all registered service brokers and their status
-svcat get brokers
-
-# Show the services that are available to order.
-svcat marketplace
-```
+include::{includedir}/connect_service_catalog_to_service_broker.adoc[tag=main,leveloffset=+1]
 
 [TIP]
 =====
@@ -333,5 +58,5 @@ This would typically be the case when your _Crossplane Service Broker_ is only s
 It's a single tenant system instance.
 (The advantage of the _Bearer Token_ authentication is that the _Crossplane Service Broker_ can restrict the offered services based on information provided in the _Bearer Token_.)
 
-See xref:app-catalog:ROOT:how-tos/crossplane/basic_authentication.adoc[Setup HTTP _Basic_ authentication] on how to achieve that.
+See xref:app-catalog:ROOT:how-tos/crossplane_service_broker/basic_authentication.adoc[Setup HTTP _Basic_ authentication] on how to achieve that.
 =====

@@ -14,6 +14,7 @@ If you are planing on using the _Crossplane Service Broker_ in a multi-tenant en
 =====
 
 == Configuring HTTP _Basic_ authentication
+// tag::main[]
 
 To configure _Basic_ authentication, first create a secret that contains the username and the password.
 Then register the _Crossplane Service Broker_ through the basic authentication mechanism:
@@ -31,3 +32,4 @@ svcat register servicebroker-test --basic-secret basic-creds --url "http://servi
 # Check the Crossplane Service Broker's status
 svcat get brokers
 ```
+// end::main[]

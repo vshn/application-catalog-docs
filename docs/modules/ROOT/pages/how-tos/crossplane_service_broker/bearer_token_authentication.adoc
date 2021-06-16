@@ -7,6 +7,9 @@ This will be required xref:app-catalog:ROOT:how-tos/crossplane_service_broker/co
 
 - Have access to an authentication server that has a JWKS endpoint.
 
+== Inspect the OpenID configuration
+// tag::main[]
+
 [TIP]
 =====
 Below are `curl` commands shown.
@@ -40,8 +43,6 @@ kubectl run \
 
 Now you get a terminal in which you can then run `wget` commands, for example `wget --version`.
 =====
-
-== Inspect the OpenID configuration
 
 If you (or your company) use an OpenID compliant authentication server, you should be able to learn about the JWKS URL from the `.well-known/openid-configuration` JSON:
 
@@ -179,3 +180,4 @@ kubectl run \
 | pbcopy
 ```
 =====
+// end::main[]

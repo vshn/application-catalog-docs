@@ -13,6 +13,7 @@ They usually mean the same thing.
 - Have access to a Kubernetes cluster installed.
 
 == Configuration
+// tag::main[]
 
 The command below will install the _service catalog_ service in your current Kubernetes cluster using Helm in the `catalog` namespace.
 The namespace will be created if it doesn't already exist.
@@ -47,3 +48,4 @@ helm install \
 <4> The previously defined namespace will be created if it doesn't yet exist.
 <5> The Helm repository that contains the chart for the _service catalog_.
 <6> The name of the chart which Helm shall apply.
+// end::main[]
