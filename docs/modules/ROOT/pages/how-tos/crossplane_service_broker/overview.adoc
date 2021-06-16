@@ -1,4 +1,4 @@
-== Overview
+= Overview
 
 The setup around a _Crossplane Service Broker_ consists of three main components:
 

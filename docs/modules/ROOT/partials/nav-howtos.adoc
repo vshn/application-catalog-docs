@@ -1,6 +1,5 @@
 * Crossplane
 ** xref:app-catalog:ROOT:how-tos/crossplane/investigate_service_instances.adoc[Investigate a Service]
-** xref:app-catalog:ROOT:how-tos/crossplane/implement_new_service_offering.adoc[Implement a New Service]
 
 * Crossplane Service Broker
 ** xref:app-catalog:ROOT:how-tos/crossplane_service_broker/overview.adoc[Overview]

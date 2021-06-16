@@ -1,13 +1,13 @@
-== Install the Crossplane Service Broker
+= Install the Crossplane Service Broker
 
 The https://github.com/vshn/crossplane-service-broker[_Crossplane Service Broker_] will manage _Crossplane custom resources_ in the same cluster as it runs itself.
 It must be provided with a least one _service id_ to handle.
 
-=== Preparations
+== Preparations
 
 - Have access to a Kubernetes cluster with Crossplane installed.
 
-=== Configuration
+== Configuration
 
 The _Crossplane Service Broker_ is configured through environment variables.
 A typical deployment may look like the following YAML.

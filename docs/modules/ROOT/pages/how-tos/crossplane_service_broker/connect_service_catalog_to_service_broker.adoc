@@ -1,15 +1,15 @@
-== Connect the _Service Catalog_ to a _Service Broker_
+= Connect the _Service Catalog_ to a _Service Broker_
 
 This how-to will explain how a _Service Catalog_ is connected to the _Crossplane Service Broker_.
 
-=== Preparations
+== Preparations
 
 - Have access to an authentication server from which you can request _Bearer Tokens_.
 - xref:app-catalog:ROOT:how-tos/crossplane_service_broker/setup_crossplane_service_broker.adoc[Have a _Crossplane Service Broker_ in your cluster that's configured for HTTP _Bearer Token_ authentication.]
 - xref:app-catalog:ROOT:how-tos/crossplane_service_broker/setup_service_catalog.adoc[Have a _Service Catalog_ running on your cluster.]
 - https://svc-cat.io/docs/install/#installing-the-service-catalog-cli[Have `svcat` installed on your computer.]
 
-=== Configuring HTTP _Bearer Token_ Authentication
+== Configuring HTTP _Bearer Token_ Authentication
 
 For the following instructions, change to the `catalog` namespace of your cluster:
 
@@ -69,7 +69,7 @@ svcat deregister servicebroker-test
 ```
 ====
 
-=== Register the _Crossplane Service Broker_ at the _Service Catalog_
+== Register the _Crossplane Service Broker_ at the _Service Catalog_
 
 Now, finally, we must register the _Crossplane Service Broker_ at the  _Service Catalog_.
 The _Service Catalog_ will immediately query the _Crossplane Service Broker_ about the services it offers.

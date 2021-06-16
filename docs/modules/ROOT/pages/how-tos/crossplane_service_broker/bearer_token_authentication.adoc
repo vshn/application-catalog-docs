@@ -1,10 +1,10 @@
-== Prepare HTTP _Bearer Token_ Authentication
+= Prepare HTTP _Bearer Token_ Authentication
 
 This how-to will prepare you for the final step, which will be xref:app-catalog:ROOT:how-tos/crossplane_service_broker/connect_service_catalog_to_service_broker.adoc[to connect the _Service Catalog_ to the _Service Broker_].
 In order to do that, you'll need the credentials that the _Service Catalog_ will need to present to the _Crossplane Service Broker_.
 Getting these credentials is what this how-to is about.
 
-=== Preparations
+== Preparations
 
 - Have access to an authentication server which has a JWKS endpoint.
 
@@ -42,7 +42,7 @@ kubectl run \
 Now you get a terminal in which you can then run `wget` commands, for example `wget --version`.
 =====
 
-=== Inspect the OpenID configuration
+== Inspect the OpenID configuration
 
 If you (or your company) use an OpenID compliant authentication server, you should be able to learn about the JWKS URL from the `.well-known/openid-configuration` JSON:
 
@@ -85,7 +85,7 @@ The JSON will look like this:
 <2> Also note down the `token_endpoint`.
     We'll need it later.
 
-=== JWK Store
+== JWK Store
 
 To verify that the _Crossplane Service Broker_ will be able to access this URL, check the response now:
 
@@ -110,7 +110,7 @@ NOTE: The values for `x` and `y` have been shortened in the example below.
 }
 ```
 
-=== Get a _Bearer Token_
+== Get a _Bearer Token_
 
 In order to get a _Bearer Token_, you need to be in the possession of a `client_id` and a `client_secret`.
 Create these on your authentication server or request them from authorized personnel.

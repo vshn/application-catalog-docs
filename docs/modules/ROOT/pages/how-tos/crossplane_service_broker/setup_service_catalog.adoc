@@ -1,4 +1,4 @@
-== Install a Service Catalog
+= Install a Service Catalog
 
 The https://svc-cat.io[_service catalog_] provides a single, well-defined API to manage services provided by one or many service brokers, such as the _Crossplane Service Broker_.
 
@@ -8,11 +8,11 @@ Sometimes the term _application catalog_ is used instead of _service catalog_.
 They usually mean the same thing.
 =====
 
-=== Preparations
+== Preparations
 
 - Have access to a Kubernetes cluster installed.
 
-=== Configuration
+== Configuration
 
 The command below will install the _service catalog_ service in your current Kubernetes cluster using Helm in the `catalog` namespace.
 The namespace will be created if it doesn't already exist.
@@ -28,7 +28,7 @@ securityContext: { runAsUser: 1001 } <2>
 <2> Configuring the service catalog such that it doesn't run as root.
     This may not be necessary in your cluster.
 
-=== Installation
+== Installation
 
 Run the following command to install the _service catalog_:
 
