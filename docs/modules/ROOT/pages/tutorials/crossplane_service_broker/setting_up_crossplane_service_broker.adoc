@@ -1,0 +1,62 @@
+:includedir: ../../how-tos/crossplane_service_broker
+
+= Setting up the Crossplane Service Broker
+
+This is a tutorial on how to install the https://github.com/vshn/crossplane-service-broker/[_Crossplane Service Broker_] as a service in your cluster and how to use _Bearer Tokens_ to authenticate the https://svc-cat.io/[_Service Catalog_] against that _Crossplane Service Broker_ service.
+
+[TIP]
+=====
+This tutorial assumes some basic knowledge about how a _Service Catalog_ and a (generic) _Service Broker_ work together.
+To learn more about the whole _Service Catalog / Service Broker_ concept, https://kubernetes.io/docs/concepts/extend-kubernetes/service-catalog/[read the relevant Kubernetes documentation], which is excellent.
+=====
+
+== Overview
+
+include::{includedir}/overview.adoc[tag=main,leveloffset=+1]
+
+== Preparations
+
+This tutorial assumes that you have some resources and services already at your disposal and already configured:
+
+- Have at least one Kubernetes cluster https://crossplane.io/docs/[with Crossplane installed].
+- Know xref:app-catalog:ROOT:how-tos/crossplane/implement_new_service_offering.adoc[the _service id_] of at least one service which Crossplane manages.
+- Have access to an authentication server which issues xref:app-catalog:ROOT:how-tos/crossplane/implement_new_service_offering.adoc[_Bearer Tokens_] and which has a https://datatracker.ietf.org/doc/html/rfc7517#section-5[JWKS endpoint], like https://www.keycloak.org/[Keycloak] for example.
+- https://svc-cat.io/docs/install/#installing-the-service-catalog-cli[Have `svcat` installed on your computer.]
+
+[TIP]
+=====
+If you don't have a _Crossplane_ setup with services configured, then, in order to follow along this guide, have a look at https://github.com/vshn/application-catalog-demo[vshn/application-catalog-demo]:
+It explains how to setup _Crossplane_ and how to prepare services that are later recognized by the _Crossplane Service Broker_.
+
+Note that the _service id_ used in that demo is `redis-k8s`.
+Use it instead of the UUIDs when defining `OSB_SERVICE_IDS` in the `deployment.yaml`.
+
+Furthermore, you may also want to have a look at the  xref:app-catalog:ROOT:how-tos/crossplane/implement_new_service_offering.adoc[Implement a New Service] how-to.
+It explains the intricate details of how a service must be defined such that the _Crossplane Service Broker_ can make use of it.
+=====
+
+== Install the Service Catalog
+
+include::{includedir}/setup_service_catalog.adoc[tag=main,leveloffset=+1]
+
+== Install the Crossplane Service Broker
+
+include::{includedir}/setup_crossplane_service_broker.adoc[tag=main,leveloffset=+1]
+
+== Get a _Bearer Token_
+
+include::{includedir}/bearer_token_authentication.adoc[tag=main,leveloffset=+1]
+
+== Connect the _Service Catalog_ to the _Crossplane Service Broker_
+
+include::{includedir}/connect_service_catalog_to_service_broker.adoc[tag=main,leveloffset=+1]
+
+[TIP]
+=====
+If you don't need to use _Bearer Token_ authentication, you may want to fall back to _Basic_ authentication.
+This would typically be the case when your _Crossplane Service Broker_ is only serving one team, group or customer anyways, or in other words:
+It's a single tenant system instance.
+(The advantage of the _Bearer Token_ authentication is that the _Crossplane Service Broker_ can restrict the offered services based on information provided in the _Bearer Token_.)
+
+See xref:app-catalog:ROOT:how-tos/crossplane_service_broker/basic_authentication.adoc[Setup HTTP _Basic_ authentication] on how to achieve that.
+=====

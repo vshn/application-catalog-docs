@@ -1,7 +1,14 @@
-* xref:app-catalog:ROOT:how-tos/implement_new_service_offering.adoc[Implement New Service Offering]
-
 * Crossplane
-** xref:app-catalog:ROOT:how-tos/crossplane/investigate_service_instances.adoc[Investigate Service]
+** xref:app-catalog:ROOT:how-tos/crossplane/investigate_service_instances.adoc[Investigate a Service]
+
+* Crossplane Service Broker
+** xref:app-catalog:ROOT:how-tos/crossplane_service_broker/overview.adoc[Overview]
+** xref:app-catalog:ROOT:how-tos/crossplane_service_broker/setup_crossplane_service_broker.adoc[Setup a _Crossplane Service Broker_]
+** xref:app-catalog:ROOT:how-tos/crossplane_service_broker/setup_service_catalog.adoc[Setup a _Service Catalog_]
+** xref:app-catalog:ROOT:how-tos/crossplane_service_broker/bearer_token_authentication.adoc[HTTP _Bearer Token_ authentication]
+** xref:app-catalog:ROOT:how-tos/crossplane_service_broker/connect_service_catalog_to_service_broker.adoc[Connect the _Service Catalog_ to the _Service Broker_]
+** xref:app-catalog:ROOT:how-tos/crossplane_service_broker/basic_authentication.adoc[HTTP _Basic_ authentication]
+** xref:app-catalog:ROOT:how-tos/crossplane/implement_new_service_offering.adoc[Implement a New Service]
 
 * Redis
 ** xref:app-catalog:ROOT:how-tos/redis/debug_sentinel.adoc[Debug Redis Sentinel]
