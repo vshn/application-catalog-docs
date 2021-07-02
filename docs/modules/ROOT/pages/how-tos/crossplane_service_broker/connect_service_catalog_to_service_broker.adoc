@@ -57,17 +57,9 @@ NOTE: Don't forget to change the values `client_id`, `client_secret` and the URL
 The token that's issued by the authentication server may only be valid for a short time.
 (The token which was shown before in the xref:app-catalog:ROOT:how-tos/crossplane_service_broker/bearer_token_authentication.adoc#get_a_bearer_token[HTTP _Bearer Token_ authentication] section was only valid for 600 seconds, that's just 10 minutes.)
 
-We're currently working on a way to automatically refresh the token before it expires.
-If you don't strictly need _Bearer Token_ authentication (which is when you don't have multiple clients, such as multiple teams), then you can also fall back to _Basic_ authentication, which is explained at the bottom.
-
-But until then:
-Once the token expires, you need to deregister the broker, update the token (see above), and then re-register it (see further below on how to do that).
-
-The command to deregister the _Crossplane Service Broker_ is as follows:
-
-```bash
-svcat deregister servicebroker-test
-```
+In that case you will need to deploy a https://github.com/vshn/kube-token-refresher[kube-token-refresher].
+The xref:app-catalog:ROOT:how-tos/crossplane_service_broker/kube_token_refresher.adoc[Setup Kube Token Refresher] how-to covers the setup.
+In this case you won't need to manually fetch a _Bearer Token_.
 ====
 
 == Register the _Crossplane Service Broker_ at the _Service Catalog_
