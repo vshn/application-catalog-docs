@@ -59,7 +59,7 @@ The token that's issued by the authentication server may only be valid for a sho
 
 In that case you will need to deploy a https://github.com/vshn/kube-token-refresher[kube-token-refresher].
 The xref:app-catalog:ROOT:how-tos/crossplane_service_broker/kube_token_refresher.adoc[Setup Kube Token Refresher] how-to covers the setup.
-In this case you won't need to manually fetch a _Bearer Token_.
+The token refresher will ensure that the service catalog always has a valid _Bearer Token_.
 ====
 
 == Register the _Crossplane Service Broker_ at the _Service Catalog_

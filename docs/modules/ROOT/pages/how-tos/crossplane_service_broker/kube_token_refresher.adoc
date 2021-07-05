@@ -8,13 +8,15 @@ You will need access to an OIDC provider, valid credentials to request a _Bearer
 [NOTE]
 ====
 The Kube Token Refresher only manages a single secret.
-If you need multiple brokers with different short lived bearer tokens, you will need to deploy it multiple times.
+If you need multiple brokers with different short lived bearer tokens, you will need to deploy the token refresher multiple times.
 ====
 
 == Kubernetes RBAC
 
 To allow the  Kube Token Refresher to manage the secret, we need to create a Service Account and a corresponding Role.
-Apply the following to the same namespace the Kube Token Refresher will be deployed to.
+Apply the following in the same namespace the Kube Token Refresher will be deployed to.
+
+NOTE: With this RBAC configuration the token refresher must run in the namespace of the secret which it refreshes.
 
 [source,yaml]
 ----
@@ -153,7 +155,6 @@ Expect some delays and request a new token early enough.
 * `KTR_OIDC_TOKENURL`: The URL to fetch the token from. 
 See xref:app-catalog:ROOT:how-tos/crossplane_service_broker/crossplane_service_broker/bearer_token_authentication.html[Bearer Token authentication] for more details on what this is.
 * `KTR_OIDC_CLIENTID` and `KTR_OIDC_CLIENTSECRET`: The credentials we created earlier.
-
 
 
 
