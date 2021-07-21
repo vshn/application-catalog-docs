@@ -1,0 +1,61 @@
+= Enable Plan Upgrades
+
+This page describes the steps which are necessary to enable plan upgrades for both MariaDB and Redis.
+
+== Concepts
+
+Service plans consist of two different parts.
+The plan size and its SLA.
+
+We currently have two SLA levels: `standard` and `premium`. 
+Regardless of the following setup, SLA changes can always be done. 
+
+There are currently providing five different plan sizes:
+
+* `xsmall`
+* `small`
+* `medium`
+* `large`
+* `xlarge`
+
+You can look at the corresponding xref:app-catalog:ROOT:redis.adoc[Redis] or xref:app-catalog:ROOT:mariadb_galera.adoc[MariaDB] pages to see what these translate to.
+Plan size changes are only supported if the following setup has been done.
+Updates are only valid from smaller to bigger plan sizes.
+Shrinking a service instance isn't supported.
+
+This ultimately means a plan change from `xsmall-standard` to `large-premium` or from `small-premium` to  `medium-standard` is valid.
+A plan change from `xlarge-premium` to `small-standard` however isn't.
+
+[NOTE]
+====
+While the Service Broker will check that the plan change is valid before applying it, Crossplane has no such guardrails.
+If you change the composition of a Composite Resource it will happily try to change the plan, but will fail.
+====
+
+== StatefulSet Resize Controller
+
+As the name should tell you the https://github.com/vshn/statefulset-resize-controller[StatefulSet Resize Controller] manages the resizing of StatefulSets.
+It needs to be deployed on every cluster running the actual service workload.
+
+Whenever a StatefulSet is updated to request a larger persistent volume, the controller will scale down the StatfulSet, resize its volumes, move the existing data, and scale it back up.
+
+=== Deployment
+
+== Composition
+
+The Crossplane composition need to support changing resource requirements of StatefulSets.
+This is only supported with version ??
+
+== Service Broker
+
+To expose the plan upgrade capabilities as part of the Open Service Broker API, the feature needs to be explicitly enabled.
+This is done by setting `OSB_ALLOW_PLAN_UPGRADES` to `true`.
+
+
+[NOTE]
+====
+This should only ever be enabled if both the StatefulSets Resize Controller deployment and the Composition update have been successful.
+Enabling plan upgrades at the broker, without these updates can lead to unexpected issues when trying to upgrade plan.
+====
+
+

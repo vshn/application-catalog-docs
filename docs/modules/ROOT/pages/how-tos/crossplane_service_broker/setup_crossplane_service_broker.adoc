@@ -67,6 +67,9 @@ spec:
             - # Used for Bearer Token Validation
               name: OSB_JWT_KEYS_JWK_URL
               value: https://auth.corp.internal/jwks
+            - # Only enable this if plan upgrades are spcifically supported
+              name: OSB_ALLOW_PLAN_UPGRADES
+              value: "true"
           resources:
             limits:
               cpu: 500m
@@ -167,5 +170,16 @@ Take note of the environment variables that are configured in the above `deploym
 
   Learn more about this in the xref:app-catalog:ROOT:how-tos/crossplane_service_broker/bearer_token_authentication.adoc[HTTP _Bearer Token_ authentication] how-to.
 | `\https://auth.corp.internal/jwks`
+
+| `OSB_ALLOW_PLAN_UPGRADES`
+| Whether to allow the Crossplane Service Broker to upgrade plans of service instances.
+  The service broker will only allow increasing plan sizes or switching between SLAs.
+
+  +
+  This requires explicit plan upgrade support from the Crossplane setup. 
+  xref:app-catalog:ROOT:how-tos/crossplane/enable_plan_upgrade.adoc[Enabeling Plan Upgrades] explains this setup in more detail.
+  Don't set this environment variable if this setup hasn't been done for all services.
+| `true`
+
 |===
 // end::main[]
