@@ -29,7 +29,7 @@ Shrinking a service instance isn't supported.
 The set of plan changes which are allowed can be configured on the Service Broker.
 For example, if the Service Broker is configured to for example allow a plan change from `large` to `small`, it will update the service to execute this plan change.
 The backing Crossplane Composition will propagate the plan change by adjusting the Helm values accordingly.
-However, the StatefulSet Resize Controller does not process StatefulSet changes which shrink the PVCs for the replicas.
+However, the StatefulSet Resize Controller doesn't process StatefulSet changes which shrink the PVCs for the replicas.
 
 Since there's no programmatic guards against invalid plan changes in place, users have to ensure they don't allow invalid plan changes when configuring the Service Broker.
 ====
