@@ -67,9 +67,9 @@ spec:
             - # Used for Bearer Token Validation
               name: OSB_JWT_KEYS_JWK_URL
               value: https://auth.corp.internal/jwks
-            - # Only enable this if plan upgrades are spcifically supported
-              name: OSB_ALLOW_PLAN_UPGRADES
-              value: "true"
+            - # Only configure this if plan upgrades are spcifically supported
+              name: OSB_PLAN_UPDATE_SIZE_RULES 
+              value: "xsmall>small|xsmall>medium|small>medium"
           resources:
             limits:
               cpu: 500m
@@ -139,7 +139,7 @@ spec:
 
 Take note of the environment variables that are configured in the above `deployment.yaml`:
 
-[cols="3,5,4",options="header"]
+[cols="7,9,8",options="header"]
 |===
 | Variable Name
 | Description
@@ -171,15 +171,51 @@ Take note of the environment variables that are configured in the above `deploym
   Learn more about this in the xref:app-catalog:ROOT:how-tos/crossplane_service_broker/bearer_token_authentication.adoc[HTTP _Bearer Token_ authentication] how-to.
 | `\https://auth.corp.internal/jwks`
 
-| `OSB_ALLOW_PLAN_UPGRADES`
-| Whether to allow the Crossplane Service Broker to upgrade plans of service instances.
-  The service broker will only allow increasing plan sizes or switching between SLAs.
+| `OSB_PLAN_UPDATE_SIZE_RULES`
+| Configures which plan size changes are valid.
+  Takes a white-list in the form of `xsmall>small\|xsmall>medium`, which would allow upgrades from `xsmall` to `small` or `medium` and deny all other plan size changes.
 
   +
   This requires explicit plan upgrade support from the Crossplane setup. 
   xref:app-catalog:ROOT:how-tos/crossplane/enable_plan_upgrade.adoc[Enabeling Plan Upgrades] explains this setup in more detail.
   Don't set this environment variable if this setup hasn't been done for all services.
-| `true`
+| `xsmall>small\|xsmall>medium`
+
+| `OSB_PLAN_UPDATE_SLA_RULES`
+| Configures which SLA changes are valid.
+  Takes a white-list in the form of `standard>premium\|premium>premium`, which would allow upgrades from `standard` to `premium` and back.
+  This is the default configuration if this environment variable isn't set.
+| `premium>standard\|standard>premium`
 
 |===
+
+[NOTE]
+=====
+The Crossplane Service Broker only allows changes to a plans SLA or its size.
+Changing both the SLA and plan size at the same time isn't allowed.
+=====
+
+
+// tag::note_update_rule[]
+[NOTE]
+=====
+Both the SLA and plan size change rules are specified in a custom white-list format.
+
+....
+
+rule = rule|rule
+rule = plan>plan
+
+examples:
+  planA>planB|planB>planC
+  foo>bar
+  planA>planB|plabB>planA|planC>planA
+....
+
+The list isn't transitive.
+That means the rule `A>B|B>C` won't allow the update from `A` to `C` in one step.
+
+=====
+// end::note_update_rule[]
+
 // end::main[]
