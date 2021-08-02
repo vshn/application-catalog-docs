@@ -8,9 +8,9 @@ Service plans consist of two different parts.
 The plan size and its SLA.
 
 We currently have two SLA levels: `standard` and `premium`. 
-SLA changes can be configured separately and doesn't need any of the setup described below.
+SLA changes can be configured separately and don't need any of the setup described below.
 
-We're currently supporting five different plan sizes:
+We currently support five different plan sizes:
 
 * `xsmall`
 * `small`
@@ -26,11 +26,12 @@ Shrinking a service instance isn't supported.
 
 [NOTE]
 ====
-It's configurable which plan changes the Service Broker will allow. 
+The set of plan changes which are allowed can be configured on the Service Broker.
 If the Service Broker is configured to for example allow a plan change from `large` to `small`, it will happily try to change the plan.
-So will the Crossplane Composition, but it will fail.
+The backing Crossplane Composition will propagate the plan change by adjusting the Helm values accordingly.
+However, the StatefulSet Resize Controller does not process StatefulSet changes which shrink the PVCs for the replicas.
 
-Please make sure to now allow invalid plan changes when configuring the Service Broker.
+Since there's no programmatic guards against invalid plan changes in place, users have to ensure they don't allow invalid plan changes when configuring the Service Broker.
 ====
 
 == StatefulSet Resize Controller
@@ -53,7 +54,8 @@ The feature can be enabled by configuring the allowed plan size changes by setti
 
 The environment variable takes a white-list of allowed plan size changes in the form of `xsmall>small|xsmall>medium`, which would allow upgrades from `xsmall` to `small` or `medium` and deny all other plan size changes.
 The list isn't transitive, so it will deny changes from `xsmall` to `medium`.
-It's possible to allow changes to smaller plan sizes, for example `medium>small`, these changes however aren't valid and will fail.
+It's possible to allow changes to smaller plan sizes, for example `medium>small`.
+However, such changes aren't valid and will fail to apply correctly.
 
 
 [NOTE]
@@ -63,5 +65,4 @@ Enabling plan upgrades at the broker, without these updates can lead to unexpect
 ====
 
 include::../crossplane_service_broker/setup_crossplane_service_broker.adoc[tag=note_update_rule,leveloffset=+1]
-
 
