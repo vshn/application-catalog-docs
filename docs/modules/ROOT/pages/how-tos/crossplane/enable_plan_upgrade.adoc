@@ -27,7 +27,7 @@ Shrinking a service instance isn't supported.
 [NOTE]
 ====
 The set of plan changes which are allowed can be configured on the Service Broker.
-If the Service Broker is configured to for example allow a plan change from `large` to `small`, it will happily try to change the plan.
+For example, if the Service Broker is configured to for example allow a plan change from `large` to `small`, it will update the service to execute this plan change.
 The backing Crossplane Composition will propagate the plan change by adjusting the Helm values accordingly.
 However, the StatefulSet Resize Controller does not process StatefulSet changes which shrink the PVCs for the replicas.
 
@@ -65,4 +65,3 @@ Enabling plan upgrades at the broker, without these updates can lead to unexpect
 ====
 
 include::../crossplane_service_broker/setup_crossplane_service_broker.adoc[tag=note_update_rule,leveloffset=+1]
-
