@@ -1,0 +1,24 @@
+= Crossplane as Control Plane
+
+== Problem
+
+We need a way to deploy services the Kubernetes way, fully automated and reconciled.
+
+== Proposals
+
+Crossplane::
+https://crossplane.io/[Crossplane] describes itself:
++
+> Compose cloud infrastructure and services into custom platform APIs. +
+> Crossplane is an open source Kubernetes add-on that enables platform teams to assemble infrastructure from multiple vendors, and expose higher level self-service APIs for application teams to consume, without having to write any code.
+
+Helm Charts::
+Plain Helm Charts, applied with a Helm controller.
+
+== Decision
+
+Crossplane
+
+== Rationale
+
+We're already using Crossplane and it proves to be working.
