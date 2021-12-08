@@ -1,0 +1,94 @@
+= Application Catalog Concept
+
+TIP: For an introduction what the application catalog is, please see https://products.docs.vshn.ch/products/appcat/index.html[our product documentation].
+
+The application catalog consists of:
+
+* *Control-Plane* to deploy, configure, update and maintain services
+* *Service Catalog* which contains a list of well-defined services
+* *Framework* to build services upon
+
+It is our framework to fully automate service provisioning and all tasks for day-2 operations.
+
+image::appcat_concept.drawio.svg[]
+
+== Terminology
+
+Control-Plane::
+The application catalog control-plane, running Crossplane.
+
+Service Catalog::
+A catalog of well-defined services, operated by the control-plane.
+
+Control Cluster::
+A Kubernetes cluster on which the application catalog control-plane runs.
+
+Service Cluster::
+A Kubernetes cluster on which services managed by the control-plane are running.
+
+Converged Cluster::
+A Kubernetes cluster which hosts both, the control-plane and services.
+
+== Service Location
+
+Services can be provisioned on various places:
+
+Converged Cluster::
+Service runs on the same cluster as the control-plane.
+Either in the same namespace as the service request was made or in another namespace.
+Usually deployed via a Helm Chart.
+
+Service Cluster::
+Service runs on one or more dedicated clusters, reserved for services.
+Usually deployed via a Helm Chart.
+
+Cloud Service::
+Service is provided by the cloud.
+
+== Service Definition
+
+A service is defined by a *Composite Resource Definition (XRD)* which exposes our API to provision and configure a service.
+It's the interface to define a service instance.
+One or more *Compositions* then implement the actual service.
+
+image::appcat_xrd_composition.drawio.svg[]
+
+The https://crossplane.io/docs/master/concepts/composition.html[Crossplane documentation on Composite Resources] explains it in more detail.
+
+With this concept it's even possible to define new services by combining several other services into a new one.
+Imagine a service called "Python Django Hosting" which would combine a Database, a Cache and a Queue into a perfectly configured service for this use-case.
+
+== Service Provisioning
+
+Kubernetes resources::
+The control-plane runs on the local cluster, service definitions are available locally and service ordering happens by creating a composite resource.
+Creation of a composite resource can happen via a CI/CD Pipeline, GitOps, manually creating and applying it or even via a graphical user interface.
+The Kubernetes API is used.
+
+Open Service Broker::
+The service offering is exposed via the xref:explanations/crossplane_service_broker.adoc[Crossplane Service Broker], an https://github.com/openservicebrokerapi/servicebroker[Open Service Broker API (OSB)] compatible API.
+Service provisioning is done via the OSB API, which behind the scenes operates on Kubernetes resources (same concept as above).
+This allows to integrate the service offering in Cloudfoundry, on external Kubernetes Cluster via the https://svc-cat.io/[Kubernetes Service Catalog] or on cloud providers which provide integration into their marketplace (for example https://community.exoscale.com/documentation/vendor/[Exoscale Marketplace]).
+
+== Providers
+
+https://crossplane.io/docs/master/concepts/providers.html[Crossplane Providers] implement the https://crossplane.io/docs/master/concepts/managed-resources.html[Managed Resources].
+Allthough they are all the same, we differentiate them:
+
+Cloud Services Provider::
+These providers do work with already existing service offerings from cloud providers like AWS or Google.
+The services are running in the cloud and are configured to our liking.
+
+Kubernetes-native Provider::
+The https://github.com/crossplane-contrib/provider-helm[Helm provider] installs and configures Helm Charts, either on the local Kubernetes Cluster or on remote Clusters.
+This also applies to the https://github.com/crossplane-contrib/provider-kubernetes[Kubernetes provider].
+These are our own custom services and are engineered and provided by VSHN.
+
+Configuration Provider::
+Some providers directly configure a service which was provisioned by another provider.
+For example https://github.com/crossplane-contrib/provider-sql[provider-sql] can configure users and permissions in an SQL database which was provisioned by the Helm Provider or by a Cloud Services Provider.
+
+== Configuration Management
+
+Crossplane itself is deployed and configured with the Project Syn https://github.com/projectsyn/component-crossplane[Commodore Component].
+Although there is the concept of https://crossplane.io/docs/master/concepts/packages.html[Crossplane packages], service definitions (XRDs and Compositions) and provider installation and configuration is delegated to Project Syn Commodore Components as well.

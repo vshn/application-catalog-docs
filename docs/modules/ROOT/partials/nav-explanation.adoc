@@ -1,3 +1,5 @@
+* xref:app-catalog:ROOT:explanations/app_catalog.adoc[Concept]
+
 * Crossplane
 ** xref:app-catalog:ROOT:explanations/crossplane_service_broker.adoc[Service Broker]
 
