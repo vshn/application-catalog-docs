@@ -108,7 +108,7 @@ As you can't change a `StatefulSet`, first delete the mariadb `StatefulSet` and 
 
 [source,shell]
 ----
-kubectl -n $INSTANCE_ID delete statefulset mariadb --cascade=false
+kubectl -n $INSTANCE_ID delete statefulset mariadb --cascade=orphan
 ----
 
 [source,shell]
