@@ -111,9 +111,22 @@ As you can't change a `StatefulSet`, first delete the mariadb `StatefulSet` and 
 kubectl -n $INSTANCE_ID delete statefulset mariadb --cascade=orphan
 ----
 
+Now edit the release:
+
 [source,shell]
 ----
 kubectl edit releases.helm.crossplane.io $release_name
+----
+
+Add the following elements to the helm release. Node 2 is used an example to bootstrap from:
+
+[source,yaml]
+----
+galera:
+  bootstrap:
+    bootstrapFromNode: 2
+    forceSafeToBootstrap: true
+podManagementPolicy: Parallel
 ----
 
 When your cluster is up and running again (all 3 pods ready), first scale down to 1 replica and wait until only one Pod remains and then scale down to 0 replicas.
