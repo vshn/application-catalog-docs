@@ -1,0 +1,67 @@
+= Enable Plan Upgrades
+
+This page describes the steps which are necessary to enable plan upgrades for both MariaDB and Redis.
+
+== Concepts
+
+Service plans consist of two different parts.
+The plan size and its SLA.
+
+We currently have two SLA levels: `standard` and `premium`. 
+SLA changes can be configured separately and don't need any of the setup described below.
+
+We currently support five different plan sizes:
+
+* `xsmall`
+* `small`
+* `medium`
+* `large`
+* `xlarge`
+
+You can look at the corresponding xref:app-catalog:ROOT:redis.adoc[Redis] or xref:app-catalog:ROOT:mariadb_galera.adoc[MariaDB] pages to see what these translate to.
+Plan size changes are only supported if the following setup has been done.
+Updates are only valid from smaller to bigger plan sizes.
+Shrinking a service instance isn't supported.
+
+
+[NOTE]
+====
+The set of plan changes which are allowed can be configured on the Service Broker.
+For example, if the Service Broker is configured to for example allow a plan change from `large` to `small`, it will update the service to execute this plan change.
+The backing Crossplane Composition will propagate the plan change by adjusting the Helm values accordingly.
+However, the StatefulSet Resize Controller doesn't process StatefulSet changes which shrink the PVCs for the replicas.
+
+Since there's no programmatic guards against invalid plan changes in place, users have to ensure they don't allow invalid plan changes when configuring the Service Broker.
+====
+
+== StatefulSet Resize Controller
+
+As the name should tell you the https://github.com/vshn/statefulset-resize-controller[StatefulSet Resize Controller] manages the resizing of StatefulSets.
+It needs to be deployed on every cluster running the actual service workload.
+
+Whenever a StatefulSet is updated to request a larger persistent volume, the controller will scale down the StatfulSet, resize its volumes, move the existing data, and scale it back up.
+
+
+== Composition
+
+The Crossplane composition need to support changing resource requirements of StatefulSets.
+
+== Service Broker
+
+To expose the plan size upgrade capabilities as part of the Open Service Broker API, the feature needs to be explicitly enabled.
+Plan size upgrades are only supported the  `crossplane-service-broker v0.6.0` or higher and the `swisscom-service-broker v0.5.0` or higher.
+The feature can be enabled by configuring the allowed plan size changes by setting the `OSB_PLAN_UPDATE_SIZE_RULES` environment variable.
+
+The environment variable takes a white-list of allowed plan size changes in the form of `xsmall>small|xsmall>medium`, which would allow upgrades from `xsmall` to `small` or `medium` and deny all other plan size changes.
+The list isn't transitive, so it will deny changes from `xsmall` to `medium`.
+It's possible to allow changes to smaller plan sizes, for example `medium>small`.
+However, such changes aren't valid and will fail to apply correctly.
+
+
+[NOTE]
+====
+This should only ever be enabled if both the StatefulSets Resize Controller deployment and the Composition update have been successful.
+Enabling plan upgrades at the broker, without these updates can lead to unexpected issues when trying to upgrade plan.
+====
+
+include::../crossplane_service_broker/setup_crossplane_service_broker.adoc[tag=note_update_rule,leveloffset=+1]

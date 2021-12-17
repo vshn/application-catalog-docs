@@ -1,0 +1,221 @@
+= Install the Crossplane Service Broker
+
+The https://github.com/vshn/crossplane-service-broker[_Crossplane Service Broker_] will manage _Crossplane custom resources_ in the same cluster as it runs itself.
+It must be provided with a least one _service id_ to handle.
+
+== Preparations
+
+- Have access to a Kubernetes cluster with Crossplane installed.
+
+== Configuration
+// tag::main[]
+
+The _Crossplane Service Broker_ is configured through environment variables.
+A typical deployment may look like the following YAML.
+
+After you created the file `deployment.yaml` below, run this command to install the _Crossplane Service Broker_ in your Kubernetes cluster:
+
+```bash
+kubectl apply -f deployment.yaml
+```
+
+.deployment.yaml
+```yaml
+kind: Namespace # <1>
+apiVersion: v1
+metadata:
+  labels:
+    name: service-broker
+  name: service-broker
+---
+kind: Deployment # <2>
+apiVersion: apps/v1
+metadata:
+  name: service-broker-test # <3>
+  namespace: service-broker
+  labels:
+    name: service-broker-test
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: test
+      app.kubernetes.io/name: service-broker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: test
+        app.kubernetes.io/name: service-broker
+        name: service-broker-test
+    spec:
+      containers:
+        - name: service-broker
+          image: quay.io/vshn/crossplane-service-broker:v0.4.1
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env: # <4>
+            - name: OSB_NAMESPACE
+              value: crossplane-services
+            - name: OSB_USERNAME
+              value: test
+            - name: OSB_PASSWORD
+              value: changeMeEventually
+            - name: OSB_SERVICE_IDS
+              value: redis-k8s,3a385e26-cdfc-46bc-961b-69892684af8b,16379f5f-0c5f-4c55-a119-fd063af62919
+            - # Used for Bearer Token Validation
+              name: OSB_JWT_KEYS_JWK_URL
+              value: https://auth.corp.internal/jwks
+            - # Only configure this if plan upgrades are spcifically supported
+              name: OSB_PLAN_UPDATE_SIZE_RULES 
+              value: "xsmall>small|xsmall>medium|small>medium"
+          resources:
+            limits:
+              cpu: 500m
+              memory: 128Mi
+            requests:
+              cpu: 200m
+              memory: 64Mi
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+              scheme: HTTP
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+              scheme: HTTP
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          imagePullPolicy: Always
+          securityContext:
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: ClusterFirst
+      serviceAccountName: service-broker
+      serviceAccount: service-broker
+      schedulerName: default-scheduler
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 25%
+  minReadySeconds: 30
+  revisionHistoryLimit: 10
+  progressDeadlineSeconds: 600
+---
+kind: Service # <5>
+apiVersion: v1
+metadata:
+  name: service-broker-test
+  namespace: service-broker
+  labels:
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/name: service-broker
+    name: service-broker-test
+spec:
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: http
+  selector:
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/name: service-broker
+  type: ClusterIP
+  sessionAffinity: None
+```
+<1> This part of the YAML ensures that a Kubernetes namespace called `service-broker` exists.
+<2> This part of the YAML initiates the actual Deployment of the service broker.
+<3> This line defines the name of your _Crossplane Service Broker_.
+    Don't change it for now, as this guide relies on it being called `service-broker-test`.
+<4> See below for an explanation of the environment variables that are defined here.
+<5> In order for the service catalog to discover and access the _Crossplane Service Broker_, a Kubernetes `Service` is created.
+    It conveniently also takes care of the load balancing between the two instances of the _Crossplane Service Broker_ that get deployed.
+
+Take note of the environment variables that are configured in the above `deployment.yaml`:
+
+[cols="7,9,8",options="header"]
+|===
+| Variable Name
+| Description
+| Example Value
+
+| `OSB_SERVICE_IDS`
+| The _Crossplane Service Broker_ must know which services it's responsible for.
+  The ID can be any arbitrary string, though often this is a UUID.
+| `redis-k8s,3a385e26-cdfc-46bc-961b-69892684af8b,16379f5f-0c5f-4c55-a119-fd063af62919`
+
+| `OSB_NAMESPACE`
+| This is the namespace in which the _Crossplane Service Broker_ will create it the relevant _Crossplane custom resources_.
+| `crossplane-services`
+
+| `OSB_USERNAME`
+| This is the username which is used when doing Basic auth between the _Service Catalog_ and the _Service Broker_.
+  If you don't use basic auth, choose a random string here.
+| `test`
+
+| `OSB_PASSWORD`
+| This is the password which is used when doing Basic auth between the _Service Catalog_ and the _Service Broker_.
+  If you don't use basic auth, choose a random string here.
+| `changeMeEventually`
+
+| `OSB_JWT_KEYS_JWK_URL`
+| This URL is queried _during the startup_ of the service broker.
+  It contains the public keys in https://tools.ietf.org/html/rfc7517[JWK-format] that should be used to verify the validity of the https://tools.ietf.org/html/rfc7519[JWT tokens].
+
+  Learn more about this in the xref:app-catalog:ROOT:how-tos/crossplane_service_broker/bearer_token_authentication.adoc[HTTP _Bearer Token_ authentication] how-to.
+| `\https://auth.corp.internal/jwks`
+
+| `OSB_PLAN_UPDATE_SIZE_RULES`
+| Configures which plan size changes are valid.
+  Takes a white-list in the form of `xsmall>small\|xsmall>medium`, which would allow upgrades from `xsmall` to `small` or `medium` and deny all other plan size changes.
+
+  +
+  This requires explicit plan upgrade support from the Crossplane setup. 
+  xref:app-catalog:ROOT:how-tos/crossplane/enable_plan_upgrade.adoc[Enabeling Plan Upgrades] explains this setup in more detail.
+  Don't set this environment variable if this setup hasn't been done for all services.
+| `xsmall>small\|xsmall>medium`
+
+| `OSB_PLAN_UPDATE_SLA_RULES`
+| Configures which SLA changes are valid.
+  Takes a white-list in the form of `standard>premium\|premium>premium`, which would allow upgrades from `standard` to `premium` and back.
+  This is the default configuration if this environment variable isn't set.
+| `premium>standard\|standard>premium`
+
+|===
+
+[NOTE]
+=====
+The Crossplane Service Broker only allows changes to a plans SLA or its size.
+Changing both the SLA and plan size at the same time isn't allowed.
+=====
+
+
+// tag::note_update_rule[]
+[NOTE]
+=====
+Both the SLA and plan size change rules are specified in a custom white-list format.
+
+....
+
+rule = rule|rule
+rule = plan>plan
+
+examples:
+  planA>planB|planB>planC
+  foo>bar
+  planA>planB|plabB>planA|planC>planA
+....
+
+The list isn't transitive.
+That means the rule `A>B|B>C` won't allow the update from `A` to `C` in one step.
+
+=====
+// end::note_update_rule[]
+
+// end::main[]
