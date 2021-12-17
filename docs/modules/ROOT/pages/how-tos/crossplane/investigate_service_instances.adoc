@@ -34,6 +34,7 @@ The following labels contain metadata about an instance:
 * `service.syn.tools/id` - UID of the service (Redis = 8d4b8039-6bcc-4f68-98f0-0e8efa5ab0e2)
 * `service.syn.tools/instance` - UID of this instance (same as `.metadata.name`)
 * `service.syn.tools/plan` - Name of the plan
+* `service.syn.tools/sla` - SLA (`standard` or `premium`)
 * `crossplane.io/composite` - UID of the plan (name of the composition)
 * `service.syn.tools/parent` - UID of the parent service, if applicable (only for MariaDB Database instances)
 

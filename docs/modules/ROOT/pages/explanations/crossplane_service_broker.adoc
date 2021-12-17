@@ -2,7 +2,12 @@
 
 The Crossplane Service Broker is an https://github.com/openservicebrokerapi/servicebroker/blob/master/spec.md[Open Service Broker API] implementation based on Crossplane.
 
-Most of the design decisions and approaches of this architecture are based on a proof of concept: https://github.com/vshn/crossplane-service-broker-poc
+Most of the design decisions and approaches of this architecture are based on the https://github.com/vshn/crossplane-service-broker-poc[crossplane-service-broker-poc]. 
+
+A new implementation has been created with the learnings of the PoC. This implementation is currently in the testing phase. The implementation has been split into two repositories:
+
+* https://github.com/vshn/crossplane-service-broker[crossplane-service-broker]
+* https://github.com/vshn/swisscom-service-broker[swisscom-service-broker]
 
 == Crossplane
 
@@ -39,11 +44,11 @@ Rel(service_plan, service_offering, "Implements")
 
 === Broker Instances
 
-Multiple instances of the service broker will exist and each instance will handle exactly one service offering. This makes the separation of multiple services easier as a single instance only ever has to be concerned about one type of service. While there are multiple instances, a lot of the logic and therefore code will be shared between the instances. Separate sub-commands will be used to start a specific instance. For example to start the redis instance of the service broker: `+./service-broker start redis+`
+Multiple instances of the service broker exist and each instance handles exactly one service offering. This makes the separation of multiple services easier as a single instance only ever has to be concerned about one type of service. While there are multiple instances, a lot of the logic and therefore code is shared between the instances. 
 
 === Service Offerings
 
-Service offerings are mapped to Crossplane _Composite Resource Definitions (XRD)._ The service broker basically converts XRDs to the OSB representation of a service offering. Each XRD in a cluster which contains the labels `+service.syn.tools/id+`  and `+service.syn.tools/name+` will be converted to a service offering using the specified id and name. An optional annotation `+service.syn.tools/description+` can contain the description for the service. The schema of the XRD can be used to define https://github.com/openservicebrokerapi/servicebroker/blob/master/spec.md#service-instance-schema-object[the schema of a service instance object].
+Service offerings are mapped to Crossplane _Composite Resource Definitions (XRD)._ The service broker basically converts XRDs to the OSB representation of a service offering. Each XRD in a cluster which contains the labels `+service.syn.tools/id+`  and `+service.syn.tools/name+` will be converted to a service offering using the specified id and name. Optional annotations like `+service.syn.tools/description+` and `+service.syn.tools/metadata+` can contain additional information about the service. The schema of the XRD can be used to define https://github.com/openservicebrokerapi/servicebroker/blob/master/spec.md#service-instance-schema-object[the schema of a service instance object].
 
 The following example shows how the `RedisInstance` XRD gets mapped to an OSB catalog:
 
@@ -157,7 +162,7 @@ OSB Plan::
 
 === Service Instances
 
-The instantiation of a service plan will be represented by a Crossplane _Composite Resource (XR)_. The XR is an instance of the custom resource defined by the respective XRD. The name of the resource is the UUID of the service instance and the labels `service.syn.tools/name`, `service.syn.tools/id` and `service.syn.tools/plan` reference the respective service offering and plan. The https://github.com/openservicebrokerapi/servicebroker/blob/master/spec.md#provisioning[parameters] of a provisioned instance are directly mapped to the `.spec.parameters` field of the XR.
+The instantiation of a service plan is represented by a Crossplane _Composite Resource (XR)_. The XR is an instance of the custom resource defined by the respective XRD. The name of the resource is the UUID of the service instance and the labels `service.syn.tools/name`, `service.syn.tools/id` and `service.syn.tools/plan` reference the respective service offering and plan. The https://github.com/openservicebrokerapi/servicebroker/blob/master/spec.md#provisioning[parameters] of a provisioned instance are directly mapped to the `.spec.parameters` field of the XR.
 
 The following example shows how a service instance for the `redis-small` plan gets mapped to a `CompositeRedisInstance`:
 
@@ -194,7 +199,7 @@ OSB Service Instance::
 
 === Service Bindings
 
-Service bindings are used to get information about provisioned service to be used by end user applications. This information usually consists of connection details (hostname/IP/port/TLS cert) and credentials (username/password). Depending on the actual service the binding might provide different information. For example Redis doesn't have a concept of users or permissions. There's just one global password per Redis instance which is required to connect. MariaDB on the other hand allows fine granular configuration of users and their permissions. This means that the service binding implementation is specific for each service. The following describes the implementation for the Redis and MariaDB services.
+Service bindings are used to get information about provisioned services to be used by end user applications. This information usually consists of connection details (hostname/IP/port/TLS cert) and credentials (username/password). Depending on the actual service the binding might provide different information. For example Redis doesn't have a concept of users or permissions. There's just one global password per Redis instance which is required to connect. MariaDB on the other hand allows fine granular configuration of users and their permissions. This means that the service binding implementation is specific for each service. The following describes the implementation for the Redis and MariaDB services.
 
 ==== MariaDB
 
@@ -204,7 +209,7 @@ In this case the binding is represented by another XRD (for example `DatabaseUse
 
 ==== Redis
 
-Since Redis doesn't have a concept of users, roles or databases like MariaDB does, there's only one service offering: Redis. It will instantiate a Redis setup (master/slave & Sentinel) and create a password which is required to access it. A subsequent binding for this service will return the password and connection information (IP/port) of the Redis and Sentinel instances. This has the drawback that all bindings will reuse the same password and to rotate one of them, all of them need to be rotated.
+Since Redis doesn't have a concept of users, roles or databases like MariaDB does, there's only one service offering: Redis. It instantiates a Redis setup (master/slave & Sentinel) and creates a password which is required to access it. A subsequent binding for this service will return the password and connection information (IP/port) of the Redis and Sentinel instances. This has the drawback that all bindings will reuse the same password and to rotate one of them, all of them need to be rotated.
 
 In this implementation the bindings won't be persisted in any Kubernetes resource. Every request to create or fetch a binding will return the same information (password,IP/port). Therefore a https://github.com/openservicebrokerapi/servicebroker/blob/master/spec.md#synchronous-and-asynchronous-operations[synchronous] operation is done and the binding information is directly returned from the request.
 
@@ -295,6 +300,7 @@ Service Plan (Composition)::
 * `service.syn.tools/cluster`: Cluster Name
 * `service.syn.tools/id`: Referenced service UUID
 * `service.syn.tools/name`: Referenced service name
+* `service.syn.tools/sla`: Service-Level-Agreement (`standard` or `premium`)
 * `service.syn.tools/updatable`: Whether the service instances can be updated
 
 Service Instance (XR)::
@@ -302,8 +308,10 @@ Service Instance (XR)::
 * `.metadata.name`: Instance UUID
 * `service.syn.tools/cluster`: Cluster Name
 * `service.syn.tools/id`: Referenced service UUID
+* `service.syn.tools/instance`: Instance UUID (same as `.metadata.name`)
 * `service.syn.tools/name`: Referenced service name
 * `service.syn.tools/plan`: Referenced plan name
+* `service.syn.tools/sla`: Service-Level-Agreement (`standard` or `premium`)
 
 Binding (Composition) if applicable::
 
@@ -311,6 +319,9 @@ Binding (Composition) if applicable::
 * `service.syn.tools/instance`: Referenced service instance UUID
 * `service.syn.tools/id`: Referenced service UUID
 * `service.syn.tools/name`: Referenced service name
+* `service.syn.tools/parent`: Referenced parent service instance (only for MariaDB database instances)
+* `service.syn.tools/plan`: Referenced plan name
+* `service.syn.tools/sla`: Service-Level-Agreement (`standard` or `premium`)
 
 Non-identifying metadata is stored in the following *annotations*:
 
@@ -329,22 +340,14 @@ Service Plan (Composition)::
 
 Service Instance (XR)::
 
-* tbd
+Currently none.
 
 Binding (Composition) if applicable::
 
-* tbd
+Currently none.
 
 === Service Binding Information
 
 Crossplane has a concept of connection secrets. These secrets are created by providers for provisioned resources and contain all information required to use the resource. Typically this consists of connection details like hostnames, IP addresses and ports and credentials like username and password to access the resource.
 
-==== Service Broker Implementation
-
-To retrieve the information for a service binding (for example username/password, IP/port) the service broker connects to the Kubernetes cluster where the respective service instance is deployed on. It does so by using the provider config of the used Crossplane provider. In the case of the https://github.com/crossplane-contrib/provider-helm[provider-helm] this is a reference to a secret containing a kubeconfig file. This kubeconfig can be used to instantiate a client-go to access the cluster. Since each service instance is deployed to a namespace with the instance UUID as its name, the broker can discover whichever information it needs in said namespace. This could for example be a service of type `LoadBalancer` to retrieve the IP and port or a secret containing the credentials.
-
-This is an interim solution and will be replaced by Crossplane native connection secrets once they're available for all providers.
-
-==== Crossplane Connection Secrets
-
-Once the provider-helm supports creating connection secrets (see https://github.com/crossplane-contrib/provider-helm/issues/56[issues #56]) the service broker no longer needs to connect to downstream clusters. Instead a connection secret will be created (by Crossplane) for every XR on the same cluster and can be converted to a service binding by the broker.
+A connection secret is created (by Crossplane) for every XR on the same cluster and can be converted to a service binding by the broker.
