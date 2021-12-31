@@ -1,0 +1,40 @@
+= Quality of a Service
+
+Each service in the catalog must meet our quality requirements.
+For a high-level description, see https://products.docs.vshn.ch/products/appcat/index.html#_common_features[our product documentation].
+
+== Functional
+
+* Provisioning of a service happens fully automated
+* Configuration of services is a declarative approach
+* Day-2 operations of a service is well defined and automated as far as possible
+
+== Performance
+
+* Services are provisioned in under 1 minute
+* Every service defines its own performance requirements (answer time, reaction time, ...) and constraints
+
+== Reliability
+
+* Services have a defined SLI (Service Level Indicator) and an appropriate SLO (Service Level Objective)
+* Backup of data is regularly conducted
+* Services are kept up-to-date with the latest stable version
+* Only the latest stable version plus one version before are supported, services must upgrade in 3 months after a new version has been released
+
+== Security
+
+* All connections are secured with TLS and must be authenticated
+* Security upgrades are applied as they come available
+
+== Portability
+
+* Services run independent of the cloud they are provisioned
+
+== Maintainability
+
+* Each service defines a well-defined set of parameters which can be tuned
+* Runbooks describe day-2 operations of a service
+
+== Usability
+
+* Every service in the catalog has a structured product description which is based on a default template
