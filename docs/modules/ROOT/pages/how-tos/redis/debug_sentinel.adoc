@@ -4,7 +4,7 @@ Connect to a Redis Sentinel Pod and start a `redis-cli`.
 
 [source,shell]
 ----
-user@computer:~$ kubectl exec redis-node-0 sentinel -it -- sh
+user@computer:~$ kubectl exec redis-node-0 -c sentinel -it -- sh
 $ redis-cli -p 26379 -a foobarbaz12
 127.0.0.1:26379>
 ----
