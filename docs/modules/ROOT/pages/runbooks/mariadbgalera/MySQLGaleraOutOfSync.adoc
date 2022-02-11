@@ -4,6 +4,15 @@
 
 This alert is being triggered if a Galera Cluster node is out of Sync for the past 5 minutes.
 
+More specifically, it's `wsrep_local_state` is not `4` ("Synced"). Possible values and their meaning:
+
+* `1` - **Joining** (requesting/receiving State Transfer) - node is joining the cluster
+* `2` - **Donor/Desynced** - node is the donor to the node joining the cluster
+* `3` - **Joined** - node has joined the cluster
+* `4` - **Synced** - node is synced with the cluster
+
 == icon:bug[] Steps for Debugging
 
-DETAILEDSTEPS
+=== State `2 != 4` but sync completed
+
+If a node stays in State `2` for a long time, restart the pod.
