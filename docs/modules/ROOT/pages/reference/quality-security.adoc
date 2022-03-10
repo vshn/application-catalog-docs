@@ -1,0 +1,47 @@
+= Security
+
+== Services Can Be Secured with TLS
+Source::
+User
+
+Stimulus::
+Creates an AppCatalog Service
+
+Environment::
+AppCatalog enabled Kubernetes cluster
+
+Artifact::
+Kubectl or Service Broker API
+
+Response::
+The service only accepts TLS encrypted connections, if the service supports it.
+
+Response measure::
+The connection details contain all necessary parameters to connect to the service securely.
+For services that don't support TLS, the connection details will only contain plaintext connection information.
+
+Rationale::
+On a shared environment, the encryption of in-transit data is an important security aspect.
+
+== All Services Are Hardened Following Best Practices
+
+Source::
+Engineer
+
+Stimulus::
+Maintains an AppCatalog Service
+
+Environment::
+AppCatalog enabled Kubernetes cluster
+
+Artifact::
+Crossplane and Helm
+
+Response::
+The default service configuration is hardened
+
+Response measure::
+Security best practices are applied to each AppCatalog Service. Authentication is enabled by default (if available).
+
+Rationale::
+In a shared cloud environment, it is crucial to secure the services, so no other people have access to it.

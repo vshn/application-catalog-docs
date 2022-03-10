@@ -1,0 +1,23 @@
+= Maintainability
+
+== Runbooks Describe Day-2 Operations of a Service
+Source::
+Engineer
+
+Stimulus::
+Debugs an AppCatalog Service
+
+Environment::
+AppCatalog enabled Kubernetes cluster
+
+Artifact::
+kubectl and https://kb.vshn.ch[VSHN Documentation]
+
+Response::
+Runbooks to troubleshoot the service are available
+
+Response measure::
+Playbooks are available for the most common issues.
+
+Rationale::
+Each engineer should be able to debug an AppCatalog service during operations or OnCall.

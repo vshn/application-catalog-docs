@@ -1,0 +1,115 @@
+= Usability
+
+== Every Service in the Catalog Has a Structured Product Description
+
+Source::
+User
+
+Stimulus::
+Reading an AppCatalog Service documentation
+
+Environment::
+AppCatalog enabled Kubernetes cluster
+
+Artifact::
+https://kb.vshn.ch[VSHN Documentation]
+
+Response::
+The product description is available.
+
+Response measure::
+The service has a product description based on a template that covers all important aspects of the service.
+
+Rationale::
+Having product descriptions clearly communicates what is to be expected of each service.
+
+== Configuration of Services Are Done via CRs or via Service Broker
+
+Source::
+User
+
+Stimulus::
+Creates an AppCatalog Service
+
+Environment::
+AppCatalog enabled Kubernetes cluster
+
+Artifact::
+Kubectl or Service Broker API
+
+Response::
+The service is created
+
+Response measure::
+The service belongs to the same organization where the CR is applied.
+
+Rationale::
+To give users a native k8s experience. The services should be created by well-defined and simple CRs.
+
+== Connection Details Are Provided via Kubernetes Secrets or via Service Broker
+
+Source::
+User
+
+Stimulus::
+Creates an AppCatalog Service
+
+Environment::
+AppCatalog enabled Kubernetes cluster
+
+Artifact::
+Kubectl or Service Broker API
+
+Response::
+The connection details are available to the user
+
+Response measure::
+The connection details are available to the user in the form of a k8s secret.
+
+Rationale::
+To give users a native k8s experience. The secrets can be referenced from other applications and thus be easily integrated.
+
+== All Service Logs Are Accessible
+
+Source::
+User
+
+Stimulus::
+Views the service's logs
+
+Environment::
+APPUiO Cloud
+
+Artifact::
+Web browser or kubectl
+
+Response::
+All logs of the service are available
+
+Response measure::
+The service's logs can be viewed either via kubectl or via the central logging collector.
+
+Rationale::
+To give the users more flexibility with debugging issues and using the services, we will provide access to the service's logs.
+
+== Configuration of Services Is a Declarative Approach
+Source::
+User
+
+Stimulus::
+Changes the manifest of an AppCatalog service
+
+Environment::
+AppCatalog enabled Kubernetes cluster
+
+Artifact::
+`kubectl` or equivalent tool
+
+Response::
+Service instance configuration is changed according to desired state.
+
+Response measure::
+Observed service instance state is updated in the manifest.
+
+Rationale::
+Service instance provisioning (complete stack) should be as user-friendly as deploying a custom application in Kubernetes with GitOps in mind.

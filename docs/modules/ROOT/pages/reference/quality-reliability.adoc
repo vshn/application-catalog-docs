@@ -1,0 +1,93 @@
+= Reliability
+
+== Services Have Defined Slis (Service Level Indicator) And Appropriate Slos (Service Level Objective)
+
+Source::
+User
+
+Stimulus::
+Reads an AppCatalog Service description
+
+Environment::
+AppCatalog enabled Kubernetes cluster
+
+Artifact::
+https://kb.vshn.net[VSHN Documentation]
+
+Response::
+The service has defined SLIs and SLOs
+
+Response measure::
+Each service has its own set of well-defined SLIs and SLOs.
+
+Rationale::
+As each service has different SLIs and SLOs they are specified for each service separately.
+
+== Backup of Data Is Conducted at Least Every 24h
+
+Source::
+User
+
+Stimulus::
+Uses an AppCatalog Service
+
+Environment::
+AppCatalog enabled Kubernetes cluster
+
+Artifact::
+K8up
+
+Response::
+A new backup is created within 24 hours
+
+Response measure::
+The time between taking backups doesn't exceed 24h. Shorter intervals can also be configured.
+
+Rationale::
+At least one backup per day is the accepted norm for backups.
+
+== Services Are Kept Up-To-Date With the Latest Stable Version
+
+Source::
+Engineer
+
+Stimulus::
+Uses an AppCatalog Service
+
+Environment::
+AppCatalog enabled Kubernetes cluster
+
+Artifact::
+Crossplane and Helm
+
+Response::
+Running services are updated automatically.
+
+Response measure::
+Services will be updated, as the updates become available in the AppCatalog.
+
+Rationale::
+Up-to-date services contain bugfixes and security patches that improve the service's reliability.
+
+== Services Leverage Kubernetes Self-Healing
+
+Source::
+Engineer
+
+Stimulus::
+Engineers an AppCatalog Service
+
+Environment::
+AppCatalog enabled Kubernetes cluster
+
+Artifact::
+Crossplane and Helm
+
+Response::
+Services have specific Kubernetes probes
+
+Response measure::
+Kubernetes is able to detect a faulty service and try to trigger self-healing mechanisms.
+
+Rationale::
+By using Kubernetes automatic self-healing features, we can lower the operational load.

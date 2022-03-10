@@ -1,0 +1,46 @@
+= Portability
+
+== Services Run Independent of the Cloud They Are Provisioned
+Source::
+User
+
+Stimulus::
+Creates an AppCatalog Service
+
+Environment::
+AppCatalog enabled Kubernetes cluster
+
+Artifact::
+Kubectl or Service Broker API
+
+Response::
+The services are provisioned the same way for any cloud.
+
+Response measure::
+The same API calls and CRs can be used to provision AppCatalog services.
+
+Rationale::
+The AppCatalog services doenot care what infrastructure they are running on.
+
+== Backups Can Be Exported
+Source::
+Service engineer
+
+Stimulus::
+Export an existing backup
+
+Environment::
+AppCatalog enabled Kubernetes cluster
+
+Artifact::
+K8up and restic
+
+Response::
+The backup is in a format that can be exported.
+
+Response measure::
+The backup data can be inspected and used to fully restore a service instance outside of AppCat with conventional tools.
+
+Rationale::
+Vendor lock-in users into the service instances or AppCat framework must be avoided.
+The users should be able to take their data away before canceling their service instances.

@@ -1,0 +1,4 @@
+= AppCatalog Quality Requirements
+
+These pages contain the formal quality requirements that each of the AppCatalog services should fulfill.
+They are general descriptions, for specific services please see the service specification.
