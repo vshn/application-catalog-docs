@@ -1,0 +1,24 @@
+= Automatic Updates
+
+Source::
+User
+
+Stimulus::
+Uses an AppCatalog Service
+
+Environment::
+AppCatalog enabled Kubernetes cluster
+
+Artifact::
+Crossplane and Helm
+
+Response::
+Approved updates are rolled out to running services automatically in the next maintenance window.
+
+Response measure::
+Affected services are up-to-date with the approved version after the user-provided maintenance window.
+
+Rationale::
+- Up-to-date services generally contain bugfixes and security patches that improve the service's reliability.
+  It is in the interest of service engineers and users that they stay secure.
+- Users shall have the option to choose the maintenance window.

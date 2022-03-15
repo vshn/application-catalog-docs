@@ -1,0 +1,27 @@
+= Service Istance Logs
+
+Source::
+User
+
+Stimulus::
+Desire to view the logs of a service instance.
+
+Environment::
+APPUiO Cloud
+
+Artifact::
+`kubectl`
+
+Response::
+All logs of the service are visible.
+
+Response measure::
+The service's logs can be viewed via kubectl.
+
+Rationale::
+To give the users more insight with issues they might have by using the services.
+
+[NOTE]
+====
+Currently only available for APPUiO Cloud for Helm-based services.
+====

@@ -1,15 +1,20 @@
 * xref:app-catalog:ROOT:reference/quality-requirements.adoc[Quality Requirements]
 
-** xref:app-catalog:ROOT:reference/quality-functional.adoc[Functional]
+** Maintainability
+*** xref:app-catalog:ROOT:reference/quality-requirements/maintainability/readiness-standards.adoc[Service Production Readiness Standards]
 
-** xref:app-catalog:ROOT:reference/quality-maintainability.adoc[Maintainability]
+** Portability
+*** xref:app-catalog:ROOT:reference/quality-requirements/portability/backup-exports.adoc[Backups Can Be Exported]
+*** xref:app-catalog:ROOT:reference/quality-requirements/portability/provisioning.adoc[Common Interface to Provision Services]
 
-** xref:app-catalog:ROOT:reference/quality-performance.adoc[Performance]
+** Reliability
+*** xref:app-catalog:ROOT:reference/quality-requirements/reliability/automatic-updates.adoc[Automatic Updates]
+*** xref:app-catalog:ROOT:reference/quality-requirements/reliability/mandatory-updates.adoc[Mandatory Updates]
+*** xref:app-catalog:ROOT:reference/quality-requirements/reliability/backup-interval.adoc[Minimum Backup Interval]
 
-** xref:app-catalog:ROOT:reference/quality-portability.adoc[Portability]
-
-** xref:app-catalog:ROOT:reference/quality-reliability.adoc[Reliability]
-
-** xref:app-catalog:ROOT:reference/quality-security.adoc[Security]
-
-** xref:app-catalog:ROOT:reference/quality-usability.adoc[Usability]
+** Usability
+*** xref:app-catalog:ROOT:reference/quality-requirements/usability/actionable-alerts.adoc[Actionable Alerts]
+*** xref:app-catalog:ROOT:reference/quality-requirements/usability/api-declarative.adoc[Declarative Configuration of Instances]
+*** xref:app-catalog:ROOT:reference/quality-requirements/usability/api-validation.adoc[Service Instance API Validation]
+*** xref:app-catalog:ROOT:reference/quality-requirements/usability/automated-provisioning.adoc[Automated Provisioning of a Service]
+*** xref:app-catalog:ROOT:reference/quality-requirements/usability/logs.adoc[Service Istance Logs]

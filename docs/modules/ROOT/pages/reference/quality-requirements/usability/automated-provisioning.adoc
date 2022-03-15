@@ -1,0 +1,32 @@
+= Automated Provisioning of a Service
+
+Source::
+User
+
+Stimulus::
+Orders a service via the provided APIs.
+
+Environment::
+AppCatalog enabled Kubernetes cluster
+
+Artifact::
+`kubectl` or equivalent tool
+
+Response::
+Service ready (status condition)
+
+Response measure::
+Service ready depending on service architecture in normal conditions:
+- Standalone: within 10 minutes
+- Replicated: within 20 minutes
+- Clustered: within 30 minutes
+- Cloud instance: within 20 minutes
+
+Rationale::
+The user can work with the instance in an acceptable time frame.
+
+[NOTE]
+====
+- The provided APIs can vary according to the environment.
+- The service is provisioned asynchronously and its readiness status has to be polled regularly.
+====
