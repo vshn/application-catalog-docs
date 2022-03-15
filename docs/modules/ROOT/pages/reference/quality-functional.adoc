@@ -1,37 +1,4 @@
-= Functional
-
-== Provisioning of a Service Happens Fully Automated
-
-Source::
-User
-
-Stimulus::
-Orders a service via the provided APIs
-
-Environment::
-AppCatalog enabled Kubernetes cluster
-
-Artifact::
-`kubectl` or equivalent tool
-
-Response::
-Service ready
-
-Response measure::
-Service ready depending on service architecture in normal conditions:
-- Standalone: within 10 minutes
-- Replicated: within 20 minutes
-- Clustered: within 30 minutes
-- Cloud instance: within 20 minutes
-
-Rationale::
-Creating a service requires service specific actions, depending on the service the time it takes to provision may vary.
-
-[NOTE]
-====
-- The provided APIs can vary according to the environment.
-- The service is provisioned asynchronously and its readiness status has to be polled regularly.
-====
+= Functional Suitability
 
 == Day-2 Operations of a Service Are Well-Defined and Automated as Far as Possible
 

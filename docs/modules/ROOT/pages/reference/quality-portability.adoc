@@ -14,15 +14,18 @@ Artifact::
 Kubectl or Service Broker API
 
 Response::
-The services are provisioned the same way for any cloud.
+The services are provisioned the same way for any cluster.
 
 Response measure::
+The usage for provisioning services is transparent for any underlying Kubernetes distribution.
 The same API calls and CRs can be used to provision AppCatalog services.
 
 Rationale::
-The AppCatalog services doenot care what infrastructure they are running on.
+`kubectl` and equivalent tools shall provide the common means for interacting with the AppCatalog framework.
+In general it doesn't matter where the platform is running on, although there may be cloud provider specific APIs.
 
 == Backups Can Be Exported
+
 Source::
 Service engineer
 

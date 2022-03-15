@@ -1,31 +1,32 @@
 = Reliability
 
-== Services Have Defined Slis (Service Level Indicator) And Appropriate Slos (Service Level Objective)
-
-Source::
-User
-
-Stimulus::
-Reads an AppCatalog Service description
-
-Environment::
-AppCatalog enabled Kubernetes cluster
-
-Artifact::
-https://kb.vshn.net[VSHN Documentation]
-
-Response::
-The service has defined SLIs and SLOs
-
-Response measure::
-Each service has its own set of well-defined SLIs and SLOs.
-
-Rationale::
-As each service has different SLIs and SLOs they are specified for each service separately.
-
 == Backup of Data Is Conducted at Least Every 24h
 
 Source::
+Service engineer
+
+Stimulus::
+Inspect backups
+
+Environment::
+AppCatalog enabled Kubernetes cluster
+
+Artifact::
+Backup tool
+
+Response::
+List of available backups.
+
+Response measure::
+Consecutive backups don't exceed the 24h interval.
+
+Rationale::
+At least one backup per day is the accepted norm for backups.
+Services may define shorter intervals.
+
+== Services Are Kept Up-To-Date with Automatic Updates
+
+Source::
 User
 
 Stimulus::
@@ -35,59 +36,44 @@ Environment::
 AppCatalog enabled Kubernetes cluster
 
 Artifact::
-K8up
+Crossplane and Helm
 
 Response::
-A new backup is created within 24 hours
+Approved updates are rolled out to running services automatically in the next maintenance window.
 
 Response measure::
-The time between taking backups doesn't exceed 24h. Shorter intervals can also be configured.
+Affected services are up-to-date with the approved version after the user-provided maintenance window.
 
 Rationale::
-At least one backup per day is the accepted norm for backups.
+- Up-to-date services generally contain bugfixes and security patches that improve the service's reliability.
+  It is in the interest of service engineers and users that they stay secure.
+- Users shall have the option to choose the maintenance window.
 
-== Services Are Kept Up-To-Date With the Latest Stable Version
+== Mandatory Updates Are Rolled Out to All Services
 
 Source::
-Engineer
+Service engineer
 
 Stimulus::
-Uses an AppCatalog Service
+Desire to roll out mandatory updates to all service instances.
 
 Environment::
 AppCatalog enabled Kubernetes cluster
 
 Artifact::
-Crossplane and Helm
+tbd
 
 Response::
-Running services are updated automatically.
+Mandatory updates are rolled out immediately.
 
 Response measure::
-Services will be updated, as the updates become available in the AppCatalog.
+Affected services are up-to-date with the mandatory update.
 
 Rationale::
-Up-to-date services contain bugfixes and security patches that improve the service's reliability.
+Service engineers need to be able to roll out mandatory updates to all instances, regardless of their configured maintenance window.
+This allows for special kinds of updates, such as critical security patches.
 
-== Services Leverage Kubernetes Self-Healing
-
-Source::
-Engineer
-
-Stimulus::
-Engineers an AppCatalog Service
-
-Environment::
-AppCatalog enabled Kubernetes cluster
-
-Artifact::
-Crossplane and Helm
-
-Response::
-Services have specific Kubernetes probes
-
-Response measure::
-Kubernetes is able to detect a faulty service and try to trigger self-healing mechanisms.
-
-Rationale::
-By using Kubernetes automatic self-healing features, we can lower the operational load.
+[NOTE]
+====
+Ideally mandatory updates are announced beforehand.
+====
