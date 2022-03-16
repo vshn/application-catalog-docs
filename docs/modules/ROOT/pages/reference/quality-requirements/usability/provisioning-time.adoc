@@ -28,5 +28,5 @@ The user can work with the instance in an acceptable time frame.
 ====
 - The provided APIs can vary according to the environment.
 - The service is provisioned asynchronously and its readiness status has to be polled regularly.
-- Services with Cloud Instance architecture type are excluded and they "take as long as needed".
+- Services with Cloud Instance architecture type are excluded and they take as long as needed.
 ====

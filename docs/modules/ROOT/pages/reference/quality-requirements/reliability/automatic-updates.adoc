@@ -10,7 +10,7 @@ Environment::
 AppCatalog enabled Kubernetes cluster
 
 Artifact::
-Crossplane and Helm
+AppCatalog Framework
 
 Response::
 Approved updates are rolled out to running services automatically in the next maintenance window.

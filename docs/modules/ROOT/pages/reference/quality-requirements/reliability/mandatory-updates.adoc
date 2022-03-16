@@ -10,7 +10,7 @@ Environment::
 AppCatalog enabled Kubernetes cluster
 
 Artifact::
-tbd
+AppCatalog Framework
 
 Response::
 Mandatory updates are rolled out immediately.
