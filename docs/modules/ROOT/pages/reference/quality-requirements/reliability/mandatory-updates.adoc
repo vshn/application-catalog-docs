@@ -1,0 +1,28 @@
+= Mandatory Updates
+
+Source::
+Service engineer
+
+Stimulus::
+Desire to roll out mandatory updates to all service instances.
+
+Environment::
+AppCatalog enabled Kubernetes cluster
+
+Artifact::
+AppCatalog Framework
+
+Response::
+Mandatory updates are rolled out immediately.
+
+Response measure::
+Affected services are up-to-date with the mandatory update.
+
+Rationale::
+Service engineers need to be able to roll out mandatory updates to all instances, regardless of their configured maintenance window.
+This allows for special kinds of updates, such as critical security patches.
+
+[NOTE]
+====
+Ideally mandatory updates are announced beforehand.
+====
