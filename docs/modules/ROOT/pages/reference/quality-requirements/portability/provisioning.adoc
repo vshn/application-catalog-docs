@@ -13,7 +13,7 @@ Artifact::
 `kubectl` or equivalent tool
 
 Response::
-The services are provisioned the same way for any cluster.
+The services are provisioned using the supported provisioning methods for any cluster.
 
 Response measure::
 The usage for provisioning services is transparent for any underlying Kubernetes distribution.

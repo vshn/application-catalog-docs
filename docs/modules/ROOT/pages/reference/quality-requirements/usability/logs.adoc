@@ -7,7 +7,7 @@ Stimulus::
 Desire to view the logs of a service instance.
 
 Environment::
-APPUiO Cloud
+Converged Cluster
 
 Artifact::
 `kubectl`
@@ -23,5 +23,6 @@ To give the users more insight with issues they might have by using the services
 
 [NOTE]
 ====
-Currently only available for APPUiO Cloud for Helm-based services.
+Currently only available for Helm-based services.
+Cloud Instances are currently excluded.
 ====
