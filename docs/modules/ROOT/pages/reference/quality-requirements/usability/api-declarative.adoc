@@ -13,11 +13,11 @@ Artifact::
 `kubectl` or equivalent tool
 
 Response::
-Service instance configuration is changed according to desired state.
+Service instance configuration is changed according to desired state using the supported provisioning methods.
 
 Response measure::
 Observed service instance state is updated in the manifest.
 
 Rationale::
 Service instance provisioning (complete stack) should be as user-friendly as deploying a custom application in Kubernetes with GitOps in mind.
-This gives users a native Kubernetes experience.
+This gives users a native Kubernetes experience by using `kubectl` and equivalent tools.
