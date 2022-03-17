@@ -1,0 +1,90 @@
+= Service Provisioning Implementation
+
+== Problem
+
+Crossplane brings a lot of lifecycle features for XRDs and XRs.
+While developing the https://github.com/vshn/appcat-service-prototype[service prototype] it became apparent that some functionality is missing in Crossplane out-of-the-box.
+
+=== Missing Features In Crossplane 1.6
+
+[qanda]
+Generate random strings::
+See discussions in https://github.com/crossplane/crossplane/issues/1895[#1895] and https://github.com/crossplane/crossplane/pull/2308[#2308].
+Currently the https://github.com/mittwald/kubernetes-secret-generator[Secret generator] is used but this should be regarded as a workaround.
+
+Webhook support for validations and custom business logic::
+See design proposal in https://github.com/crossplane/crossplane/pull/2719[#2719].
+
+Delay reconciliations to specific times when using `CompositionRevisions` feature::
+This is needed to enable maintenance windows.
+
+Cross-resource references within `Composition`::
+This could eliminate a lot of patch duplications.
+See discussions in https://github.com/crossplane/crossplane/issues/1770[#1770] and https://github.com/crossplane/crossplane/issues/2099[#2099].
+
+[NOTE]
+====
+This list doesn't mean that they should be part of Crossplane, only that they are missing from the PoV of AppCatalog.
+====
+
+=== Deployment Requirements
+
+There are several additional resources required along the "usual deployment resources".
+
+[qanda]
+Base service runtime::
+* Helm release
+* Crossplane resources for cloud instances
+
+Backup::
+* S3 Buckets (through Crossplane)
+* K8up `Schedule`
+
+Service Monitoring::
+* Prometheus `ServiceMonitor`
+* Prometheus `PrometheusRule`
+
+Networking::
+* `NetworkPolicy` to allow traffic to the service.
+
+RBAC::
+* `RoleBinding` to grant read access for requesting customer to instance logs.
+
+Customer association::
+Each instance needs to be associated to the requesting customer for billing the services.
+This might require additional business logic.
+
+== Proposals
+
+=== Proposal 1: Umbrella Charts
+
+The primary deployment strategy will be a Helm chart that contains most, if not all deployment artifacts.
+This includes cloud instances provisioned by Crossplane itself.
+
+Additional logic is implemented through custom webhooks and controllers.
+
+.Service provisioning with an umbrella Helm chart
+image::appcat_proposal_1.drawio.svg[]
+
+The "umbrella" chart contain all the feature gates and dependent charts required to provision services on the supported cloud infrastructure.
+The chart takes input parameters such as
+- cloud provider
+- major version
+- backup enabled
+- SLA (alerting enabled)
+
+and then deploys the resources as required.
+
+The chart is also used when cloud instances are provisioned.
+For example, there may be additional Prometheus exporters needed in case the cloud instance doesn't provide Prometheus metrics endpoints.
+
+In addition to the composition, there are webhooks to perform validations and assignment to customer.
+Also, a dedicated version update controller delays changing of `CompositionRevisions` to the newest version until a specific time is met.
+
+Advantages::
+- Umbrella chart is able to deploy arbitrary resources
+
+Disadvantages::
+- Separate version controller required for automated updates
+- Webhook controller required
+- Logic and feature gates in umbrella chart is limited by Helm's templating engine
