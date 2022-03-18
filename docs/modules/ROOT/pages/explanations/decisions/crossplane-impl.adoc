@@ -29,7 +29,7 @@ This list doesn't mean that they should be part of Crossplane, only that they ar
 
 === Deployment Requirements
 
-There are several additional resources required along the "usual" deployment resources.
+There are several additional resources required along the usual deployment resources.
 
 [qanda]
 Base service runtime::
@@ -178,8 +178,20 @@ Disadvantages::
 This proposal does not impose a certain strategy how services are to be provisioned.
 Each service can choose how to best provision the required resources in a `Composition`.
 
+Custom webhooks and version update controller would still be required.
+
 Advantages::
 - Flexible deployment strategy
 
 Disadvantages::
 - No common ground between services makes maintenance and day-2 operations difficult.
+
+== Decision
+
+Proposal 3: Dedicated Provider
+
+== Rationale
+
+Dedicated providers bring the most flexibility.
+They are in code and thus easier testable and other business code is easily integrated.
+Crossplane already provides templates and development guides to create new providers, so most boilerplate code should be available.

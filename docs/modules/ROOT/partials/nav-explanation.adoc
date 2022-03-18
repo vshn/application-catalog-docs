@@ -16,4 +16,4 @@
 
 * Decisions
 ** xref:app-catalog:ROOT:explanations/decisions/crossplane.adoc[Crossplane as Control Plane]
-** xref:app-catalog:ROOT:explanations/decisions/crossplane-impl.adoc[Crossplane Impls]
+** xref:app-catalog:ROOT:explanations/decisions/crossplane-impl.adoc[Service Provisioning Implementation]
