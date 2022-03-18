@@ -133,3 +133,22 @@ Advantages::
 Disadvantages::
 - There may be a lot of code repetition between services that deploy the same set of common resources.
 - Impact of versioning mechanics of a provider is currently unknown.
+
+=== Proposal 4: Sub Providers
+
+This proposal is similar to proposal 3, however it uses dedicated Crossplane providers for each sub component.
+A Crossplane provider uses code thus provides the most flexibility.
+
+.Service provisioning with multiple Crossplane providers
+image::appcat_proposal_4.drawio.svg[]
+
+Advantages::
+- Flexible deployment using code and Kubernetes API.
+- Webhook controller can be built-in.
+- Built-in version update controller.
+- Generating the resources is unit testable.
+
+Disadvantages::
+- Loose coupling of the resources.
+- A lot of repetition in the compositions.
+- Impact of versioning mechanics of a provider is currently unknown.
