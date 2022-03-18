@@ -29,7 +29,7 @@ This list doesn't mean that they should be part of Crossplane, only that they ar
 
 === Deployment Requirements
 
-There are several additional resources required along the "usual deployment resources".
+There are several additional resources required along the "usual" deployment resources.
 
 [qanda]
 Base service runtime::
@@ -114,3 +114,22 @@ Disadvantages::
 - Webhook controller required (possibly per service).
 - Logic and feature gates in side chart is limited by Helm's templating engine.
 - Side chart and service definition are loosely coupled.
+
+=== Proposal 3: Dedicated Provider
+
+This proposal uses a dedicated Crossplane provider to deploy and configure all the resources that the service needs.
+A Crossplane provider uses code thus provides the most flexibility.
+
+.Service provisioning with a dedicated Crossplane provider
+image::appcat_proposal_3.drawio.svg[]
+
+Advantages::
+- Flexible deployment using code and Kubernetes API.
+- Webhook controller can be built-in.
+- Built-in version update controller.
+- Strong coupling of the resources.
+- Generating the resources is unit testable.
+
+Disadvantages::
+- There may be a lot of code repetition between services that deploy the same set of common resources.
+- Impact of versioning mechanics of a provider is currently unknown.
