@@ -1,5 +1,5 @@
-# run the containter
-# docker run --name antora --rm --publish 35729:35729 --publish 2020:2020 --volume "$(pwd)":/preview/antora -d vshn/antora-preview:2.3.12 --antora=docs --style=vshn
+# run the container:
+# make preview
 
 group :documentation do
     # Rebuild documentation when modifying files
