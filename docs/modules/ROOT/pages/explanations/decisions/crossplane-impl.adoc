@@ -68,6 +68,7 @@ image::appcat_proposal_1.drawio.svg[]
 
 The "umbrella" chart contain all the feature gates and dependent charts required to provision services on the supported cloud infrastructure.
 The chart takes input parameters such as
+
 - cloud provider
 - major version
 - backup enabled
@@ -83,8 +84,33 @@ Also, a dedicated version update controller delays changing of `CompositionRevis
 
 Advantages::
 - Umbrella chart is able to deploy arbitrary resources
+- Umbrella chart is integration testable
 
 Disadvantages::
-- Separate version controller required for automated updates
-- Webhook controller required
-- Logic and feature gates in umbrella chart is limited by Helm's templating engine
+- Separate version controller required for automated updates.
+- Webhook controller required (possibly per service).
+- Logic and feature gates in umbrella chart is limited by Helm's templating engine.
+
+=== Proposal 2: Side Charts
+
+The main difference to proposal 1 is that the umbrella chart is split up into parts where just the service is deployed and another where the additional resources are deployed.
+
+It is assumed that the additional resources are roughly the same for all services, thus they are packaged into one side chart.
+
+.Service provisioning with a common "side" Helm chart
+image::appcat_proposal_2.drawio.svg[]
+
+If the service is a cloud instance, instead of deploying the service chart, the Crossplane resource is used.
+
+In addition to the composition, there are webhooks to perform validations and assignment to customer.
+Also, a dedicated version update controller delays changing of `CompositionRevisions` to the newest version until a specific time is met.
+
+Advantages::
+- Easier onboarding of new services.
+- Side chart is able to deploy arbitrary resources.
+
+Disadvantages::
+- It assumes that every service requires roughly the same common resources that can be packed into one chart.
+- Webhook controller required (possibly per service).
+- Logic and feature gates in side chart is limited by Helm's templating engine.
+- Side chart and service definition are loosely coupled.
