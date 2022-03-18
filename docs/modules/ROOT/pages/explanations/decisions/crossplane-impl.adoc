@@ -172,3 +172,14 @@ Disadvantages::
 - Loose coupling between service and additional resources.
 - Impact of versioning mechanics of a provider is currently unknown.
 - Logic and feature gates in side chart is limited by Helm's templating engine.
+
+=== Proposal 6: Free Choice
+
+This proposal does not impose a certain strategy how services are to be provisioned.
+Each service can choose how to best provision the required resources in a `Composition`.
+
+Advantages::
+- Flexible deployment strategy
+
+Disadvantages::
+- No common ground between services makes maintenance and day-2 operations difficult.
