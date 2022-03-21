@@ -90,6 +90,7 @@ Disadvantages::
 - Separate version controller required for automated updates.
 - Webhook controller required (possibly per service).
 - Logic and feature gates in umbrella chart is limited by Helm's templating engine.
+- Maintaining services longterm using just YAML might become questionable.
 
 === Proposal 2: Side Charts
 
@@ -114,6 +115,7 @@ Disadvantages::
 - Webhook controller required (possibly per service).
 - Logic and feature gates in side chart is limited by Helm's templating engine.
 - Side chart and service definition are loosely coupled.
+- Maintaining services longterm using just YAML might become questionable.
 
 === Proposal 3: Dedicated Provider
 
@@ -186,12 +188,33 @@ Advantages::
 Disadvantages::
 - No common ground between services makes maintenance and day-2 operations difficult.
 
-== Decision
+=== Proposal 7: Dedicated Operator
 
-Proposal 3: Dedicated Provider
+This proposal completely removes Crossplane as the manager of resources related to the service.
+Instead, a dedicated Kubernetes Operator that comes with its own CRD will be built.
+
+.Service provisioning with a dedicated Operator
+image::appcat_proposal_7.drawio.svg[]
+
+The operator might still use Crossplane resources as a means to provision those resources.
+
+Advantages::
+- Overall reduced complexity of the stack compared to Crossplane.
+- Flexible deployment using code and Kubernetes API.
+- Webhook controller can be built-in.
+- Built-in version update controller.
+- Generating the resources is unit testable.
+
+Disadvantages::
+- There may be a lot of code repetition between services that deploy the same set of common resources (though this can be counteracted with a code library).
+- More engineering effort needed in resource lifecycle management compared to Crossplane.
+
+== Decision
 
 == Rationale
 
+////
 Dedicated providers bring the most flexibility.
 They are in code and thus easier testable and other business code is easily integrated.
 Crossplane already provides templates and development guides to create new providers, so most boilerplate code should be available.
+////
