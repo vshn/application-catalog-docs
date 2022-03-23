@@ -5,7 +5,6 @@
 
 ** Portability
 *** xref:app-catalog:ROOT:reference/quality-requirements/portability/backup-exports.adoc[Backups Can Be Exported]
-*** xref:app-catalog:ROOT:reference/quality-requirements/portability/provisioning.adoc[Common Interface to Provision Services]
 
 ** Reliability
 *** xref:app-catalog:ROOT:reference/quality-requirements/reliability/automatic-updates.adoc[Automatic Updates]
