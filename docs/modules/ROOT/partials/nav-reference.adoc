@@ -1,4 +1,5 @@
 * xref:app-catalog:ROOT:reference/glossary.adoc[Glossary]
+* xref:app-catalog:ROOT:reference/billing-naming.adoc[Naming Scheme for Billing]
 
 * xref:app-catalog:ROOT:reference/quality-requirements.adoc[Quality Requirements]
 

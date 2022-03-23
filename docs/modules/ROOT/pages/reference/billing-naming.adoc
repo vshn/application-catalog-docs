@@ -1,0 +1,66 @@
+= Billing
+
+This page specifies various aspects of the AppCatalog billing.
+
+== Product Naming in the Database
+
+In order to support all future AppCatalog services and its subproducts, we need to define a naming scheme to differentiate between them.
+Each AppCatalog service will have multiple variations, let's take PostgreSQL as an example:
+
+* PostgreSQL standalone without SLA
+* PostgreSQL standalone with SLA
+* PostgreSQL replicated without SLA
+* PostgreSQL replicated with SLA
+* PostgreSQL CloudSQL
+* PostgreSQL RDS
+
+Every permutation will need an identifier, as it will be associated with a product in the https://kb.vshn.ch/appuio-cloud/references/architecture/metering-data-flow.html#_data_model[product dimension] of the billing database.
+Also, depending on the cluster where a given service is running, there could be different prices and discounts.
+
+To accommodate for all these variations, the default identifier of each product in the database should be as follows:
+
+ appcat_$servicename_$architecture_$sla:$clustername
+
+* `servicename`: The name of the AppCatalog service, in this example PostgreSQL
+* `variation`: The variation of the service, for example standalone or rds.
+* `sla`: The name of the applied SLA.
+* `clustername`: The name of the cluster where this given instance is provisioned.
+
+We can add more specific product identifiers for special cases as needed. See the "examples" section of the https://kb.vshn.ch/appuio-cloud/references/architecture/metering-data-flow.html#_system_idea[system idea] for more information about how the matching works.
+
+== Query Names for Reporting
+
+The query names in the reporting tool should match the naming for the product.
+But it should not contain the `clustername` part.
+The cluster name is part of the `product` label that should be returned by the query.
+
+Examples for reporting query names:
+
+* appcat_postgresql_standalone_besteffort
+* appcat_redis_cluster_sla
+* appcat_mariadb_rds
+
+== Trivial Prometheus Query Example
+
+The following is a trivial query that contains all information that is needed to bill a service:
+
+[source,]
+----
+label_replace(
+  label_replace(
+    label_replace(
+      vector(42), <1>
+      "category", "AppCatalog - my-product", "", "" <2>
+    ),
+    "product", "my-product:my-cluster:my-tenant:my-namespce", "", "" <3>
+  ),
+  "tenant", "my-tenant", "", "" <4>
+)
+----
+<1> Actual query that creates the billable values, for most AppCatalog services, this will be "instance minutes"
+<2> Category, this value is used for grouping on the invoice
+<3> Product source string, this string will be used to do various matching operations during further reporting and enrichment operations
+<4> Tenant ID, for matching the tenant
+
+This example should not be used as a query template, it's only to illustrate what information is required by the billing framework.
+Depending on the exporter, the available labels could already contain all necessary information, thus simplifying the query.
