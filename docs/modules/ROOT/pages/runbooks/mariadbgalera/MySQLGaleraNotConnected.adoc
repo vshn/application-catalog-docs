@@ -6,4 +6,6 @@ This check alerts if a cluster node hasn't connected to Galera for more than 5 m
 
 == icon:bug[] Steps for Debugging
 
+See xref:how-tos/mariadbgalera/debug.adoc[How to debug MariaDB Galera] on how to determine the cluster status.
+
 TODO

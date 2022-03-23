@@ -30,3 +30,70 @@ kubectl -n $INSTANCE_ID logs -c mariadb-galera \
     -l app.kubernetes.io/name=mariadb-galera \
     --prefix -f
 ----
+
+== Determine the cluster status
+
+Put the following in a file called `mariadb_state` in your `$PATH`:
+[source,shell]
+----
+#!/usr/bin/env bash
+
+query() {
+  echo -e "\n===> \033[0;33mmariadb-$1\033[0m"
+  CMD='mysql -uroot --password="$MARIADB_ROOT_PASSWORD"'
+  QUERY='SHOW STATUS WHERE Variable_name IN ("wsrep_cluster_size", "wsrep_cluster_status", "wsrep_connected", "wsrep_evs_state", "wsrep_local_state_comment", "wsrep_local_state_uuid", "wsrep_cluster_state_uuid");'
+  kubectl exec "mariadb-$1" -it -c mariadb-galera -- bash -c "$CMD -e '$QUERY'"
+}
+
+if [ -z "$1" ]; then
+  query 0
+  query 1
+  query 2
+else
+  query "$1"
+fi
+----
+
+This gives you an overview of the individual nodes' view of the cluster:
+
+[source,console]
+----
+===> mariadb-0
++---------------------------+--------------------------------------+
+| Variable_name             | Value                                |
++---------------------------+--------------------------------------+
+| wsrep_local_state_uuid    | b72a7f60-9615-11ec-b43a-8a29d1ec8cf3 |
+| wsrep_local_state_comment | Synced                               |
+| wsrep_evs_state           | OPERATIONAL                          |
+| wsrep_cluster_size        | 3                                    |
+| wsrep_cluster_state_uuid  | b72a7f60-9615-11ec-b43a-8a29d1ec8cf3 |
+| wsrep_cluster_status      | Primary                              |
+| wsrep_connected           | ON                                   |
++---------------------------+--------------------------------------+
+
+===> mariadb-1
++---------------------------+--------------------------------------+
+| Variable_name             | Value                                |
++---------------------------+--------------------------------------+
+| wsrep_local_state_uuid    | b72a7f60-9615-11ec-b43a-8a29d1ec8cf3 |
+| wsrep_local_state_comment | Synced                               |
+| wsrep_evs_state           | OPERATIONAL                          |
+| wsrep_cluster_size        | 3                                    |
+| wsrep_cluster_state_uuid  | b72a7f60-9615-11ec-b43a-8a29d1ec8cf3 |
+| wsrep_cluster_status      | Primary                              |
+| wsrep_connected           | ON                                   |
++---------------------------+--------------------------------------+
+
+===> mariadb-2
++---------------------------+--------------------------------------+
+| Variable_name             | Value                                |
++---------------------------+--------------------------------------+
+| wsrep_local_state_uuid    | b72a7f60-9615-11ec-b43a-8a29d1ec8cf3 |
+| wsrep_local_state_comment | Synced                               |
+| wsrep_evs_state           | OPERATIONAL                          |
+| wsrep_cluster_size        | 3                                    |
+| wsrep_cluster_state_uuid  | b72a7f60-9615-11ec-b43a-8a29d1ec8cf3 |
+| wsrep_cluster_status      | Primary                              |
+| wsrep_connected           | ON                                   |
++---------------------------+--------------------------------------+
+----
