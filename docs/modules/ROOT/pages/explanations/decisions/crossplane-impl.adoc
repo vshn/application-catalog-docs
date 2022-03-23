@@ -13,7 +13,7 @@ See discussions in https://github.com/crossplane/crossplane/issues/1895[#1895] a
 Currently the https://github.com/mittwald/kubernetes-secret-generator[Secret generator] is used but this should be regarded as a workaround.
 
 Webhook support for validations and custom business logic::
-See design proposal in https://github.com/crossplane/crossplane/pull/2719[#2719].
+With release v1.7.0 Crossplane offers methods to build webhooks, but apparently only for dedicated Providers.
 
 Delay reconciliations to specific times when using `CompositionRevisions` feature::
 This is needed to enable maintenance windows.
@@ -21,6 +21,14 @@ This is needed to enable maintenance windows.
 Cross-resource references within `Composition`::
 This could eliminate a lot of patch duplications.
 See discussions in https://github.com/crossplane/crossplane/issues/1770[#1770] and https://github.com/crossplane/crossplane/issues/2099[#2099].
+
+More methods for dynamic value computation::
+It's currently impossible to apply certain types of patching:
++
+- Transformation of string to boolean with an expression evaluator, for example `if spec.sla == "guaranteed" then true else false`
+- Omit deploying resources, for example if `spec.backups.enabled` is set to `false` in the XR, it's impossible to skip generating a resource based on this conditional.
+- Basic math operations like addition, subtraction division or floating-point multiplication.
+- The `map` patch type only supports string-to-string mapping, not string-to-object which would help patching whole specs.
 
 [NOTE]
 ====
