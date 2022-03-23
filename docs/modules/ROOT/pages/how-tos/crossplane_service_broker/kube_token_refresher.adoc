@@ -1,6 +1,6 @@
 = Install Kube Token Refresher
 
-As discussed in xref:app-catalog:ROOT:how-tos/crossplane_service_broker/crossplane_service_broker/connect_service_catalog_to_service_broker.html[Connecting the Service Catalog to a Service Broker], issued tokens might only be valid for a short period of time.
+As discussed in xref:app-catalog:ROOT:how-tos/crossplane_service_broker/connect_service_catalog_to_service_broker.adoc[Connecting the Service Catalog to a Service Broker], issued tokens might only be valid for a short period of time.
 For this purpose we developed the https://github.com/vshn/kube-token-refresher[kube-token-refresher], which periodically fetches a new bearer token and writes it to a secret for the Service Catalog.
 
 You will need access to an OIDC provider, valid credentials to request a _Bearer Token_, and permission to get, update, and create secrets.
@@ -80,7 +80,7 @@ type: Opaque
 
 == Standalone Deployment
 
-Finally we will deploy the Token Refresher. 
+Finally we will deploy the Token Refresher.
 In this section we will deploy it as a standalone deployment.
 
 Apply the following:
@@ -145,15 +145,15 @@ spec:
 
 There are a few things that can be configured.
 
-* `KTR_SECRET_NAME`: The name of the secret that will be updated. 
-This is the same secret referenced as a `bearer-secret` when xref:app-catalog:ROOT:how-tos/crossplane_service_broker/crossplane_service_broker/connect_service_catalog_to_service_broker.html#_register_the_crossplane_service_broker_at_the_service_catalog[registering the service catalog]
+* `KTR_SECRET_NAME`: The name of the secret that will be updated.
+This is the same secret referenced as a `bearer-secret` when xref:app-catalog:ROOT:how-tos/crossplane_service_broker/connect_service_catalog_to_service_broker.adoc#_register_the_crossplane_service_broker_at_the_service_catalog[registering the service catalog]
 * `KTR_SECRET_NAMESPACE`: The namespace this secrets is in.
 This example assumes it to be in the same namespace as the deployment.
-* `KTR_INTERVAL`: In what interval (in seconds) to fetch a new token. 
+* `KTR_INTERVAL`: In what interval (in seconds) to fetch a new token.
 This depends on your authentication server.
 Expect some delays and request a new token early enough.
-* `KTR_OIDC_TOKENURL`: The URL to fetch the token from. 
-See xref:app-catalog:ROOT:how-tos/crossplane_service_broker/crossplane_service_broker/bearer_token_authentication.html[Bearer Token authentication] for more details on what this is.
+* `KTR_OIDC_TOKENURL`: The URL to fetch the token from.
+See xref:app-catalog:ROOT:how-tos/crossplane_service_broker/bearer_token_authentication.adoc[Bearer Token authentication] for more details on what this is.
 * `KTR_OIDC_CLIENTID` and `KTR_OIDC_CLIENTSECRET`: The credentials we created earlier.
 
 
