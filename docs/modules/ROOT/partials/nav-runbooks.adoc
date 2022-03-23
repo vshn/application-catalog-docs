@@ -11,6 +11,7 @@
 
 * MariaDB Galera
 ** xref:app-catalog:ROOT:runbooks/mariadbgalera/MySQLGaleraClusterEvenNodes.adoc[MySQLGaleraClusterEvenNodes]
+** xref:app-catalog:ROOT:runbooks/mariadbgalera/MySQLGaleraClusterSmall.adoc[MySQLGaleraClusterSmall]
 ** xref:app-catalog:ROOT:runbooks/mariadbgalera/MySQLGaleraDonorFallingBehind.adoc[MySQLGaleraDonorFallingBehind]
 ** xref:app-catalog:ROOT:runbooks/mariadbgalera/MySQLGaleraNotConnected.adoc[MySQLGaleraNotConnected]
 ** xref:app-catalog:ROOT:runbooks/mariadbgalera/MySQLGaleraNotOperational.adoc[MySQLGaleraNotOperational]
