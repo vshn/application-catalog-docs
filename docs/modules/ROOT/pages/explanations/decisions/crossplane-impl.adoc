@@ -11,7 +11,7 @@ The scope of this problem and decision here is explicitly custom services that c
 How cloud instances are provisioned is a different problem with a different decision.
 ====
 
-=== Missing Features In Crossplane 1.6
+=== Missing Features In Crossplane 1.7
 
 [qanda]
 Generate random strings::
@@ -40,7 +40,7 @@ It's currently impossible to apply certain types of patching:
 [NOTE]
 ====
 This list doesn't mean that they should be part of Crossplane, only that they are missing from the PoV of AppCatalog.
-Please see also https://github.com/crossplane/crossplane/issues/2524[#2524], where the community discusses "Custom Compositions".
+Please see also https://github.com/crossplane/crossplane/issues/2524[#2524], where the community discusses 'Custom Compositions'.
 In there the problems with Compositions are summarized pretty well and also AppCat is affected by the limitations of Compositions.
 ====
 
