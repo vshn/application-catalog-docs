@@ -37,7 +37,7 @@ The cluster name is part of the `product` label that should be returned by the q
 Examples for reporting query names:
 
 * appcat_postgresql_standalone_besteffort
-* appcat_redis_cluster_sla
+* appcat_redis_cluster_guaranteed
 * appcat_mariadb_rds
 
 == Trivial Prometheus Query Example
