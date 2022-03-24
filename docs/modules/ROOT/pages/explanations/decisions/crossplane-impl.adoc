@@ -5,6 +5,12 @@
 Crossplane brings a lot of lifecycle features for XRDs and XRs.
 While developing the https://github.com/vshn/appcat-service-prototype[service prototype] it became apparent that some functionality is missing in Crossplane out-of-the-box.
 
+[NOTE]
+====
+The scope of this problem and decision here is explicitly custom services that certain cloud providers don't offer as a managed cloud instance.
+How cloud instances are provisioned is a different problem with a different decision.
+====
+
 === Missing Features In Crossplane 1.6
 
 [qanda]
@@ -14,9 +20,10 @@ Currently the https://github.com/mittwald/kubernetes-secret-generator[Secret gen
 
 Webhook support for validations and custom business logic::
 With release v1.7.0 Crossplane offers methods to build webhooks, but apparently only for dedicated Providers.
+It _may_ be possible to come off without custom webhooks for _simple_ validations, but if custom logic or complex validation is required, no existing policy engine is going to be a sensible choice.
 
 Delay reconciliations to specific times when using `CompositionRevisions` feature::
-This is needed to enable maintenance windows.
+This would be interesting to enable maintenance windows.
 
 Cross-resource references within `Composition`::
 This could eliminate a lot of patch duplications.
@@ -33,6 +40,8 @@ It's currently impossible to apply certain types of patching:
 [NOTE]
 ====
 This list doesn't mean that they should be part of Crossplane, only that they are missing from the PoV of AppCatalog.
+Please see also https://github.com/crossplane/crossplane/issues/2524[#2524], where the community discusses "Custom Compositions".
+In there the problems with Compositions are summarized pretty well and also AppCat is affected by the limitations of Compositions.
 ====
 
 === Deployment Requirements
@@ -42,7 +51,6 @@ There are several additional resources required along the usual deployment resou
 [qanda]
 Base service runtime::
 * Helm release
-* Crossplane resources for cloud instances
 
 Backup::
 * S3 Buckets (through Crossplane)
@@ -62,12 +70,17 @@ Customer association::
 Each instance needs to be associated to the requesting customer for billing the services.
 This might require additional business logic.
 
+[NOTE]
+====
+Some proposals are going to mention custom Crossplane providers, though the impact of versioning mechanics of a provider is currently unknown.
+====
+
 == Proposals
 
 === Proposal 1: Umbrella Charts
 
 The primary deployment strategy will be a Helm chart that contains most, if not all deployment artifacts.
-This includes cloud instances provisioned by Crossplane itself.
+This includes cloud instances provisioned by Crossplane itself if required as dependencies.
 
 Additional logic is implemented through custom webhooks and controllers.
 
@@ -77,15 +90,11 @@ image::appcat_proposal_1.drawio.svg[]
 The "umbrella" chart contain all the feature gates and dependent charts required to provision services on the supported cloud infrastructure.
 The chart takes input parameters such as
 
-- cloud provider
 - major version
 - backup enabled
 - SLA (alerting enabled)
 
 and then deploys the resources as required.
-
-The chart is also used when cloud instances are provisioned.
-For example, there may be additional Prometheus exporters needed in case the cloud instance doesn't provide Prometheus metrics endpoints.
 
 In addition to the composition, there are webhooks to perform validations and assignment to customer.
 Also, a dedicated version update controller delays changing of `CompositionRevisions` to the newest version until a specific time is met.
@@ -108,8 +117,6 @@ It is assumed that the additional resources are roughly the same for all service
 
 .Service provisioning with a common "side" Helm chart
 image::appcat_proposal_2.drawio.svg[]
-
-If the service is a cloud instance, instead of deploying the service chart, the Crossplane resource is used.
 
 In addition to the composition, there are webhooks to perform validations and assignment to customer.
 Also, a dedicated version update controller delays changing of `CompositionRevisions` to the newest version until a specific time is met.
@@ -141,8 +148,7 @@ Advantages::
 - Generating the resources is unit testable.
 
 Disadvantages::
-- There may be a lot of code repetition between services that deploy the same set of common resources.
-- Impact of versioning mechanics of a provider is currently unknown.
+- There may be a lot of code repetition between services that deploy the same set of common resources (though this can be counteracted with a code library).
 
 === Proposal 4: Sub Providers
 
@@ -160,8 +166,8 @@ Advantages::
 
 Disadvantages::
 - Loose coupling of the resources.
+- Each provider might need their own feature gates and share similar API only to be patched repeatedly in compositions.
 - A lot of repetition in the compositions.
-- Impact of versioning mechanics of a provider is currently unknown.
 
 === Proposal 5: Dedicated Provider With Side Chart
 
@@ -180,7 +186,6 @@ Advantages::
 
 Disadvantages::
 - Loose coupling between service and additional resources.
-- Impact of versioning mechanics of a provider is currently unknown.
 - Logic and feature gates in side chart is limited by Helm's templating engine.
 
 === Proposal 6: Free Choice
