@@ -222,6 +222,28 @@ Disadvantages::
 - There may be a lot of code repetition between services that deploy the same set of common resources (though this can be counteracted with a code library).
 - More engineering effort needed in resource lifecycle management compared to Crossplane.
 
+=== Proposal 8: Dedicated Provider With Common Provider
+
+This is similar to proposal 5, but instead of a side chart a side provider deploys the common resources.
+It eliminates the disadvantages of Helm charts while increasing testability.
+Compared to proposal 3, it also moves the common resources from a simple shared code library to an actual provider.
+
+.Service provisioning with a dedicated provider and a side provider
+image::appcat_proposal_8.drawio.svg[]
+
+It's assumed that a lot of services are going to be domain-specific, yet some common boilerplate is needed to fully make a service managed.
+These common resources could be deployed by a dedicated provider that can be reused from multiple services.
+
+Advantages::
+- Flexible deployment using code and Kubernetes API.
+- Webhook controller can be built-in.
+- Built-in version update controller.
+- Generating the resources is unit testable.
+- The dedicated provider is free of VSHN-specific resources, making the provider possibly sharable with Crossplane community.
+
+Disadvantages::
+- Loose coupling between service and additional resources (though Kubernetes API lookups may help out to a degree).
+
 == Decision
 
 == Rationale
