@@ -22,7 +22,7 @@ To accommodate for all these variations, the default identifier of each product 
  appcat_$servicename_$architecture_$sla:$clustername
 
 * `servicename`: The name of the AppCatalog service, in this example PostgreSQL
-* `variation`: The variation of the service, for example standalone or rds.
+* `architecture`: The architecture type of the service, for example `standalone` or `rds`.
 * `sla`: The name of the applied SLA.
 * `clustername`: The name of the cluster where this given instance is provisioned.
 
