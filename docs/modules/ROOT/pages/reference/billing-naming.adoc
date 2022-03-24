@@ -1,4 +1,4 @@
-= Billing
+= Naming Scheme for Billing
 
 This page specifies various aspects of the AppCatalog billing.
 
