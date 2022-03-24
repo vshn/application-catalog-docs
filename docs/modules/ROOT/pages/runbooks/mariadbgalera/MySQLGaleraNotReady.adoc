@@ -10,4 +10,4 @@ The global variable https://galeracluster.com/library/documentation/galera-statu
 
 See xref:how-tos/mariadbgalera/debug.adoc[How to debug MariaDB Galera] on how to determine the cluster status and show the Logs of MariaDB.
 
-If the cluster won't start up on itselfe again, xref:how-tos/mariadbgalera/bootstrap_cluster.adoc[a manual reset] is necessary.
+If the cluster won't start up on itself again, xref:how-tos/mariadbgalera/bootstrap_cluster.adoc[a manual reset] is necessary.
