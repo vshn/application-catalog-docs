@@ -246,10 +246,27 @@ Disadvantages::
 
 == Decision
 
+Proposal 3: Dedicated Provider
+
 == Rationale
 
-////
-Dedicated providers bring the most flexibility.
-They are in code and thus easier testable and other business code is easily integrated.
-Crossplane already provides templates and development guides to create new providers, so most boilerplate code should be available.
-////
+Crossplane `Composition` API is limited and it alone can't solve the problem mentioned at the top.
+While umbrella and side charts sound easy at first, they lack flexibility and testability compared to code running in some form of controller.
+Proposal 4 is risking a too lose coupling between the resources.
+A totally undefined foundation as in proposal 6 puts operational aspects into silos, requiring a learning curve for each individual service.
+Through method of elimination the remaining proposals are 3, 7 and 8.
+
+Compared to proposal 7, proposal 3 is favored for the following reasons:
+
+- It's expected to need less engineering effort in resource lifecycle management at the cost of higher complexity in operations.
+- Assuming the future decision of provisioning cloud instances also with Crossplane, they would be aligned and comparable.
+  This would mean a steeper learning curve to understand the Crossplane stack in both development and operations, but once understood should be more efficient.
+  However this can be considered a risk if the decision is not Crossplane, in which case it may be sensible to transform the provider into its own operator, since the overhead complexity of Crossplane is not exactly required or portentially not even justified.
+  This would effectively become proposal 7.
+
+Compared to proposal 8, proposal 3 is favored for the following reasons:
+
+- While some experience could be gained by developing an AppCat service prototype, the actual details, dependencies and relations between common resource and service-specific resources are currently still rather uncertain.
+  For this reason, it makes sense to start the first productive service with strong coupling by having the common artifacts in the same provider and internal code.
+- Once the dependencies and relations could be made out, it may be sensible to refactor and extract the common artifacts into their own provider.
+  This would effectively become proposal 8.
