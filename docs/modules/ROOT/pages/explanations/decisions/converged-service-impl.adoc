@@ -1,4 +1,4 @@
-= Service Provisioning Implementation
+= Converged Service Provisioning Implementation
 
 == Problem
 
@@ -7,7 +7,7 @@ While developing the https://github.com/vshn/appcat-service-prototype[service pr
 
 [NOTE]
 ====
-The scope of this problem and decision here is explicitly custom services that certain cloud providers don't offer as a managed cloud instance.
+The scope of this problem and decision here is explicitly converged services that certain cloud providers don't offer as a managed cloud instance.
 How cloud instances are provisioned is a different problem with a different decision.
 ====
 
