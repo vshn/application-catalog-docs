@@ -1,3 +1,5 @@
+* xref:app-catalog:ROOT:reference/glossary.adoc[Glossary]
+
 * xref:app-catalog:ROOT:reference/quality-requirements.adoc[Quality Requirements]
 
 ** Maintainability
