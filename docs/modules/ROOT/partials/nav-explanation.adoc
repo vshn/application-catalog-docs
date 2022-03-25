@@ -16,3 +16,4 @@
 
 * Decisions
 ** xref:app-catalog:ROOT:explanations/decisions/crossplane.adoc[Crossplane as Control Plane]
+** xref:app-catalog:ROOT:explanations/decisions/converged-service-impl.adoc[Converged Service Provisioning Implementation]

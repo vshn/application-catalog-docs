@@ -1,0 +1,272 @@
+= Converged Service Provisioning Implementation
+
+== Problem
+
+Crossplane brings a lot of lifecycle features for XRDs and XRs.
+While developing the https://github.com/vshn/appcat-service-prototype[service prototype] it became apparent that some functionality is missing in Crossplane out-of-the-box.
+
+[NOTE]
+====
+The scope of this problem and decision here is explicitly converged services that certain cloud providers don't offer as a managed cloud instance.
+How cloud instances are provisioned is a different problem with a different decision.
+====
+
+=== Missing Features In Crossplane 1.7
+
+[qanda]
+Generate random strings::
+See discussions in https://github.com/crossplane/crossplane/issues/1895[#1895] and https://github.com/crossplane/crossplane/pull/2308[#2308].
+Currently the https://github.com/mittwald/kubernetes-secret-generator[Secret generator] is used but this should be regarded as a workaround.
+
+Webhook support for validations and custom business logic::
+With release v1.7.0 Crossplane offers methods to build webhooks, but apparently only for dedicated Providers.
+It _may_ be possible to come off without custom webhooks for _simple_ validations, but if custom logic or complex validation is required, no existing policy engine is going to be a sensible choice.
+
+Delay reconciliations to specific times when using `CompositionRevisions` feature::
+This would be interesting to enable maintenance windows.
+
+Cross-resource references within `Composition`::
+This could eliminate a lot of patch duplications.
+See discussions in https://github.com/crossplane/crossplane/issues/1770[#1770] and https://github.com/crossplane/crossplane/issues/2099[#2099].
+
+More methods for dynamic value computation::
+It's currently impossible to apply certain types of patching:
++
+- Transformation of string to boolean with an expression evaluator, for example `if spec.sla == "guaranteed" then true else false`
+- Omit deploying resources, for example if `spec.backups.enabled` is set to `false` in the XR, it's impossible to skip generating a resource based on this conditional.
+- Basic math operations like addition, subtraction division or floating-point multiplication.
+- The `map` patch type only supports string-to-string mapping, not string-to-object which would help patching whole specs.
+
+[NOTE]
+====
+This list doesn't mean that they should be part of Crossplane, only that they are missing from the PoV of AppCatalog.
+Please see also https://github.com/crossplane/crossplane/issues/2524[#2524], where the community discusses 'Custom Compositions'.
+In there the problems with Compositions are summarized pretty well and also AppCat is affected by the limitations of Compositions.
+====
+
+=== Deployment Requirements
+
+There are several additional resources required along the usual deployment resources.
+
+[qanda]
+Base service runtime::
+* Helm release
+
+Backup::
+* S3 Buckets (through Crossplane)
+* K8up `Schedule`
+
+Service Monitoring::
+* Prometheus `ServiceMonitor`
+* Prometheus `PrometheusRule`
+
+Networking::
+* `NetworkPolicy` to allow traffic to the service.
+
+RBAC::
+* `RoleBinding` to grant read access for requesting customer to instance logs.
+
+Customer association::
+Each instance needs to be associated to the requesting customer for billing the services.
+This might require additional business logic.
+
+[NOTE]
+====
+Some proposals are going to mention custom Crossplane providers, though the impact of versioning mechanics of a provider is currently unknown.
+====
+
+== Proposals
+
+=== Proposal 1: Umbrella Charts
+
+The primary deployment strategy will be a Helm chart that contains most, if not all deployment artifacts.
+This includes cloud instances provisioned by Crossplane itself if required as dependencies.
+
+Additional logic is implemented through custom webhooks and controllers.
+
+.Service provisioning with an umbrella Helm chart
+image::appcat_proposal_1.drawio.svg[]
+
+The "umbrella" chart contain all the feature gates and dependent charts required to provision services on the supported cloud infrastructure.
+The chart takes input parameters such as
+
+- major version
+- backup enabled
+- SLA (alerting enabled)
+
+and then deploys the resources as required.
+
+In addition to the composition, there are webhooks to perform validations and assignment to customer.
+Also, a dedicated version update controller delays changing of `CompositionRevisions` to the newest version until a specific time is met.
+
+Advantages::
+- Umbrella chart is able to deploy arbitrary resources
+- Umbrella chart is integration testable
+
+Disadvantages::
+- Separate version controller required for automated updates.
+- Webhook controller required (possibly per service).
+- Logic and feature gates in umbrella chart is limited by Helm's templating engine.
+- Maintaining services longterm using just YAML might become questionable.
+
+=== Proposal 2: Side Charts
+
+The main difference to proposal 1 is that the umbrella chart is split up into parts where just the service is deployed and another where the additional resources are deployed.
+
+It is assumed that the additional resources are roughly the same for all services, thus they are packaged into one side chart.
+
+.Service provisioning with a common "side" Helm chart
+image::appcat_proposal_2.drawio.svg[]
+
+In addition to the composition, there are webhooks to perform validations and assignment to customer.
+Also, a dedicated version update controller delays changing of `CompositionRevisions` to the newest version until a specific time is met.
+
+Advantages::
+- Easier onboarding of new services.
+- Side chart is able to deploy arbitrary resources.
+
+Disadvantages::
+- It assumes that every service requires roughly the same common resources that can be packed into one chart.
+- Webhook controller required (possibly per service).
+- Logic and feature gates in side chart is limited by Helm's templating engine.
+- Side chart and service definition are loosely coupled.
+- Maintaining services longterm using just YAML might become questionable.
+
+=== Proposal 3: Dedicated Provider
+
+This proposal uses a dedicated Crossplane provider to deploy and configure all the resources that the service needs.
+A Crossplane provider uses code thus provides the most flexibility.
+
+.Service provisioning with a dedicated Crossplane provider
+image::appcat_proposal_3.drawio.svg[]
+
+Advantages::
+- Flexible deployment using code and Kubernetes API.
+- Webhook controller can be built-in.
+- Built-in version update controller.
+- Strong coupling of the resources.
+- Generating the resources is unit testable.
+
+Disadvantages::
+- There may be a lot of code repetition between services that deploy the same set of common resources (though this can be counteracted with a code library).
+
+=== Proposal 4: Sub Providers
+
+This proposal is similar to proposal 3, however it uses dedicated Crossplane providers for each sub component.
+A Crossplane provider uses code thus provides the most flexibility.
+
+.Service provisioning with multiple Crossplane providers
+image::appcat_proposal_4.drawio.svg[]
+
+Advantages::
+- Flexible deployment using code and Kubernetes API.
+- Webhook controller can be built-in.
+- Built-in version update controller.
+- Generating the resources is unit testable.
+
+Disadvantages::
+- Loose coupling of the resources.
+- Each provider might need their own feature gates and share similar API only to be patched repeatedly in compositions.
+- A lot of repetition in the compositions.
+
+=== Proposal 5: Dedicated Provider With Side Chart
+
+This proposal combines the ideas of proposal 3 with proposal 2.
+A Crossplane provider uses code to provision the service, whereas the additional resources are deployed using a Helm chart.
+
+.Service provisioning with a dedicated Crossplane provider and side chart
+image::appcat_proposal_5.drawio.svg[]
+
+Advantages::
+- Flexible deployment using code and Kubernetes API.
+- Webhook controller can be built-in.
+- Built-in version update controller.
+- Generating the resources is unit testable.
+- Common resources are sharable between services using the chart.
+
+Disadvantages::
+- Loose coupling between service and additional resources.
+- Logic and feature gates in side chart is limited by Helm's templating engine.
+
+=== Proposal 6: Free Choice
+
+This proposal does not impose a certain strategy how services are to be provisioned.
+Each service can choose how to best provision the required resources in a `Composition`.
+
+Custom webhooks and version update controller would still be required.
+
+Advantages::
+- Flexible deployment strategy
+
+Disadvantages::
+- No common ground between services makes maintenance and day-2 operations difficult.
+
+=== Proposal 7: Dedicated Operator
+
+This proposal completely removes Crossplane as the manager of resources related to the service.
+Instead, a dedicated Kubernetes Operator that comes with its own CRD will be built.
+
+.Service provisioning with a dedicated Operator
+image::appcat_proposal_7.drawio.svg[]
+
+The operator might still use Crossplane resources as a means to provision those resources.
+
+Advantages::
+- Overall reduced complexity of the stack compared to Crossplane.
+- Flexible deployment using code and Kubernetes API.
+- Webhook controller can be built-in.
+- Built-in version update controller.
+- Generating the resources is unit testable.
+
+Disadvantages::
+- There may be a lot of code repetition between services that deploy the same set of common resources (though this can be counteracted with a code library).
+- More engineering effort needed in resource lifecycle management compared to Crossplane.
+
+=== Proposal 8: Dedicated Provider With Common Provider
+
+This is similar to proposal 5, but instead of a side chart a side provider deploys the common resources.
+It eliminates the disadvantages of Helm charts while increasing testability.
+Compared to proposal 3, it also moves the common resources from a simple shared code library to an actual provider.
+
+.Service provisioning with a dedicated provider and a side provider
+image::appcat_proposal_8.drawio.svg[]
+
+It's assumed that a lot of services are going to be domain-specific, yet some common boilerplate is needed to fully make a service managed.
+These common resources could be deployed by a dedicated provider that can be reused from multiple services.
+
+Advantages::
+- Flexible deployment using code and Kubernetes API.
+- Webhook controller can be built-in.
+- Built-in version update controller.
+- Generating the resources is unit testable.
+- The dedicated provider is free of VSHN-specific resources, making the provider possibly sharable with Crossplane community.
+
+Disadvantages::
+- Loose coupling between service and additional resources (though Kubernetes API lookups may help out to a degree).
+
+== Decision
+
+Proposal 3: Dedicated Provider
+
+== Rationale
+
+Crossplane `Composition` API is limited and it alone can't solve the problem mentioned at the top.
+While umbrella and side charts sound easy at first, they lack flexibility and testability compared to code running in some form of controller.
+Proposal 4 is risking a too lose coupling between the resources.
+A totally undefined foundation as in proposal 6 puts operational aspects into silos, requiring a learning curve for each individual service.
+Through method of elimination the remaining proposals are 3, 7 and 8.
+
+Compared to proposal 7, proposal 3 is favored for the following reasons:
+
+- It's expected to need less engineering effort in resource lifecycle management at the cost of higher complexity in operations.
+- Assuming the future decision of provisioning cloud instances also with Crossplane, they would be aligned and comparable.
+  This would mean a steeper learning curve to understand the Crossplane stack in both development and operations, but once understood should be more efficient.
+  However this can be considered a risk if the decision is not Crossplane, in which case it may be sensible to transform the provider into its own operator, since the overhead complexity of Crossplane is not exactly required or portentially not even justified.
+  This would effectively become proposal 7.
+
+Compared to proposal 8, proposal 3 is favored for the following reasons:
+
+- While some experience could be gained by developing an AppCat service prototype, the actual details, dependencies and relations between common resource and service-specific resources are currently still rather uncertain.
+  For this reason, it makes sense to start the first productive service with strong coupling by having the common artifacts in the same provider and internal code.
+- Once the dependencies and relations could be made out, it may be sensible to refactor and extract the common artifacts into their own provider.
+  This would effectively become proposal 8.
