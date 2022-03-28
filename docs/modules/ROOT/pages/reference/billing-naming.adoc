@@ -24,7 +24,7 @@ To accommodate for all these variations, the default identifier of each product 
 * `servicename`: The name of the AppCatalog service, in this example PostgreSQL
 * `architecture`: The architecture type of the service, for example `standalone` or `rds`.
 * `sla`: The name of the applied SLA.
-* `clustername`: The name of the cluster where this given instance is provisioned.
+* `clustername`: The name of the cluster where this given instance is ordered.
 
 More specific product identifiers for special cases are added as needed.
 See the "examples" section of the https://kb.vshn.ch/appuio-cloud/references/architecture/metering-data-flow.html#_system_idea[system idea] for more information about how the matching works.
