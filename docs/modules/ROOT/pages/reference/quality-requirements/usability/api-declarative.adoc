@@ -1,13 +1,13 @@
 = Declarative Configuration of Instances
 
 Source::
-User
+xref:reference/glossary.adoc#service-user[Service User]
 
 Stimulus::
-Changes the manifest of an AppCatalog service.
+Changes the manifest of an {product} service.
 
 Environment::
-AppCatalog enabled Kubernetes cluster
+{product} enabled Kubernetes cluster
 
 Artifact::
 `kubectl` or equivalent tool

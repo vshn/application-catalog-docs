@@ -1,13 +1,13 @@
 = Minimum Backup Interval
 
 Source::
-Service engineer
+xref:reference/glossary.adoc#service-engineer[Service Engineer]
 
 Stimulus::
 Inspect backups
 
 Environment::
-AppCatalog enabled Kubernetes cluster
+{product} enabled Kubernetes cluster
 
 Artifact::
 Backup tool

@@ -1,6 +1,6 @@
-= AppCatalog Quality Requirements
+= {product} Quality Requirements
 
-These pages contain the formal quality requirements that apply to the AppCatalog framework.
+These pages contain the formal quality requirements that apply to the {product} framework.
 They are general descriptions, for specific services please see the service specification.
 
 ////

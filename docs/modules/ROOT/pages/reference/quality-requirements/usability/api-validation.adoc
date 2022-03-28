@@ -1,13 +1,13 @@
 = Service Instance API Validation
 
 Source::
-User
+xref:reference/glossary.adoc#service-user[Service User]
 
 Stimulus::
-Provision an AppCatalog Service instance with an invalid API spec.
+Provision a xref:reference/glossary.adoc#service-instance[service instance] with an invalid API spec.
 
 Environment::
-AppCatalog enabled Kubernetes cluster
+{product} enabled Kubernetes cluster
 
 Artifact::
 `kubectl` or equivalent tool
