@@ -1,0 +1,30 @@
+= Alert rule: MySQLGaleraClusterSmall
+
+== icon:glasses[] Overview
+
+This alert indicates that the Galera cluster has less than 3 nodes
+
+== icon:bug[] Steps for Debugging
+
+See xref:how-tos/mariadbgalera/debug.adoc[How to debug MariaDB Galera] on how to determine the cluster status and show the Logs of MariaDB.
+
+=== One Pod in CrashLoopBackoff
+
+Sometimes it may happen that data of one of the nodes becomes corrupted.
+
+If, and ONLY IF `mariadb_state` shows that the remaining two nodes are synced, operational and have the same state_uuid's, clear the data dir of the broken pod.
+
+This can be facilitated by recreating the volume:
+
+[source,shell]
+----
+# Values in UPPER_SNAKE_CASE have to be substituted by the reader!
+
+# Delete the PVC of the broken container:
+kubectl delete pvc data-mariadb-N
+
+# Restart the broken pod so that a new PVC is created:
+kubectl delete pod mariadb-N
+----
+
+Once this has completed, wait for the PVC to be recreated and the Pod to come up again.
