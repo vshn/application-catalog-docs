@@ -8,6 +8,6 @@ The global variable https://galeracluster.com/library/documentation/galera-statu
 
 == icon:bug[] Steps for Debugging
 
-See xref:how-tos/mariadbgalera/debug.adoc#_show_mariadb_logs[logs of MariaDB].
+See xref:how-tos/mariadbgalera/debug.adoc[How to debug MariaDB Galera] on how to determine the cluster status and show the Logs of MariaDB.
 
 If the cluster won't start up on itselfe again, xref:how-tos/mariadbgalera/reset_cluster.adoc[a manual reset] is necessary.

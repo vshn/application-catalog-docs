@@ -13,6 +13,8 @@ More specifically, it's `wsrep_local_state` is not `4` ("Synced"). Possible valu
 
 == icon:bug[] Steps for Debugging
 
+See xref:how-tos/mariadbgalera/debug.adoc[How to debug MariaDB Galera] on how to determine the cluster status.
+
 === State `2 != 4` but sync completed
 
 If a node stays in State `2` for a long time, restart the pod.
