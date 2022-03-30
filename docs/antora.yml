@@ -6,4 +6,4 @@ nav:
 - modules/ROOT/partials/nav.adoc
 asciidoc:
   attributes:
-    product: AppCatalog
+    product: AppCat
