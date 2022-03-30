@@ -5,14 +5,18 @@ This page specifies various aspects of the AppCatalog billing.
 == Product Naming in the Database
 
 In order to support all future AppCatalog services and its subproducts, we need to define a naming scheme to differentiate between them.
-Each AppCatalog service will have multiple variations, let's take PostgreSQL as an example:
+Each AppCatalog service will have multiple variations.
 
+.PostgreSQL variation possibilities
+[example]
+====
 * PostgreSQL standalone without SLA
 * PostgreSQL standalone with SLA
 * PostgreSQL replicated without SLA
 * PostgreSQL replicated with SLA
 * PostgreSQL CloudSQL
 * PostgreSQL RDS
+====
 
 Every permutation will need an identifier, as it will be associated with a product in the https://kb.vshn.ch/appuio-cloud/references/architecture/metering-data-flow.html#_data_model[product dimension] of the billing database.
 Also, depending on the cluster where a given service is running, there could be different prices and discounts.
