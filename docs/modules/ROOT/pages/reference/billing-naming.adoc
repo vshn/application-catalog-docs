@@ -39,7 +39,7 @@ Examples for reporting query names:
 
 * appcat_postgresql_standalone_besteffort
 * appcat_redis_cluster_guaranteed
-* appcat_mariadb_rds
+* appcat_mariadb_rds_besteffort
 
 == Trivial Prometheus Query Example
 
