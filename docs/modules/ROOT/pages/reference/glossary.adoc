@@ -65,3 +65,38 @@ A human that engineers and maintains a service (code).
 
 [[service-engineer]]Service Engineer::
 A human that performs day-2 operations or resolves incidents.
+
+== Crossplane
+:crossplane-version: v1.7
+
+[[composition]]Composition::
+[quote, 'https://crossplane.io/docs/{crossplane-version}/concepts/terminology.html#composition[Crossplane.io]']
+____
+A Composition refers to the key Crossplane API type that configures how Crossplane should compose resources into a higher level "composite resource".
+A Composition tells Crossplane "when someone creates composite resource X, you should respond by creating resources Y and Z".
+____
+
+[[composite-resource]]Composite Resource::
+[quote, 'https://crossplane.io/docs/{crossplane-version}/concepts/terminology.html#composite-resource[Crossplane.io]']
+____
+A "Composite Resource" or "XR" is an API type defined using Crossplane.
+A composite resource's API type is arbitrary - dictated by the concept the author wishes to expose as an API.
+A common convention is for types to start with "X" - for example "XAcmeCoDB".
+
+A composite resource can be thought of as the interface to a Composition. It provides the inputs a Composition uses to compose resources into a higher level concept. In fact, the composite resource is the high level concept.
+____
+
+[[composite-resource-definition,xrd]]Composite Resource Definition (XRD)::
+[quote, 'https://crossplane.io/docs/{crossplane-version}/concepts/terminology.html#composite-resource-definition[Crossplane.io]']
+____
+A "Composite Resource Definition" or "XRD" is the API type used to define new types of composite resources and claims.
+Types of composite resources and types of claims exist because they were defined into existence by an XRD.
+The XRD configures Crossplane with support for the composite resources and claims that make up a platform API.
+____
+
+[[claim,xrc]]Composite Resource Claim (XRC, claim)::
+[quote, 'https://crossplane.io/docs/{crossplane-version}/concepts/terminology.html#composite-resource-claim[Crossplane.io]']
+____
+Each claim corresponds to a composite resource, and the pair have nearly identical schemas.
+____
+In the context of {product}, a resource claim is created in the user's namespace, which binds a cluster-scoped composite resource.
