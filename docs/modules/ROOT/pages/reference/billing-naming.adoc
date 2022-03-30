@@ -35,11 +35,13 @@ The query names in the reporting tool should match the naming for the product.
 But it should not contain the `clustername` part.
 The cluster name is part of the `product` label that should be returned by the query.
 
-Examples for reporting query names:
-
+.Reporting query names:
+[example]
+====
 * appcat_postgresql_standalone_besteffort
 * appcat_redis_cluster_guaranteed
 * appcat_mariadb_rds_besteffort
+====
 
 == Trivial Prometheus Query Example
 
