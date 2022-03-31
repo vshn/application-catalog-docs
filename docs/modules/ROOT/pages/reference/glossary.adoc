@@ -1,0 +1,102 @@
+= Glossary
+
+////
+You can link these terms using xrefs and their IDs, for example:
+  xref:reference/glossary.adoc#service-instance[Service Instance]
+////
+
+== General
+
+[[service]]Service::
+An application that can be ordered.
+It is automatically provisioned, can be consumed by a service consumer and generally adheres to our quality requirements.
+
+[[service-consumer]]Service Consumer::
+An application that connects to a service instance as a client.
+
+[[service-order]]Service Order::
+The act of deploying a Kubernetes resource that triggers the provisioning of a new service instance.
+
+[[service-instance]]Service Instance::
+A single isolated occurrence of a service.
+
+[[cloud-instance]]Cloud Instance:::
+An instance of a cloud service offering by a cloud service provider.
+
+[[converged-service-instance]]Converged Service Instance:::
+An instance of a converged service blueprint.
+Either in the same namespace as the service order was made or in another namespace.
+
+== Service Location
+
+Services can be provisioned on various places:
+
+[[converged-cluster]]Converged Cluster::
+Service instance runs on the same cluster as the service consumer.
+
+[[service-cluster]]Service Cluster::
+Service runs on one or more dedicated clusters, reserved for services.
+
+[[cloud-service]]Cloud Service::
+A type of service architecture offered by a cloud service provider such as AWS or GCP.
+
+[[converged-service]]Converged Service::
+A type of service developed to run on a converged cluster.
+
+[[converged-service-architecture]]Converged Service Architectures::
+Architecture refers to the deployment strategy of a service instance in relation to high availability.
+
+[[standalone]]Standalone:::
+A single node instance without any high availability.
+
+[[replicated]]Replicated:::
+The service offers data replication to one or more other instances.
+
+[[clustered]]Clustered:::
+A fully clustered version of the service, usually offering active / active replication with fully automated cluster handling.
+
+== Personas
+
+[[service-user]]Service User::
+A human that interacts with {product}.
+
+[[service-maintainer]]Service Maintainer::
+A human that engineers and maintains a service (code).
+
+[[service-engineer]]Service Engineer::
+A human that performs day-2 operations or resolves incidents.
+
+== Crossplane
+:crossplane-version: v1.7
+
+[[composition]]Composition::
+[quote, 'https://crossplane.io/docs/{crossplane-version}/concepts/terminology.html#composition[Crossplane.io]']
+____
+A Composition refers to the key Crossplane API type that configures how Crossplane should compose resources into a higher level "composite resource".
+A Composition tells Crossplane "when someone creates composite resource X, you should respond by creating resources Y and Z".
+____
+
+[[composite-resource]]Composite Resource::
+[quote, 'https://crossplane.io/docs/{crossplane-version}/concepts/terminology.html#composite-resource[Crossplane.io]']
+____
+A "Composite Resource" or "XR" is an API type defined using Crossplane.
+A composite resource's API type is arbitrary - dictated by the concept the author wishes to expose as an API.
+A common convention is for types to start with "X" - for example "XAcmeCoDB".
+
+A composite resource can be thought of as the interface to a Composition. It provides the inputs a Composition uses to compose resources into a higher level concept. In fact, the composite resource is the high level concept.
+____
+
+[[composite-resource-definition,xrd]]Composite Resource Definition (XRD)::
+[quote, 'https://crossplane.io/docs/{crossplane-version}/concepts/terminology.html#composite-resource-definition[Crossplane.io]']
+____
+A "Composite Resource Definition" or "XRD" is the API type used to define new types of composite resources and claims.
+Types of composite resources and types of claims exist because they were defined into existence by an XRD.
+The XRD configures Crossplane with support for the composite resources and claims that make up a platform API.
+____
+
+[[claim,xrc]]Composite Resource Claim (XRC, claim)::
+[quote, 'https://crossplane.io/docs/{crossplane-version}/concepts/terminology.html#composite-resource-claim[Crossplane.io]']
+____
+Each claim corresponds to a composite resource, and the pair have nearly identical schemas.
+____
+In the context of {product}, a resource claim is created in the user's namespace, which binds a cluster-scoped composite resource.

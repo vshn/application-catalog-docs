@@ -1,17 +1,17 @@
 = Service Production Readiness Standards
 
 Source::
-Application Catalog Product Owner
+{product} Product Owner
 
 Stimulus::
 Approve service production readiness (new and changing services)
 
 Environment::
-AppCatalog enabled Kubernetes cluster
+{product} enabled Kubernetes cluster
 
 Artifact::
 // Placeholder for now. Future "Service Hub" docs?
-https://kb.vshn.ch/app-catalog[AppCatalog Documentation]
+https://kb.vshn.ch/app-catalog[{product} Documentation]
 
 Response::
 Documentation and specification of all services adhere to a common standard.

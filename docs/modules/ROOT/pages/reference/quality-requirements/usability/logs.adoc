@@ -1,25 +1,25 @@
 = Service Instance Logs
 
 Source::
-User
+xref:reference/glossary.adoc#service-user[Service User]
 
 Stimulus::
-Desire to view the logs of a service instance.
+Desire to view the logs of a xref:reference/glossary.adoc#service-instance[service instance].
 
 Environment::
-Converged Cluster
+{product} enabled Kubernetes xref:reference/glossary.adoc#converged-cluster[converged cluster]
 
 Artifact::
 `kubectl`
 
 Response::
-All logs of the service are visible.
+All logs of the instance are visible.
 
 Response measure::
-The service's logs can be viewed via kubectl.
+The instance's logs can be viewed via kubectl.
 
 Rationale::
-To give the users more insight with issues they might have by using the services.
+To give the users more insight with issues they might have by using the instance.
 
 [NOTE]
 ====

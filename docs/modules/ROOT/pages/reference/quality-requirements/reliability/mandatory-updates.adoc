@@ -1,16 +1,16 @@
 = Mandatory Updates
 
 Source::
-Service engineer
+xref:reference/glossary.adoc#service-engineer[Service Engineer]
 
 Stimulus::
-Desire to roll out mandatory updates to all service instances.
+Desire to roll out mandatory updates to all xref:reference/glossary.adoc#service-instance[service instances].
 
 Environment::
-AppCatalog enabled Kubernetes cluster
+{product} enabled Kubernetes xref:reference/glossary.adoc#converged-cluster[converged cluster]
 
 Artifact::
-AppCatalog Framework
+{product} Framework
 
 Response::
 Mandatory updates are rolled out immediately.
