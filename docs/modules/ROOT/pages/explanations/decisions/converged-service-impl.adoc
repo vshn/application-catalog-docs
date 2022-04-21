@@ -5,6 +5,9 @@
 Crossplane brings a lot of lifecycle features for XRDs and XRs.
 While developing the https://github.com/vshn/appcat-service-prototype[service prototype] it became apparent that some functionality is missing in Crossplane out-of-the-box.
 
+Also, using Crossplane to deploy converged services may provide many lifecycle boilerplate, but also adds significant overhead complexity.
+It's being questioned whether this complexity is worth it.
+
 [NOTE]
 ====
 The scope of this problem and decision here is explicitly xref:reference/glossary.adoc#converged-service[converged services] that certain cloud providers don't offer as a managed xref:reference/glossary.adoc#cloud-instance[cloud instance].
@@ -211,6 +214,12 @@ image::appcat_proposal_7.drawio.svg[]
 
 The operator might still use Crossplane resources as a means to provision those resources.
 
+Also, there's nothing that stops anyone to integrate Operator-managed resources into another Crossplane Composition later on.
+The following graph depicts how this proposal leaves a possible integration with Compositions open:
+
+.Service provisioning with a dedicated Operator, managed by Crossplane Composition
+image::appcat_proposal_7_cp.drawio.svg[]
+
 Advantages::
 - Overall reduced complexity of the stack compared to Crossplane.
 - Flexible deployment using code and Kubernetes API.
@@ -246,7 +255,7 @@ Disadvantages::
 
 == Decision
 
-Proposal 3: Dedicated Provider
+Proposal 7: Dedicated Operator
 
 == Rationale
 
@@ -256,17 +265,20 @@ Proposal 4 is risking a too lose coupling between the resources.
 A totally undefined foundation as in proposal 6 puts operational aspects into silos, requiring a learning curve for each individual service.
 Through method of elimination the remaining proposals are 3, 7 and 8.
 
-Compared to proposal 7, proposal 3 is favored for the following reasons:
+Compared to proposal 3, proposal 7 is favored for the following reasons:
 
-- It's expected to need less engineering effort in resource lifecycle management at the cost of higher complexity in operations.
-- Assuming the future decision of provisioning xref:reference/glossary.adoc#cloud-instance[cloud instances] also with Crossplane, they would be aligned and comparable.
-  This would mean a steeper learning curve to understand the Crossplane stack in both development and operations, but once understood should be more efficient.
-  However this can be considered a risk if the decision is not Crossplane, in which case it may be sensible to transform the provider into its own operator, since the overhead complexity of Crossplane is not exactly required or portentially not even justified.
-  This would effectively become proposal 7.
+- Compared to classic Kubernetes Operators, Crossplane brings a lot of added complexity that is technically not required.
+  The cost of higher complexity is not worth the reduced engineering effort in resource lifecycle management that Crossplane brings.
+- If xref:reference/glossary.adoc#cloud-instance[cloud instances] were implemented with Crossplane Compositions, one could argue they would be aligned and comparable.
+  However, this means that the converged service provisioning is artificially more complex than it needs to be.
+  By now it's already clear enough that converged services and cloud services are fundamentally different, both in implementation as in usage.
+  Thus this alignment doesn't bring much value and is not considered justified.
 
-Compared to proposal 8, proposal 3 is favored for the following reasons:
+Compared to proposal 8, proposal 7 is favored for the following reasons:
 
 - While some experience could be gained by developing an {product} service prototype, the actual details, dependencies and relations between common resource and service-specific resources are currently still rather uncertain.
-  For this reason, it makes sense to start the first productive service with strong coupling by having the common artifacts in the same provider and internal code.
+  For this reason, it makes sense to start the first productive service with strong coupling by having the common artifacts in the same operator and internal code.
 - Once the dependencies and relations could be made out, it may be sensible to refactor and extract the common artifacts into their own provider.
-  This would effectively become proposal 8.
+  This would become similar to proposal 8.
+
+Going for the most simplest and flexible option first (a dedicated Operator) still allows platform engineers to build Crossplane Compositions that make use of the service operator.
