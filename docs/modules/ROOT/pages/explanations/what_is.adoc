@@ -2,15 +2,17 @@
 
 TL;DR::
 * A catalog of services which can be self-service ordered directly from a Kubernetes cluster
-* A framework to build services which are then available in the catalog
+* A framework to build services to make them available in the catalog
 
 [quote, products.docs.vshn.ch]
 ____
 The VSHN Application Catalog is a Cloud Native marketplace which offers services from Cloud Service Providers like Amazon AWS, Google Cloud, Microsoft Azure, Aiven.io, Exoscale or cloudscale.ch, as well as managed services from VSHN.
 ____
 
-Behind the scenes it's *our framework* to self-service deploy applications on Kubernetes, by simply ordering a new instance directly in the cluster (no external system involved).
-It's a list of applications available in an APPUiO Kubernetes cluster from which the user of the cluster can choose from.
+Behind the scenes it's *our framework* to self-service order services provided by a cloud service provider or provisioned directly in the cluster itself.
+Everything happens directly inside the cluster, no external system or tool is needed for provisioning.
+
+It's also a list of applications available in an APPUiO Kubernetes cluster from which the user of the cluster can choose from.
 The list of applications heavily depends on where the cluster runs and it's capabilities.
 
 == The Framework
@@ -19,7 +21,7 @@ It enables us to:
 
 * Easily engineer new services for the application catalog, by still having them to adhere to our standards and make them discoverable
 * Have similarity between all services in the application catalog because they all are built using the same framework and technology
-* A standardization of the same service between clusters, because we set our defaults and only expose the parameters we want to allow to be customized
+* A standardization of the same service between clusters, because we set our best practices and only expose the parameters we want to allow to be customized
 
 === A comparison
 

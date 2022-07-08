@@ -1,12 +1,15 @@
 = Service Requirements and Iterations
 
-Implementing a service is iterative work.
-The idea is to release early and release often, until the desired functionality, stability and maturity is reached.
+Implementing and maintaining a service is iterative work.
+The idea is to release early and release often, without having the urge to have all features available right from the beginning.
 
 This page gives an idea on the iterative steps.
-Except the initial version and the final version, all steps in-between can be in any order, as it fits best.
+Except the initial version and the feature complete version, all steps in-between can be in any order, as it fits best.
+With "feature complete" it's not meant that the service doesn't receive new functionality or doesn't get maintained anymore, we're talking about the default scope outlined on this page.
 
 Important is that every step already has the desired quality.
+That in turn also means we must allow some leeway for each service in respect to the requirements, should a service not allow for a feature or makes it overly complex.
+A service is allowed to deviate from a requirement when it makes sense and can be documented and reasoned about accordingly.
 
 == Initial Release "Alpha"
 
