@@ -8,7 +8,7 @@ Except the initial version and the final version, all steps in-between can be in
 
 Important is that every step already has the desired quality.
 
-== Initial Releas "Alpha"
+== Initial Release "Alpha"
 
 As a user of the service I can:
 
