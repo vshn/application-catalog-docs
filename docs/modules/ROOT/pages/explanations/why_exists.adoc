@@ -1,4 +1,5 @@
 = Why does Application Catalog exist?
+pass:[<!-- vale Microsoft.Avoid = NO -->]
 
 The application catalog is the successor to the classic VSHN Managed Services on virtual machines, managed by Puppet.
 It's a very similar concept, applied to Kubernetes, but extended with Cloud services integration, which wasn't available with Puppet.

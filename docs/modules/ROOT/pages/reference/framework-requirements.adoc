@@ -1,5 +1,4 @@
 = Framework Requirements
-pass:[<!-- vale Microsoft.Avoid = NO -->]
 
 As discussed on xref:explanations/what_is.adoc["What is it?"], a *framework* for self-service provisioning of services out of a Kubernetes cluster is part of the application catalog.
 
