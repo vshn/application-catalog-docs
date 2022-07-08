@@ -1,0 +1,85 @@
+= Service Requirements and Iterations
+
+Implementing a service is iterative work.
+The idea is to release early and release often, until the desired functionality, stability and maturity is reached.
+
+This page gives an idea on the iterative steps.
+Except the initial version and the final version, all steps in-between can be in any order, as it fits best.
+
+Important is that every step already has the desired quality.
+
+== Initial Releas "Alpha"
+
+As a user of the service I can:
+
+* Create a service instance
+* Update configuration of a service instance
+* Delete a service instance
+
+See also:
+
+* xref:reference/quality-requirements/usability/api-declarative.adoc[Declarative Configuration of Instances]
+* xref:reference/quality-requirements/usability/api-validation.adoc[Service Instance API Validation]
+* xref:reference/quality-requirements/usability/provisioning-time.adoc[Provisioning Time]
+
+== Iteration "Bathin"
+
+As a user of the service I can:
+
+* Enable Backup on a service instance
+* Disable Backup on a service instance
+* Manually restore data for a service instance
+
+See also:
+
+* xref:reference/quality-requirements/portability/backup-exports.adoc[Backups Can Be Exported]
+* xref:reference/quality-requirements/reliability/backup-interval.adoc[Minimum Backup Interval]
+
+== Iteration "Settulco"
+
+As a user of the service I can:
+
+* Access logs of a service instance
+
+See also:
+
+* xref:reference/quality-requirements/usability/logs.adoc[Service Instance Logs]
+
+== Iteration "Melchom"
+
+As a user of the service I can:
+
+* See metrics of a service instance
+* Access a dashboard showing pre-crafted diagrams
+
+== Iteration "Abigor"
+
+As a user of the service I can:
+
+* Enable alerting on pre-defined SLIs to VSHN
+* See SLO reports
+* Access operations runbooks
+
+See also:
+
+* xref:reference/quality-requirements/usability/actionable-alerts.adoc[Actionable Alerts]
+
+== Iteration "Marbas"
+
+As a user of the service I can:
+
+* Enable regular maintenance on a service instance
+
+== Iteration "Dantalion"
+
+As a user of the service I can:
+
+* Upgrade the service instance version
+
+== Stable Release
+
+As a user of the service I can:
+
+* Rely on production readiness of the service
+
+All requirements from xref:reference/quality-requirements/maintainability/readiness-standards.adoc[Service Production Readiness Standards] are met.
