@@ -1,11 +1,13 @@
 = Framework Requirements
+pass:[<!-- vale Microsoft.Avoid = NO -->]
 
-As discussed on xref:explanations/what_is.adoc["What is it?"], a *framework* for self-service provisioning of services out of a Kubernetes cluste is part of the application catalog.
+As discussed on xref:explanations/what_is.adoc["What is it?"], a *framework* for self-service provisioning of services out of a Kubernetes cluster is part of the application catalog.
 
 This page discusses requirements the framework must adhere to:
 
 Reusability::
 Base parts of the framework should be reusable by the Open Source community and VSHNeers.
+When we develop a base part of the framework which might be usable by others, we try to bring it upstream or contribute it to the place it best belongs to.
 Just like Puppet base module or Helm charts are (can be) reusable.
 
 Low barrier to entry - xref:reference/glossary.adoc#_personas[Service Maintainer]::
@@ -30,7 +32,7 @@ Core parts of the framework should be maintained by a community.
 
 More buy than make::
 Try to use what's already available and focus on sticking parts together to be of use for us.
-Only engineer code (e.g. Go) when it's for sticking parts together or a mandatory part is missing.
+Only engineer code (for example Go or Python) when it's for sticking parts together or a mandatory part is missing.
 
 Be aware of the risks::
 When "buying" a part of the system, do a risk assesment and document it properly.
