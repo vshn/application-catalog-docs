@@ -1,0 +1,36 @@
+= Framework Requirements
+
+As discussed on xref:explanations/what_is.adoc["What is it?"], a *framework* for self-service provisioning of services out of a Kubernetes cluste is part of the application catalog.
+
+This page discusses requirements the framework must adhere to:
+
+Reusability::
+Base parts of the framework should be reusable by the Open Source community and VSHNeers.
+Just like Puppet base module or Helm charts are (can be) reusable.
+
+Low barrier to entry - xref:reference/glossary.adoc#_personas[Service Maintainer]::
+Adding a new service to the catalog using the framework should be as easy as possible.
+Required skills:
+Must:::
+* Kubernetes
+* Helm Charts
+* (Crossplane)
+Should:::
+* Commodore Components
+
+Low barrier to entry - xref:reference/glossary.adoc#_personas[Service User]::
+Using a service should be a no-brainer:
+* Simple interface
+* Expressive and approachable documentation
+
+Low maintenance::
+Our focus must be on maintaining the service itself.
+Core parts of the framework should be maintained by a community.
+(Just like Puppet itself is maintained by Puppet Labs - we maintain the modules and run the infrastructure)
+
+More buy than make::
+Try to use what's already available and focus on sticking parts together to be of use for us.
+Only engineer code (e.g. Go) when it's for sticking parts together or a mandatory part is missing.
+
+Be aware of the risks::
+When "buying" a part of the system, do a risk assesment and document it properly.
