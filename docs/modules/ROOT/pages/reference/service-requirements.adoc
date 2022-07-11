@@ -7,7 +7,7 @@ This page gives an idea on the iterative steps.
 Except the initial version and the feature complete version, all steps in-between can be in any order, as it fits best.
 With "feature complete" it's not meant that the service doesn't receive new functionality or doesn't get maintained anymore, we're talking about the default scope outlined on this page.
 
-Important is that every step already has the desired quality.
+Important is that every step is independent of each other. A service that implements `Abigor` doesn't necessarily already implement `Melchom `.
 That in turn also means we must allow some leeway for each service in respect to the requirements, should a service not allow for a feature or makes it overly complex.
 A service is allowed to deviate from a requirement when it makes sense and can be documented and reasoned about accordingly.
 
