@@ -14,7 +14,8 @@ Adding a new service to the catalog using the framework should be as easy as pos
 Required skills:
 Must:::
 * Kubernetes
-* Helm Charts
+* Helm, Helm Charts
+* Prometheus, PromQL
 * (Crossplane)
 Should:::
 * Commodore Components
