@@ -40,7 +40,9 @@ Brokering of external services gets much easier when we have a set of pre-define
 
 === Standard way to provide services
 
-All provided services look the same as they were provided by the same framework.
+All services which are offered in the application catalog have the same identity.
+They adhere to a defined resource model which makes them well-discoverable.
+It's easy to start with a new service, as they have a common look.
 
 == For a Cloud Service Provider
 

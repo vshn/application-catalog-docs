@@ -1,6 +1,6 @@
 = Framework Requirements
 
-As discussed on xref:explanations/what_is.adoc["What is it?"], a *framework* for self-service provisioning of services out of a Kubernetes cluster is part of the application catalog.
+As discussed on xref:explanations/what_is.adoc["What is it?"], a *framework* for self-service provisioning of services out of a Kubernetes cluster is a core part of the application catalog.
 
 This page discusses requirements the framework must adhere to:
 
@@ -22,12 +22,12 @@ Should:::
 
 Low barrier to entry - xref:reference/glossary.adoc#_personas[Service User]::
 Using a service should be a no-brainer:
-* Simple interface
+* Simple and discoverable interface
 * Expressive and approachable documentation
 
 Low maintenance::
 Our focus must be on maintaining the service itself.
-Core parts of the framework should be maintained by a community.
+Core parts of the framework should be maintained by a community whenever possible or by the framework maintainer.
 (Just like Puppet itself is maintained by Puppet Labs - we maintain the modules and run the infrastructure)
 
 More buy than make::
@@ -35,4 +35,12 @@ Try to use what's already available and focus on sticking parts together to be o
 Only engineer code (for example Go or Python) when it's for sticking parts together or a mandatory part is missing.
 
 Be aware of the risks::
-When "buying" a part of the system, do a risk assesment and document it properly.
+When "buying" a part of the system, do a risk assessment and document it properly.
+
+Testing facilities::
+Automated testing is important for the quality of a service.
+The framework must provide facilities for a service maintainer to be able to specify tests for a service.
+
+Identity::
+Services which are making use of the framework have a unique identity.
+To achieve that, the framework must help with that.

@@ -11,13 +11,15 @@ Important is that every step is independent of each other. A service that implem
 That in turn also means we must allow some leeway for each service in respect to the requirements, should a service not allow for a feature or makes it overly complex.
 A service is allowed to deviate from a requirement when it makes sense and can be documented and reasoned about accordingly.
 
+To understand the personas referenced in this document, see xref:reference/glossary.adoc#_personas[Glossary - Personas].
+
 == Initial Release "Alpha"
 
 As a user of the service I can:
 
-* Create a service instance
-* Update configuration of a service instance
-* Delete a service instance
+* create a service instance
+* update the configuration of a service instance
+* delete a service instance
 
 See also:
 
@@ -29,9 +31,9 @@ See also:
 
 As a user of the service I can:
 
-* Enable Backup on a service instance
-* Disable Backup on a service instance
-* Manually restore data for a service instance
+* enable Backup on a service instance
+* disable Backup on a service instance
+* manually restore data for a service instance
 
 See also:
 
@@ -42,7 +44,7 @@ See also:
 
 As a user of the service I can:
 
-* Access logs of a service instance
+* access logs of a service instance
 
 See also:
 
@@ -52,16 +54,19 @@ See also:
 
 As a user of the service I can:
 
-* See metrics of a service instance
-* Access a dashboard showing pre-crafted diagrams
+* see metrics of a service instance
+* access a dashboard showing pre-crafted diagrams
 
 == Iteration "Abigor"
 
 As a user of the service I can:
 
-* Enable alerting on pre-defined SLIs to VSHN
-* See SLO reports
-* Access operations runbooks
+* enable alerting on pre-defined SLIs to VSHN so that VSHN can resolve incidents with priority
+* see SLO reports so that I can get an overview of how well my instance performs
+
+As an engineer of the service I can:
+
+* access operations runbooks so that I can resolve upcoming alerts
 
 See also:
 
@@ -71,18 +76,18 @@ See also:
 
 As a user of the service I can:
 
-* Enable regular maintenance on a service instance
+* enable regular maintenance on a service instance
 
 == Iteration "Dantalion"
 
 As a user of the service I can:
 
-* Upgrade the service instance version
+* upgrade the service instance version
 
 == Stable Release
 
 As a user of the service I can:
 
-* Rely on production readiness of the service
+* rely on production readiness of the service
 
 All requirements from xref:reference/quality-requirements/maintainability/readiness-standards.adoc[Service Production Readiness Standards] are met.
