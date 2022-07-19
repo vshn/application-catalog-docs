@@ -2,15 +2,31 @@
 
 As discussed on xref:explanations/what_is.adoc["What is it?"], a *framework* for self-service provisioning of services out of a Kubernetes cluster is a core part of the application catalog.
 
-This page discusses requirements the framework must adhere to:
+This page discusses requirements the framework must adhere to, grouped by xref:reference/glossary.adoc#_personas[personas].
+
+== For Service User
+
+Self-Service First::
+A service provided using the framework must be available for self-service ordering and configuration.
+
+Low barrier to entry::
+Using a service should be as easy as possible:
+* Simple and discoverable interface to order and manage the service
+* Expressive and approachable documentation
+
+Identity::
+Services which are made with the framework have a unique identity and are therefore discoverable as being part of the application catalog.
+To achieve that, the framework must provide means for that.
+
+== For Service Maintainer
 
 Reusability::
-Base parts of the framework should be reusable by the Open Source community and VSHNeers.
+Base parts of the framework should be reusable by the Open Source community and VSHNeers, whenever it makes sense, adhering to our https://handbook.vshn.ch/values.html#_transparency[company value "Transparency"].
 When we develop a base part of the framework which might be usable by others, we try to bring it upstream or contribute it to the place it best belongs to.
 Just like Puppet base module or Helm charts are (can be) reusable.
 
-Low barrier to entry - xref:reference/glossary.adoc#_personas[Service Maintainer]::
-Adding a new service to the catalog using the framework should be as easy as possible.
+Low barrier to entry::
+Adding a new service to the catalog or maintaining an existing service using the framework should be as easy as possible.
 Required skills:
 Must:::
 * Kubernetes
@@ -20,14 +36,9 @@ Must:::
 Should:::
 * Commodore Components
 
-Low barrier to entry - xref:reference/glossary.adoc#_personas[Service User]::
-Using a service should be a no-brainer:
-* Simple and discoverable interface
-* Expressive and approachable documentation
-
 Low maintenance::
 Our focus must be on maintaining the service itself.
-Core parts of the framework should be maintained by a community whenever possible or by the framework maintainer.
+Core parts of the framework should be maintained by a community whenever possible, a third-party software vendor or by the framework maintainer.
 (Just like Puppet itself is maintained by Puppet Labs - we maintain the modules and run the infrastructure)
 
 More buy than make::
@@ -40,7 +51,3 @@ When "buying" a part of the system, do a risk assessment and document it properl
 Testing facilities::
 Automated testing is important for the quality of a service.
 The framework must provide facilities for a service maintainer to be able to specify tests for a service.
-
-Identity::
-Services which are making use of the framework have a unique identity.
-To achieve that, the framework must help with that.

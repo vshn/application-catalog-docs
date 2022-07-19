@@ -66,6 +66,9 @@ A human that engineers and maintains a service (code).
 [[service-engineer]]Service Engineer::
 A human that performs day-2 operations or resolves incidents.
 
+[[framework-maintainer]]Framework Maintainer::
+A human that engineers and maintains the framework (code).
+
 == Crossplane
 :crossplane-version: v1.7
 
