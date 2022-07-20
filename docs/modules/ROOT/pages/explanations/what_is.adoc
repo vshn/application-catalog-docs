@@ -1,0 +1,41 @@
+= What is the Application Catalog
+
+TL;DR::
+* A *catalog of services* which can be self-service ordered directly from a Kubernetes cluster (via an well-defined API)
+* A *framework to build services* to make them available in the catalog - having a unique application catalog identity
+
+[quote, products.docs.vshn.ch]
+____
+The VSHN Application Catalog is a Cloud Native marketplace which offers services from Cloud Service Providers like Amazon AWS, Google Cloud, Microsoft Azure, Aiven.io, Exoscale or cloudscale.ch, as well as managed services from VSHN.
+____
+
+Behind the scenes it's our framework to self-service order services provided by a cloud service provider or provisioned directly in the cluster itself.
+Everything happens directly from inside the Kubernetes cluster (API server), no external system or tool is needed for provisioning.
+
+It's also a list of applications available in an APPUiO Kubernetes cluster from which the user of the cluster can choose from.
+The list of applications heavily depends on where the cluster runs and it's capabilities.
+
+== The Framework
+
+It enables us to:
+
+* Easily engineer new services for the application catalog, by still having them to adhere to our standards and make them discoverable
+* Provide services with a unique and discoverable identity, similar to the https://github.com/crossplane/crossplane/blob/master/design/one-pager-managed-resource-api-design.md[Crossplane Resource Model (XRM)] or the https://cloud.google.com/blog/topics/developers-practitioners/build-platform-krm-part-1-whats-platform[Kubernetes Resource Model (MRK)]
+* Have similarity between all services in the application catalog because they all are built using the same framework and technology
+* A standardization of the same service between clusters, because we set our best practices and only expose the parameters we want to allow to be customized
+
+=== A comparison
+
+For a better understanding, the framework can be compared to:
+
+Puppet::
+* Base modules allow installing a service and configure (usually) every aspect of it (a lot of parameters are exposed)
+* Profiles use base modules, glue them together and configure them with our own best-practice, to form a new service. Usually only a few parameters are exposed and only these parameters can be influenced.
+
+Project Syn::
+* Helm charts are base modules, they allow installing and configuring a particular service and expose all possible options.
+* Commodore Components are:
+** sticking Helm Charts together
+** parametrize them with best-practices
+** make useful options available to the user
+** provide a fallback to set _every_ Helm value

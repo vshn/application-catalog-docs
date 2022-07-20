@@ -1,3 +1,5 @@
+* xref:app-catalog:ROOT:explanations/what_is.adoc[What is it?]
+* xref:app-catalog:ROOT:explanations/why_exists.adoc[Why does it exist?]
 * xref:app-catalog:ROOT:explanations/app_catalog.adoc[Concept]
 
 * Crossplane
