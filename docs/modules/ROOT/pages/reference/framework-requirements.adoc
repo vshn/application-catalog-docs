@@ -14,9 +14,8 @@ Using a service should be as easy as possible:
 * Simple and discoverable interface to order and manage the service
 * Expressive and approachable documentation
 
-Identity::
-Services which are made with the framework have a unique identity and are therefore discoverable as being part of the application catalog.
-To achieve that, the framework must provide means for that.
+Consistent API::
+Services which are made with the framework share a common API scheme (where it makes sense) to have common identity.
 
 == For Service Maintainer
 
