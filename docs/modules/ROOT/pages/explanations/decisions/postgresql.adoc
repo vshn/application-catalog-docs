@@ -1,0 +1,84 @@
+= PostgreSQL Operators
+
+== Problem
+
+Creating our own operator to deploy and manage PostgreSQL proved to be a gargantuan effort. In order to keep in line with the newly specified https://kb.vshn.ch/app-catalog/reference/framework-requirements.html#_for_service_maintainer["more buy than make"] approach, we're evaluating the viability of using existing operators for the use of converged services.
+
+== Evaluated Operators
+
+[cols="1,1,1,1,1,1,1"]
+|===
+|Requirements |Percona |Stackgres |CloudnativePG |Zalando |Crunchydata |Bitnami Helmchart
+|Superuser Access |✅ |✅ |✅ |✅ |✅ |✅
+
+|Database Management |❌ |❌ |❌ |✅ |✅ |❌
+
+|User Management |❌ |❌ |❌ |✅ |✅ |✅
+
+|Service Metrics |❌ |✅ |✅ |❌ |✅ |✅
+
+|Maintenance Schedule |✅ |✅ |❌ |❌ |❌ |❌
+
+|Backup Schedule |✅  |✅  |✅  |✅  |✅  |❌
+
+|Self Service Backup Restore |✅ |✅ |✅ |✅ |✅ |❌
+
+|Encryption at rest |✅ |✅ |✅ |✅ |✅ |✅
+
+|Connection limit of 25/Gb Memory |✅ |✅ |✅ |❌ |✅ |✅
+
+|Extension Management |❌ |✅ |❌ |✅ |❌ |✅
+
+|Custom PostgreSQL Settings |✅ |✅ |✅ |❌ |✅ |✅
+
+|In-Place Major Upgrade |✅ |✅ |❌ |❌ |❌ |❌
+
+|License |Apache License 2.0 |AGPL-3.0 |Apache License 2.0 |MIT |Apache License 2.0 | Apache License 2.0
+
+|Upstream Support |Some support available not clear if for operators |✅ |✅ (via EDB) |❌ |✅ |❌
+|===
+
+https://wiki.vshn.net/display/VHT/PostgreSQL+Operator+Evaluations[More detailed] comparison is in our internal wiki.
+
+For the POC on which this decision is based on, we opted to test out Stackgres. It's feature set and general feel were good during the evaluation phase.
+
+== Pros
+
+* Brings cluster functionality
+* Backups out of the box, incl. PIT
+* Auto deploys Prometheus service monitors
+* Brings Dbops CRs that handle some operations in a k8s native way
+* Security update schedules can be implemented
+* The operator is maintained by a third party
+* Commercial support available
+
+== Cons
+
+* We can't support PostgreSQL version or extensions that the operator doesn't provide
+* Crossplane's limitations, as discussed https://kb.vshn.ch/app-catalog/explanations/decisions/converged-service-impl.html[here]
+* We have to deal with some opinionated decision by the operator developers and maybe need to work around them
+* The operator is maintained by a third party
+
+== Risks
+
+=== Operator Unmaintained
+
+Risk:: The Operator becomes unmaintained
+
+Option 1:: We or the community carries the project further
+Option 2:: Migration to another operator
+
+=== CRD Versioning
+
+Risk:: CRDs could contain breaking changes
+
+Option 1:: The maintainer provides conversion webhooks
+Option 2:: We can handle the changes in the compositions, transparent for the user
+Option 3:: We inform the customers they have to do an action after the upgrade
+
+=== License Changes
+
+Risk:: The licensing of the operator could change
+
+Option 1:: Migrate to another operator
+Option 2:: Keep using a version before the change applied
