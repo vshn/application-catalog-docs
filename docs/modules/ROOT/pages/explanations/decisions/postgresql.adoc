@@ -64,6 +64,7 @@ It's feature set and general feel were good during the evaluation phase.
 * Crossplane's limitations, as discussed https://kb.vshn.ch/app-catalog/explanations/decisions/converged-service-impl.html[here]
 * We have to deal with some opinionated decision by the operator developers and maybe need to work around them, or accept them as given
 * The operator is maintained by a third party, but is open source and we could contribute if needed
+* Upgrading the operator could introduce breaking changes
 
 == Risks
 
@@ -76,11 +77,10 @@ Option 2:: Migration to another operator
 
 === CRD Versioning
 
-Risk:: CRDs could contain breaking changes
+Risk:: CRDs could contain breaking changes that require a manual upgrade path
 
-Option 1:: The maintainer provides conversion webhooks
-Option 2:: We can handle the changes in the compositions, transparent for the user
-Option 3:: We inform the customers they have to do an action after the upgrade
+Option 1:: We can handle the changes in the compositions, transparent for the user
+Option 2:: We inform the customers they have to do an action after the upgrade
 
 === License Changes
 
