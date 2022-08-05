@@ -14,7 +14,7 @@ Having helpers with engineering compositions and XRDs would be a welcomed bonus 
 * Promote re-usability were possible
 * Help with developing XRDs and Compositions
 * Should support Crossplane packages in the future
-* Should support APPUiO Manage in the future
+* Should support APPUiO Managed in the future
 
 == Proposals
 
