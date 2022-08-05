@@ -26,7 +26,7 @@ Commodore packages are used to define the XRDs, compositions and providers.
 These packages will be very fine-grained, so there's a package just to deploy `+provider-cloudscale+`, one for `+provider-exoscale+`, etc.
 
 They will then be mixed and matched as needed on the various targets.
-Those targets can be APPUiO Cloud clusters, APPUiO managed clusters, or simply manifests that could be packaged for general crossplane usage.
+Those targets can be APPUiO Cloud clusters, APPUiO Managed clusters, or simply manifests that could be packaged for general Crossplane usage.
 
 Advantages::
 
