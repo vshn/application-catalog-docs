@@ -44,7 +44,7 @@ image::deployment1.drawio.svg[]
 
 === Proposal 2
 
-The `+component-crossplane+` will contain all the XRDs and compositions.
+The `+component-appcat+` will contain all the XRDs and compositions.
 The component will act as a generator for the compositions and the XRDs.
 We can use jsonnet functions and snippets to make the generation of the compositions and XRDs easier.
 This also promotes re-usability of snippets.
