@@ -1,0 +1,66 @@
+= Decision How to Deploy Compositions and XRDs
+
+== Problem
+
+We need to deploy our XRDs and Compositions for AppCat to OpenShift and Kubernetes clusters.
+Also writing the compositions and XRDs plainly is somewhat a hassle (yaml engineering).
+Having helpers with engineering compositions and XRDs would be a welcomed bonus for the solution.
+
+== Requirements
+
+* Manage XRDs
+* Manage Compositions
+* Manage Providers and their config
+* Promote re-usability were possible
+* Help with developing XRDs and Compositions
+* Should support Crossplane packages in the future
+* Should support APPUiO Manage in the future
+
+== Proposals
+
+=== Proposal 1: Fine Grained Commodore Packages
+
+This proposal will enhance `+component-crossplane+` in such a way that it can also deploy XRDs and compositions via parameters.
+The definitions for the XRDs and compositions will live in the commodore packages.
+Commodore packages are used to define the XRDs, compositions and providers.
+These packages will be very fine-grained, so there's a package just to deploy `+provider-cloudscale+`, one for `+provider-exoscale+`, etc.
+
+They will then be mixed and matched as needed on the various targets.
+Those targets can be APPUiO Cloud clusters, APPUiO managed clusters, or simply manifests that could be packaged for general crossplane usage.
+
+Advantages::
+
+* Neatly separated dependencies
+* Packages are re-usable.
+
+Disadvantages::
+
+* Unnecessary complication by splitting and distributing the packages
+* Composing the packages onto a new cluster encourages a lot of copy and paste
+* XRDs and compositions live in the commodore packages (yaml in yaml)
+
+.Resources deployed via fine-grained commodore packages
+image::deployment1.drawio.svg[]
+
+=== Proposal 2
+
+The `+component-crossplane+` will contain all the XRDs and compositions.
+The component will act as a generator for the compositions and the XRDs.
+We can use jsonnet functions and snippets to make the generation of the compositions and XRDs easier.
+This also promotes re-usability of snippets.
+The composition exposes parameters to enable and configure the various XRDs and compositions.
+
+Due to the current lack of conditionals in crossplane, jsonnet can be used to create permutations of compositions for various conditions.
+Compositions for PostgreSQL with SLA and PostgreSQL without SLA can be generated from the same base.
+
+Advantages::
+
+* Leverages jsonnet to generate yaml files
+* Commodore packages can be re-used for new, similar clusters
+
+Disadvantages::
+
+* Complexity of the component increases
+
+.Resources deployed via monolithic commodore packages
+image::deployment2.drawio.svg[]
