@@ -3,8 +3,8 @@
 == Problem
 
 We need to deploy XRDs and Compositions for AppCat to Kubernetes clusters.
-Also writing the compositions and XRDs plainly is somewhat a hassle (yaml engineering).
-Having helpers with engineering compositions and XRDs would be a welcomed bonus for the solution.
+Also writing the Compositions and XRDs plainly is somewhat a hassle (yaml engineering).
+Having helpers with engineering Compositions and XRDs would be a welcomed bonus for the solution.
 
 == Requirements
 
@@ -20,9 +20,9 @@ Having helpers with engineering compositions and XRDs would be a welcomed bonus 
 
 === Proposal 1: Fine Grained Commodore Packages
 
-This proposal will enhance https://github.com/projectsyn/component-crossplane[`+component-crossplane+`] in such a way that it can also deploy XRDs and compositions via parameters.
-The definitions for the XRDs and compositions will live in the https://syn.tools/commodore/tutorial/package.html[Commodore Packages].
-Commodore packages are used to define the XRDs, compositions and providers.
+This proposal will enhance https://github.com/projectsyn/component-crossplane[`+component-crossplane+`] in such a way that it can also deploy XRDs and Compositions via parameters.
+The definitions for the XRDs and Compositions will live in the https://syn.tools/commodore/tutorial/package.html[Commodore Packages].
+Commodore packages are used to define the XRDs, Compositions and providers.
 These packages will be very fine-grained, so there's a package just to deploy `+provider-cloudscale+`, one for `+provider-exoscale+`, etc.
 
 They will then be mixed and matched as needed on the various targets.
@@ -37,20 +37,20 @@ Disadvantages::
 
 * Unnecessary complication by splitting and distributing the packages
 * Composing the packages onto a new cluster encourages a lot of copy and paste
-* XRDs and compositions live in the commodore packages (yaml in yaml)
+* XRDs and Compositions live in the commodore packages (yaml in yaml)
 
 .Resources deployed via fine-grained commodore packages
 image::deployment1.drawio.svg[]
 
 === Proposal 2
 
-The `+component-appcat+` will contain all the XRDs and compositions.
-The component will act as a generator for the compositions and the XRDs.
-We can use jsonnet functions and snippets to make the generation of the compositions and XRDs easier.
+The `+component-appcat+` will contain all the XRDs and Compositions.
+The component will act as a generator for the Compositions and the XRDs.
+We can use jsonnet functions and snippets to make the generation of the Compositions and XRDs easier.
 This also promotes re-usability of snippets.
-The composition exposes parameters to enable and configure the various XRDs and compositions.
+The composition exposes parameters to enable and configure the various XRDs and Compositions.
 
-Due to the current lack of conditionals in crossplane, jsonnet can be used to create permutations of compositions for various conditions.
+Due to the current lack of conditionals in crossplane, jsonnet can be used to create permutations of Compositions for various conditions.
 Compositions for PostgreSQL with SLA and PostgreSQL without SLA can be generated from the same base.
 
 Advantages::
