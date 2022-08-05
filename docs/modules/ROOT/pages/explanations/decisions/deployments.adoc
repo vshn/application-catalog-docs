@@ -2,7 +2,7 @@
 
 == Problem
 
-We need to deploy our XRDs and Compositions for AppCat to OpenShift and Kubernetes clusters.
+We need to deploy XRDs and Compositions for AppCat to Kubernetes clusters.
 Also writing the compositions and XRDs plainly is somewhat a hassle (yaml engineering).
 Having helpers with engineering compositions and XRDs would be a welcomed bonus for the solution.
 
