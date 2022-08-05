@@ -4,6 +4,9 @@
 
 We need to deploy XRDs and Compositions for AppCat to Kubernetes clusters.
 Also writing the Compositions and XRDs plainly is somewhat a hassle (yaml engineering).
+Our initial Redis POC contained almost 400 lines of yaml.
+Most of those lines consist of patch operations and many of those are very similar to one another.
+This makes maintaining and understanding the compositions very hard.
 Having helpers with engineering Compositions and XRDs would be a welcomed bonus for the solution.
 
 == Requirements
