@@ -21,7 +21,7 @@ Having helpers with engineering compositions and XRDs would be a welcomed bonus 
 === Proposal 1: Fine Grained Commodore Packages
 
 This proposal will enhance https://github.com/projectsyn/component-crossplane[`+component-crossplane+`] in such a way that it can also deploy XRDs and compositions via parameters.
-The definitions for the XRDs and compositions will live in the commodore packages.
+The definitions for the XRDs and compositions will live in the https://syn.tools/commodore/tutorial/package.html[Commodore Packages].
 Commodore packages are used to define the XRDs, compositions and providers.
 These packages will be very fine-grained, so there's a package just to deploy `+provider-cloudscale+`, one for `+provider-exoscale+`, etc.
 
