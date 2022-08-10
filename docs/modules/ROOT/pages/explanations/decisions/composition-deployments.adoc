@@ -1,0 +1,90 @@
+= Decision How to Deploy Compositions and XRDs
+
+== Problem
+
+We need to deploy XRDs and Compositions for the Application Catalog to Kubernetes clusters using Project Syn, our config management system.
+Using Project Syn can be seen as a constraint.
+
+Writing the Compositions and Composites ("XRDs") in plain YAML tends to become very verbose and large.
+Most of the YAML consist of patch operations and many of those are very similar to one another.
+This makes maintaining and understanding the Compositions very hard.
+Having helpers with engineering Compositions and XRDs would be a welcomed bonus for the solution.
+
+== Requirements
+
+* Manage XRDs
+* Manage Compositions
+* Manage Providers and their configuration
+* Promote re-usability were possible
+* Help with developing XRDs and Compositions
+* Should support Crossplane packages in the future
+* Should support APPUiO Managed in the future
+
+== Proposals
+
+=== Proposal 1: Commodore Packages With Resources Verbatim
+
+This proposal will enhance the Commodore Component https://github.com/projectsyn/component-crossplane[`+component-crossplane+`] in such a way that it can also deploy XRDs and Compositions via parameters.
+The definitions for the XRDs and Compositions will live in https://syn.tools/commodore/tutorial/package.html[Commodore Packages].
+Commodore Packages are used to define XRDs, Compositions and Crossplane Providers in plain YAML (no Jsonnet processing).
+These packages will be very fine-grained, so there's a package just to deploy `+provider-cloudscale+`, one for `+provider-exoscale+`, etc.
+
+They will then be mixed and matched as needed on the various targets.
+Those targets can be APPUiO Cloud clusters, APPUiO Managed clusters, or simply manifests that could be packaged for general Crossplane usage.
+
+Advantages::
+
+* Verbosity of plain YAML isn't abstracted again.
+
+Disadvantages::
+
+* Authoring the packages encourages a lot of copy and paste of YAML snippets.
+* The burden of maintaining the resources in plain YAML increases.
+
+.Resources deployed via Commodore Packages with plain YAML resources
+image::deployment1.drawio.svg[]
+
+=== Proposal 2: Commodore Component With Jsonnet Processing
+
+A new Commodore Component `+component-appcat+` will contain parameters and functions to render all the XRDs and Compositions that come in via Commodore Packages.
+The component will act as a generator for the Compositions and the XRDs.
+We can use jsonnet functions and snippets to make the generation of the Compositions and XRDs easier.
+This also promotes re-usability of snippets.
+The composition exposes parameters to enable and configure the various XRDs and Compositions.
+
+Due to the current lack of conditionals in Crossplane, Jsonnet can be used to create permutations of Compositions for various conditions.
+Compositions for PostgreSQL with SLA and PostgreSQL without SLA can be generated from the same base.
+
+The parameters in the packages will follow a structure that is optimized for jsonnet generator and the user, therefore the resources get abstracted again.
+
+Advantages::
+
+* Leverages Jsonnet to generate YAML files, reducing a lot of boilerplate YAML.
+
+Disadvantages::
+
+* Complexity of the stack increases.
+* The resources in the packages are abstracted again.
+
+.Resources deployed via Commodore Packages and Jsonnet
+image::deployment2.drawio.svg[]
+
+[NOTE]
+====
+The main difference between Proposal 1 and 2 is the use of jsonnet in Proposal 2.
+====
+
+[NOTE]
+====
+The packages can all live in the same, single Git repository (in different files and folders).
+It's not required that there is a Git repository for each and every package.
+However, if using a single Git repo, all resources share the same versions.
+====
+
+== Decision
+
+Proposal 2
+
+== Rationale
+
+The benefit of jsonnet processing and reducing a lot of boilerplate YAML is deemed greater than the disadavantage of additional abstraction.
