@@ -4,6 +4,7 @@
 
 * Crossplane
 ** xref:app-catalog:ROOT:explanations/crossplane_service_broker.adoc[Service Broker]
+** xref:app-catalog:ROOT:explanations/crossplane_provider_mechanics.adoc[Provider Mechanics]
 
 * xref:app-catalog:ROOT:explanations/redis.adoc[Redis]
 ** xref:app-catalog:ROOT:explanations/redis_sentinel_lb_with_haproxy.adoc[Redis Sentinel with HAProxy]
