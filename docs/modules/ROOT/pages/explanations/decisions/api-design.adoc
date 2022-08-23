@@ -1,0 +1,243 @@
+= Decision on API Design
+
+== Problem
+
+This decision is about how we can achieve a "common look" as defined https://kb.vshn.ch/app-catalog/explanations/why_exists.html#_standard_way_to_provide_services[here].
+
+The ideal way would be, that we can re-use the exact same XRD for each set of services.
+For example all implementations for PostgreSQL have exactly the same API for the user.
+Due to the nature of the product, not all implementations provide the same functionality.
+The set of available features is most likely not the same between most providers.
+Also with Crossplane we're a bit limited on what's possible with translating the source API spec into the target API spec.
+
+== Requirements
+
+* APIs for a set of similar services should feel similar
+* They should only need minimal configuration for a default case
+* We should be able to leverage unique features of the service providers
+
+== Proposals
+
+=== Proposal 1: Use same XRD with provider specific fields
+
+There's exactly one XRD for a set of services.
+This XRD contains a minimal set of common parameters, as well as a field for provider specific configurations.
+
+.Example Claim
+[source, yaml]
+----
+apiVersion: appcat.vshn.io/v1
+kind: PostgreSQL
+metadata:
+  name: my-instance
+spec:
+  parameters:
+    name: my-instance
+    majorVersion: '14'
+    pgSettings: {}
+    exoscale:
+      plan: hobbyist-2
+      type: pg
+      maintenance:
+        day: 2
+        hour: 22
+        minute: 0
+      backup:
+        hour: 20
+        minute: 0
+    vshn:
+      minorVersion: '4'
+----
+
+Advantages::
+
+* We can use the same XRD
+* Adding new providers to the list is easy
+
+Disadvantages::
+
+* We don't really have a "common look"
+* The customer needs to know what the underlying service provider is, even for simple instances
+
+=== Proposal 2: Separate XRDs
+
+This approach will have different XRDs for each provider.
+However, they will follow the same structure, as far as possible.
+All the toplevel fields will be the same, the differences will be apparent in the sub-fields.
+They will also have the same kind, but a different APIVersion.
+
+.Example Claim
+[source, yaml]
+----
+# Exoscale example
+apiVersion: exoscale.appcat.vshn.io/v1
+kind: PostgreSQL
+metadata:
+  name: my-instance
+spec:
+  parameters:
+    name: my-instance
+    postgreSQL:
+      version: '14'
+      type: pg
+      settings: {}
+    size:
+      plan: hobbyist-2
+    maintenance:
+      day: 2
+      hour: 22
+      minute: 0
+    backup:
+      hour: 20
+      minute: 0
+
+# Converged example
+apiVersion: vshn.appcat.vshn.io/v1
+kind: PostgreSQL
+metadata:
+  name: my-instance
+spec:
+  parameters:
+    name: my-instance
+    service:
+      version: '14.4'
+      settings: {}
+      pgbouncer:
+        settings: {}
+    size:
+      cpu: 2
+      memory: 8Gi
+      disk: 200Gi
+      encrypted: true
+    maintenance:
+      day: 2
+      hour: 22
+      minute: 0
+    backup:
+      hour: 20
+      minute: 0
+----
+
+Advantages::
+
+* Same look between all providers, deploying PostgreSQL to any backend feels familiar
+* Specifics can be handled in a sensible way
+
+Disadvantages::
+
+* The user could get confused by objects with the same kind
+
+=== Proposal 3: Composed XRDs
+
+There's a base XRD that handles the common configurations.
+All provider specific parameters are put in a separate XRD.
+
+This idea may not be possible with Crossplane, but it's here for completeness’ sake.
+
+.Example Claim
+[source, yaml]
+----
+apiVersion: appcat.vshn.io/v1
+kind: PostgreSQL
+metadata:
+  name: my-instance
+spec:
+  parameters:
+    name: my-instance
+    version: '14'
+    pgSettings: {}
+
+
+apiVersion: exoscale.appcat.vshn.io/v1
+kind: PostgreSQLConfig
+metadata:
+  name: my-instance
+spec:
+  parameters:
+    instanceRef: my-instance
+    plan: hobbyist-2
+    type: pg
+    maintenance:
+      day: 2
+      hour: 22
+      minute: 0
+    backup:
+      hour: 20
+      minute: 0
+----
+
+Advantages::
+
+* Clear separation of base and specific configuration parameters
+
+Disadvantages::
+
+* "same look" will only apply to the base XRDs
+* Pretty complicated to use for the end-user
+
+=== Proposal 4: Same XRD and Parse the Input
+
+We use the same XRD for every provider.
+Most fields are simply strings, and they will then be parsed in the composition.
+
+.Example Claim
+[source, yaml]
+----
+# Exoscale example
+apiVersion: appcat.vshn.io/v1
+kind: PostgreSQL
+metadata:
+  name: my-instance
+spec:
+  parameters:
+    name: my-instance
+    version: '14'
+    pgSettings: {}
+    # we pass the names of the plans for exoscale
+    size: hobbyist-2
+    type: pg
+    maintenance:
+      day: 2
+      hour: 22
+      minute: 0
+    backup:
+      hour: 20
+      minute: 0
+
+# vshn converged example
+apiVersion: appcat.vshn.io/v1
+kind: PostgreSQL
+metadata:
+  name: my-instance
+spec:
+  parameters:
+    name: my-instance
+    # vshn converged might need the minor version, too
+    version: '14.4'
+    pgSettings: {}
+    # we derive the size of the instance from this string
+    # custom-$cpu-$memory-$diskspace
+    size: custom-2-8-300
+    # vshn converged may not have a type
+    type: ''
+    maintenance:
+      day: 2
+      hour: 22
+      minute: 0
+    backup:
+      hour: 20
+      minute: 0
+----
+
+Advantages::
+
+* Exact same API for all services of the same set
+
+Disadvantages::
+
+* Awkward to use, there needs to be a lot of documentation
+* The complexity of the compositions increases drastically with the parsing rules
+
+== Decision
+
+== Rationale
