@@ -8,7 +8,14 @@ The ideal way would be, that we can re-use the exact same XRD for each set of se
 For example all implementations for PostgreSQL have exactly the same API for the user.
 Due to the nature of the product, not all implementations provide the same functionality.
 The set of available features is most likely not the same between most providers.
-Also with Crossplane we're a bit limited on what's possible with translating the source API spec into the target API spec.
+Also with Crossplane we're a bit limited on what's possible with translating the source API spec into the target API spec:
+
+* No conditionals in compositions
+* Only a limited set of transformations
+* Can't create random values
+
+[NOTE]
+This is not a complete list of limitations.
 
 == Requirements
 
