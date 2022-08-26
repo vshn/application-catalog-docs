@@ -12,9 +12,9 @@ Also with Crossplane we're a bit limited on what's possible with translating the
 
 == Requirements
 
-* APIs for a set of similar services should feel similar
-* They should only need minimal configuration for a default case
-* We should be able to leverage unique features of the service providers
+* APIs for a set of similar services feel similar
+* Only minimal configuration is needed for a default case
+* Unique features of a service provider can be leveraged
 
 == Proposals
 
