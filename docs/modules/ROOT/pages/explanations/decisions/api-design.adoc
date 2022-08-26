@@ -2,7 +2,7 @@
 
 == Problem
 
-This decision is about how we can achieve a "common look" as defined https://kb.vshn.ch/app-catalog/explanations/why_exists.html#_standard_way_to_provide_services[here].
+This decision is about how we can achieve a common look as defined https://kb.vshn.ch/app-catalog/explanations/why_exists.html#_standard_way_to_provide_services[here].
 
 The ideal way would be, that we can re-use the exact same XRD for each set of services.
 For example all implementations for PostgreSQL have exactly the same API for the user.
