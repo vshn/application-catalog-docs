@@ -65,13 +65,19 @@ Disadvantages::
 
 * We don't really have a "common look"
 * The customer needs to know what the underlying service provider is, even for simple instances
+* There may only be 1–3 common fields for a given service
 
-=== Proposal 2: Separate XRDs
+=== Proposal 2: Separate XRDs with Grouped Fields
 
 This approach will have different XRDs for each provider.
 However, they will follow the same structure, as far as possible.
 All the toplevel fields will be the same, the differences will be apparent in the sub-fields.
+Thus creating groups of fields.
+These groups can be different for any given service type.
 They will also have the same kind, but a different APIVersion.
+
+If a provider within a service type doesn't support all the groups, then we'll omit the group as a whole.
+This will also make it clear at one glance that the given provider doesn't support this feature.
 
 .Example Claim
 [source, yaml]
@@ -133,6 +139,7 @@ Advantages::
 Disadvantages::
 
 * The user could get confused by objects with the same kind
+* The customer needs to know what the underlying service provider is, even for simple instances
 
 === Proposal 3: Composed XRDs
 
@@ -181,11 +188,15 @@ Disadvantages::
 
 * "same look" will only apply to the base XRDs
 * Pretty complicated to use for the end-user
+* There may only be 1–3 common fields for a given service
 
 === Proposal 4: Same XRD and Parse the Input
 
 We use the same XRD for every provider.
 Most fields are simply strings, and they will then be parsed in the composition.
+
+For example one provider has `hobbyist-2` as a valid size, while other need CPU/Memory/Disk, this could be represented by `custom-2-8-200`.
+This is inspired by https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_instance#machine_type[GCP Terraform].
 
 .Example Claim
 [source, yaml]
