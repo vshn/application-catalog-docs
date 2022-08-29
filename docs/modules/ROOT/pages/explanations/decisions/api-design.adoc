@@ -139,7 +139,7 @@ Advantages::
 Disadvantages::
 
 * The user could get confused by objects with the same kind
-* The customer needs to know what the underlying service provider is, even for simple instances
+* The user needs to know some specifics of the underlying service provider.
 
 === Proposal 3: Composed XRDs
 
