@@ -64,7 +64,7 @@ Advantages::
 Disadvantages::
 
 * We don't really have a "common look"
-* The customer needs to know what the underlying service provider is, even for simple instances
+* The user needs to know some specifics of the underlying service provider.
 * There may only be 1–3 common fields for a given service
 
 === Proposal 2: Separate XRDs with Grouped Fields
