@@ -256,6 +256,71 @@ Disadvantages::
 * Awkward to use, there needs to be a lot of documentation
 * The complexity of the compositions increases drastically with the parsing rules
 
+=== Proposal 5: Group Specific Settings under One Field
+
+This is a sub-variant of proposal 2.
+Everything that has provider specific naming is grouped under a field called `+providerSpecific+`.
+If a provider doesn't support a given top-level parameter (for example `+maintenance+`), then it's omitted.
+
+.Example Claim
+[source, yaml]
+----
+# Exoscale
+apiVersion: exoscale.appcat.vshn.io/v1
+kind: PostgreSQL
+metadata:
+  name: my-instance
+spec:
+  parameters:
+    name: my-instance
+    maintenance:
+      day: 2
+      hour: 22
+      minute: 0
+    backup:
+      hour: 20
+      minute: 0
+    providerSpecific:
+      version: "14"
+      service:
+        type: pg
+        settings: {}
+        plan: hobbyist-2
+
+# VSHN Converged
+apiVersion: exoscale.appcat.vshn.io/v1
+kind: PostgreSQL
+metadata:
+  name: my-instance
+spec:
+  parameters:
+    name: my-instance
+    maintenance:
+      day: 2
+      hour: 22
+      minute: 0
+    backup:
+      hour: 20
+      minute: 0
+    providerSpecific:
+      version: "14.4"
+      service:
+        settings: {}
+      resources:
+        cpu: 2
+        memory: 2048
+        disk: 200G
+----
+
+Advantages::
+
+* All provider specific fields are grouped
+
+Disadvantages::
+
+* There may only be 1–3 common fields for a given service, shifting everything under the `+providerSpecific+` field
+* Increases the nesting
+
 == Decision
 
 == Rationale
