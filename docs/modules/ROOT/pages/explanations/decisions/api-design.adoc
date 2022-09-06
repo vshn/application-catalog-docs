@@ -5,7 +5,7 @@ This decision page is currently still a WIP.
 
 == Problem
 
-This decision is about how to define "a common look" as mentioned https://kb.vshn.ch/app-catalog/explanations/why_exists.html#_standard_way_to_provide_services[here].
+This decision is about how to define an identity and "a common look" as mentioned https://kb.vshn.ch/app-catalog/explanations/why_exists.html#_standard_way_to_provide_services[here].
 
 The ideal way would be, that we can re-use the exact same XRD for each set of services.
 For example all implementations for PostgreSQL have exactly the same API for the user.
@@ -25,6 +25,7 @@ This is not a complete list of limitations.
 * APIs for a set of similar services feel similar
 * Only minimal configuration is needed for a default case
 * Unique features of a service provider can be leveraged
+* Expose as few options as possible and extend as we go
 
 == Proposals
 
@@ -70,17 +71,22 @@ Disadvantages::
 * The user needs to know some specifics of the underlying service provider.
 * There may only be 1–3 common fields for a given service
 
-=== Proposal 2: Separate XRDs with Grouped Fields
+=== Proposal 2: Separate XRDs with Convention
 
 This approach will have different XRDs for each provider.
-However, they will follow the same structure, as far as possible.
-All the toplevel fields will be the same, the differences will be apparent in the sub-fields.
+However, they will follow the same convention, as far as possible.
+All the top level fields will be the same, the differences will be apparent in the sub-fields.
 Thus creating groups of fields.
 These groups can be different for any given service type.
 They will also have the same kind, but a different APIVersion.
 
 If a provider within a service type doesn't support all the groups, then we'll omit the group as a whole.
 This will also make it clear at one glance that the given provider doesn't support this feature.
+
+The fields below a group are not specified and depend on what the provider is capable of.
+Each group describes a very generic part of a service, like its size or maintenance.
+
+It also depends on the provider if adding grouping makes actually sense, see examples.
 
 .Example Claim
 [source, yaml]
@@ -132,6 +138,39 @@ spec:
     backup:
       hour: 20
       minute: 0
+
+# Bucket without any grouped fields
+apiVersion: appcat.vshn.io/v1
+kind: ObjectBucket
+metadata:
+  name: my-cool-object-storage-bucket
+  namespace: my-namespace
+spec:
+  parameters:
+    bucketName: my-bucket-change-name
+    region: rma
+
+# Managed Gitlab
+apiVersion: vshn.appcat.vshn.io/v1
+kind: Gitlab
+metadata:
+  name: gitlab-prod
+spec:
+  parameters:
+    name: gitlab-prod
+    service:
+      url: https://gitlab.example.com
+      runners: true
+      pages: true
+    size:
+      runners: 3
+      disk: 300Gi
+      ha: true
+    clients:
+      - 192.168.1.0/24
+      - 192.168.2.0/24
+    #no maintenance or backup as of now
+
 ----
 
 Advantages::
@@ -291,7 +330,7 @@ spec:
         plan: hobbyist-2
 
 # VSHN Converged
-apiVersion: exoscale.appcat.vshn.io/v1
+apiVersion: vshn.appcat.vshn.io/v1
 kind: PostgreSQL
 metadata:
   name: my-instance
@@ -325,5 +364,9 @@ Disadvantages::
 * Increases the nesting
 
 == Decision
+
+So far we're agreeing on:
+* Exposing only needed fields, add more as needed
+* Sensible defaults, only required parameter should be the name
 
 == Rationale
