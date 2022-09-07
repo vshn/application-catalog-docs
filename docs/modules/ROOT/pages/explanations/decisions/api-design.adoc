@@ -162,7 +162,7 @@ spec:
       url: https://gitlab.example.com
       runners: true
       pages: true
-    size:
+    size: <1>
       runners: 3
       disk: 300Gi
       ha: true
@@ -172,6 +172,8 @@ spec:
     #no maintenance or backup as of now
 
 ----
+<1> Size might be an example top level parameter that can be used in many services, although its subfields are provider-specific.
+    If a provider doesn't make use of a given top-level parameter, then it may simply be omitted from the API scheme.
 
 Advantages::
 
