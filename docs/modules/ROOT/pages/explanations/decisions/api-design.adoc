@@ -367,6 +367,6 @@ Disadvantages::
 
 So far we're agreeing on:
 * Exposing only needed fields, add more as needed
-* Sensible defaults, only required parameter should be the name
+* Sensible defaults, minimize required parameters.
 
 == Rationale
