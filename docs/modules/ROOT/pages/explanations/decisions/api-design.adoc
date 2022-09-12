@@ -103,7 +103,7 @@ spec:
       version: '14'
       type: pg
       settings: {}
-    size:
+    size: <1>
       plan: hobbyist-2
     maintenance:
       day: 2
@@ -126,7 +126,7 @@ spec:
       settings: {}
       pgbouncer:
         settings: {}
-    size:
+    size: <1>
       cpu: 2
       memory: 8Gi
       disk: 200Gi
@@ -148,7 +148,7 @@ metadata:
 spec:
   parameters:
     bucketName: my-bucket-change-name
-    region: rma
+    region: rma <2>
 
 # Managed Gitlab
 apiVersion: vshn.appcat.vshn.io/v1
@@ -166,14 +166,17 @@ spec:
       runners: 3
       disk: 300Gi
       ha: true
-    clients:
+    clients: <3>
       - 192.168.1.0/24
       - 192.168.2.0/24
     #no maintenance or backup as of now
 
 ----
-<1> Size might be an example top level parameter that can be used in many services, although its subfields are provider-specific.
+<1> Size might be an example top-level parameter that can be used in many services, although its subfields are provider-specific.
     If a provider doesn't make use of a given top-level parameter, then it may simply be omitted from the API scheme.
+<2> Object bucket is a very simple service that doesn't provide many configuration options.
+    Using any grouped top-level parameters doesn't make sense.
+<3> Clients might be an example of a top-level parameter that only finds use for some very specific services.
 
 Advantages::
 
