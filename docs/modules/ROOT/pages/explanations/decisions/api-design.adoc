@@ -370,8 +370,17 @@ Disadvantages::
 
 == Decision
 
-So far we're agreeing on:
+We agreed on Proposal 2.
+
+Additional points we've agreed on:
+
 * Exposing only needed fields, add more as needed
 * Sensible defaults, minimize required parameters.
 
 == Rationale
+
+Proposal 2 provides the most flexibility for modelling the various limitations and differences that various providers might have.
+All other proposals are hard definitions what the API should look like and are not a convention.
+This makes it hard to tailor the various provider limitations and differences to fit the definitions.
+
+To achieve the identity and same look for the various providers and services a flexible convention makes the most sense.
