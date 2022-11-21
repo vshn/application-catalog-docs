@@ -91,7 +91,7 @@ Option 2:: Migrate to another operator
 
 == Decision
 
-TBD
+The team had no objections by going forward with Stackgres and Crossplane to develop the VSHN Managed PostgreSQL service.
 
 == Operators Compared
 

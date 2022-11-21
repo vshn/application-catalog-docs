@@ -1,5 +1,11 @@
 = Converged Service Provisioning Implementation
 
+[NOTE]
+====
+This page is obsolete.
+The discussions about the approach have been moved to xref:explanations/decisions/postgresql.adoc[the VSHN Managed PostgreSQL] page.
+====
+
 == Problem
 
 Crossplane brings a lot of lifecycle features for XRDs and XRs.
