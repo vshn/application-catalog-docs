@@ -23,3 +23,6 @@
 
 * HAProxy
 ** xref:app-catalog:ROOT:how-tos/haproxy/stats.adoc[Access Stats Page]
+
+* Exoscale DBaaS
+** xref:app-catalog:ROOT:how-tos/exoscale_dbaas/price-api.adoc[Exoscale Price API]
