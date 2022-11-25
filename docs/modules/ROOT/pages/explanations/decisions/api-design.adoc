@@ -377,6 +377,16 @@ Additional points we've agreed on:
 * Exposing only needed fields, add more as needed
 * Sensible defaults, minimize required parameters.
 
+To minimize confusion when querying the claims.
+The kind should also contain the provider as a pre-fix:
+
+.Example Kind
+[source, yaml]
+----
+apiVersion: acmecorp.appcat.vshn.io/v1
+kind: AcmecorpPostgreSQL
+----
+
 == Rationale
 
 Proposal 2 provides the most flexibility for modelling the various limitations and differences that various providers might have.
@@ -384,3 +394,15 @@ All other proposals are hard definitions what the API should look like and are n
 This makes it hard to tailor the various provider limitations and differences to fit the definitions.
 
 To achieve the identity and same look for the various providers and services a flexible convention makes the most sense.
+
+=== Avoiding Confusion with Specific Kinds
+
+In Kubernetes there's ambiguity if there are multiple CRDs with the same `+kind+` but different `+apiversion+` fields.
+
+Given a Kubernetes cluster with these CRDs:
+
+* `+foo.a.io+`
+* `+foo.b.io+`
+
+If a user invokes `+kubectl get foo+` only CRs of type `+foo.a.io+` are returned footnote:ordering[As far as we were able to determine, the Kubernetes API server returns the first API group it finds by alphabetical order.].
+This could lead to "missing" CRs from a user perspective
