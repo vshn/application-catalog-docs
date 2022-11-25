@@ -382,8 +382,8 @@ To minimize confusion when querying the claims. The kind should also contain the
 .Example Kind
 [source, yaml]
 ----
-apiVersion: provider.appcat.vshn.io/v1
-kind: ProviderPostgreSQL
+apiVersion: acmecorp.appcat.vshn.io/v1
+kind: AcmecorpPostgreSQL
 ----
 
 == Rationale
