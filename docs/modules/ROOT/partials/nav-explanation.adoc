@@ -19,7 +19,8 @@
 
 * Decisions
 ** xref:app-catalog:ROOT:explanations/decisions/crossplane.adoc[Crossplane as Control Plane]
-** xref:app-catalog:ROOT:explanations/decisions/converged-service-impl.adoc[Converged Service Provisioning Implementation]
 ** xref:app-catalog:ROOT:explanations/decisions/composition-deployments.adoc[Composition Deployments]
 ** xref:app-catalog:ROOT:explanations/decisions/api-design.adoc[API Design]
 ** xref:app-catalog:ROOT:explanations/decisions/postgresql.adoc[PostgreSQL Operator]
+** Archive
+*** xref:app-catalog:ROOT:explanations/decisions/archive/converged-service-impl.adoc[Converged Service Provisioning Implementation]
