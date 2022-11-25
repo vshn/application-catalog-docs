@@ -399,7 +399,7 @@ To achieve the identity and same look for the various providers and services a f
 
 In Kubernetes there's ambiguity if there are multiple CRDs with the same `+kind+` but different `+apiversion+` fields.
 
-Given a K8s cluster with these CRDs:
+Given a Kubernetes cluster with these CRDs:
 
 * `+foo.a.io+`
 * `+foo.b.io+`
