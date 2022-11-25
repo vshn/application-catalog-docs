@@ -405,4 +405,4 @@ Given a Kubernetes cluster with these CRDs:
 * `+foo.b.io+`
 
 If a user invokes `+kubectl get foo+` only CRs of type `+foo.a.io+` are returned footnote:ordering[As far as we were able to determine, the Kubernetes API server returns the first API group it finds by alphabetical order.].
-This could lead to "missing" CRs from a user perspective
+This could lead into a "missing" CRs situation from a user's perspective.
