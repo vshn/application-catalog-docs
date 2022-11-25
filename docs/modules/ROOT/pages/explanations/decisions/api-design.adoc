@@ -377,6 +377,15 @@ Additional points we've agreed on:
 * Exposing only needed fields, add more as needed
 * Sensible defaults, minimize required parameters.
 
+To minimize confusion when querying the claims. The kind should also contain the provider as a pre-fix:
+
+.Example Kind
+[source, yaml]
+----
+apiVersion: provider.appcat.vshn.io/v1
+kind: ProviderPostgreSQL
+----
+
 == Rationale
 
 Proposal 2 provides the most flexibility for modelling the various limitations and differences that various providers might have.
