@@ -387,6 +387,11 @@ apiVersion: acmecorp.appcat.vshn.io/v1
 kind: AcmecorpPostgreSQL
 ----
 
+=== Addendum 1 Exposing Versions
+
+We expose the versioning of the various services via the composite as an enum.
+The default of the field should always point to the most recent stable version.
+
 == Rationale
 
 Proposal 2 provides the most flexibility for modelling the various limitations and differences that various providers might have.
@@ -406,3 +411,12 @@ Given a Kubernetes cluster with these CRDs:
 
 If a user invokes `+kubectl get foo+` only CRs of type `+foo.a.io+` are returned footnote:ordering[As far as we were able to determine, the Kubernetes API server returns the first API group it finds by alphabetical order.].
 This could lead to "missing" CRs from a user perspective
+
+=== Addendum 1 Exposing Versions
+
+The main point for this approach is UX.
+Users get instant feedback if their desired version isn't supported.
+Available versions as directly visible via `+kubectl+` and no other documentation has to be consulted.
+
+One drawback for this is, that versions need to be adjusted if a provider changes them.
+This issue is much smaller for VSHN Managed Services, as new versions are controlled by ourselves.
