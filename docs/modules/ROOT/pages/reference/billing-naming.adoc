@@ -24,12 +24,14 @@ Also, depending on the cluster where a given service is running, there could be 
 
 To accommodate for all these variations, the default identifier of each product in the database should be as follows:
 
-$servicename-$sla:$provider:*:*:$architecture
+$servicename-$sla:$provider:$tenant:$namespace:$architecture
 
 * `servicename`: The name of the AppCatalog service, in this example PostgreSQL
 * `provider`: The provider type of the service, for example `exoscale` or `vshn`.
-* `sla`: The name of the applied SLA.
+* `sla`: The name of the applied SLA. There are two values `BestEffort` and `Guaranteed`
 * `architecture`: The architecture of the service. For cloud providers this can be plans (for example Exoscale startup-4). For VSHN Managed Services it's the architecture (for example standalone, cluster, replicated).
+* `tenant`: The customer who's invoiced. Usually maps to the `organization` label.
+* `namespace`: The namespace where the resource is running.
 
 More specific product identifiers for special cases are added as needed.
 See the "examples" section of the https://kb.vshn.ch/appuio-cloud/references/architecture/metering-data-flow.html#_system_idea[system idea] for more information about how the matching works.
