@@ -81,10 +81,42 @@ It's not required that there is a Git repository for each and every package.
 However, if using a single Git repo, all resources share the same versions.
 ====
 
+
+=== Proposal 3: Commodore Component Without Packages
+
+The Commodore Component `+component-appcat+` renders all XRDs, Compositions, and Providers.
+We don't use any Commodore Packages but write all XRDs and Compositions in Jsonnet.
+Any configuration will be provided directly as parameters to the `+component-appcat+`.
+
+
+.Resources deployed via Commodore Packages and Jsonnet
+image::deployment3.drawio.svg[]
+
+Advantages::
+
+* Leverages Jsonnet to generate YAML files, reducing a lot of boilerplate YAML.
+* Reduced mental load thanks to fewer layers of abstraction.
+* Commodore Components are a lot more mature than Commodore Packages.
+* We already have experience with writing maintainable Commodore Components.
+
+Disadvantages::
+
+* Complexity of Jsonnet.
+* Less flexibility.
+
+
 == Decision
 
-Proposal 2
+Proposal 3
 
 == Rationale
 
-The benefit of jsonnet processing and reducing a lot of boilerplate YAML is deemed greater than the disadavantage of additional abstraction.
+A Package based solutions have the potential to be more flexible.
+However, they introduce another layer of abstraction, and it's hard to reason about multiple interacting packages.
+
+By using an opinionated Commodore Component to deploy all XRDs, Compositions, and Providers, we have a single source for all resources.
+We can completely leverage the benefits of Jsonnet, reduce boilerplate, and simplify complex configuration by providing a more opinionated interface.
+
+Commodore Packages are not yet well established, while Commodore Components are well understood, mature, and used extensively throughout VSHN,
+
+We deemed the advantages of an opinionated Commodore more important than the lost flexibility.
