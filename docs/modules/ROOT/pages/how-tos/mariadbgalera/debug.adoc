@@ -31,6 +31,26 @@ kubectl -n $INSTANCE_ID logs -c mariadb-galera \
     --prefix -f
 ----
 
+== Crossplane can't reconsilidate users or grants
+
+It might happen that crossplane can't reconcile users or grants on some clusters.
+The logs of the mariadb pod will log something like this:
+
+[source,shell]
+----
+2022-12-15 15:52:14 473 [Warning] WSREP: Ignoring error 'Can't find any matching row in the user table' on query. Default database: ''. Query: 'GRANT ALL ON `49d8e185-8cc0-413e-9d28-2a3bab081300`.* TO 'c89343c6-6367-4a89-9de9-1bfd72643d91'@'%'', Error_code: 1133
+----
+
+This is most likely caused by a bug in MariaDB and the workaround is to increase the `table_definition_cache` of the affected instance.
+
+[source,shell]
+----
+kubectl exec mariadb-0 -c mariadb-galera -it -- bash
+
+mysql -u root -p$MARIADB_ROOT_PASSWORD
+SET GLOBAL table_definition_cache=4000
+----
+
 == Determine the cluster status
 
 Put the following in a file called `mariadb_state` in your `$PATH`:
