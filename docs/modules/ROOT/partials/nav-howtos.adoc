@@ -15,6 +15,7 @@
 * Redis
 ** xref:app-catalog:ROOT:how-tos/redis/debug_sentinel.adoc[Debug Redis Sentinel]
 ** xref:app-catalog:ROOT:how-tos/redis/manual_failover.adoc[Manually Perform a Redis Failover]
+** xref:app-catalog:ROOT:how-tos/redis/no_active_leader.adoc[Fix wrong/invalide leader after rollout/update]
 
 * MariaDB Galera
 ** xref:app-catalog:ROOT:how-tos/mariadbgalera/debug.adoc[Debug MariaDB Galera]
