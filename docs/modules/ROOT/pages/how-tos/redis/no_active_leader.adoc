@@ -2,7 +2,7 @@
 
 In certain situations it might happen, that the sentinels have the master set to an ip address that doesn't exist anymore (if all pods have been restarted and the IPs changed). The most common thing that happens in this scenario is, that two of the pods are crash looping and one pod is running as a `slave` and has the master set to an IP address that doesn't exist anymore.
 
-In the logs this might lok like:
+In the logs it might look like this:
 
 [source,shell]
 ---
