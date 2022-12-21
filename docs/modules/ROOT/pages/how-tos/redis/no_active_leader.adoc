@@ -5,9 +5,9 @@ In certain situations it might happen, that the sentinels have the master set to
 In the logs it might look like this:
 
 [source,shell]
----
+----
 sentinel Could not connect to Redis at 10.0.0.20:26379: Connection refused # where 10.0.0.20 isn't assigned to any of the redis pods
----
+----
 
 To resolve this situation, you need to get the IP address of the remaining running Redis Pod, start a `redis-cli` command and promote this pod to master.
 
