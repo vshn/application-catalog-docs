@@ -1,0 +1,67 @@
+= VSHN Managed MariaDB
+
+== Problem
+
+We need to provide MariaDB on Kubernetes with following features:
+
+* Standalone and Cluster functionality (Galera)
+* Ability to customize MariaDB settings
+* Included metrics exporter
+* Backup
+* Regular Maintenance
+* Version Upgrades
+
+
+== Solutions
+
+For MariaDB there are a few operators available.
+As well as the Bitnami Helm charts.
+
+The following section contains the operators that have been looked at.
+
+[cols="1,1,1"]
+|===
+|Requirements |https://github.com/abalki001/mariadb-operator[Official MariaDB Operator] |https://github.com/bitnami/charts/tree/master/bitnami/mariadb-galera[Bitnami Helmchart]
+
+|Galera and Standalone |❌ no galera |✅
+
+|Customize MariaDB Settings |❌ |✅
+
+|Metrics |✅ |✅
+
+|Backup |✅ |❌
+
+|Regular Maintenance |❌ |❌
+
+|Version Upgrades |✅ |✅
+
+|===
+
+Some additional Notes:
+
+* The Galera Operator by Orange has been archived: https://github.com/Orange-OpenSource/galera-operator
+* The Official Mariadb operator is linked here: https://mariadb.com/kb/en/kubernetes-operators-for-mariadb/
+* Percona has a MySQL Operator: https://docs.percona.com/percona-operator-for-mysql/pxc/
+* MOCO Operator (MySQL Only): https://github.com/cybozu-go/moco
+** Has a similar concept to handling clustering like the Patroni framework that is used by Stackgres.
+
+== Decision
+
+Galera Bitnami Helm Chart.
+
+Advantages::
+
+* Less complexity than operators, but provides more features
+* Have been used in SPKS for years now
+* Supports Standalone and Galera
+
+Disadvantages::
+
+* Bitnami had breaking changes in the past, so we probably run into these in the future as well
+
+=== Rationale
+
+Operators add one more layer of complexity to the setup and one more part that can break.
+In order to justify this added complexity the operators should provide more functionality than a simple Helm Chart.
+
+With experience from SPKS we know how the Bitnami Helm Chart works and that it's capable of satisfying our requirements.

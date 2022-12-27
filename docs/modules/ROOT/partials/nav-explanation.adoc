@@ -23,6 +23,7 @@
 ** xref:app-catalog:ROOT:explanations/decisions/api-design.adoc[API Design]
 ** xref:app-catalog:ROOT:explanations/decisions/postgresql.adoc[PostgreSQL Operator]
 ** xref:app-catalog:ROOT:explanations/decisions/converged-service-loc.adoc[Converged Service Provisioning Location]
-** xref:app-catalog:ROOT:explanations/decisions/redis_galera.adoc[]
+** xref:app-catalog:ROOT:explanations/decisions/redis.adoc[]
+** xref:app-catalog:ROOT:explanations/decisions/mariadb.adoc[]
 ** Archive
 *** xref:app-catalog:ROOT:explanations/decisions/archive/converged-service-impl.adoc[Converged Service Provisioning Implementation]
