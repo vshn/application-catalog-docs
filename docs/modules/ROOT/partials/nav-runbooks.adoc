@@ -18,3 +18,6 @@
 ** xref:app-catalog:ROOT:runbooks/mariadbgalera/MySQLGaleraNotReady.adoc[MySQLGaleraNotReady]
 ** xref:app-catalog:ROOT:runbooks/mariadbgalera/MySQLGaleraOutOfSync.adoc[MySQLGaleraOutOfSync]
 ** xref:app-catalog:ROOT:runbooks/mariadbgalera/MySQLInnoDBLogWaits.adoc[MySQLInnoDBLogWaits]
+
+* Exoscale
+** xref:app-catalog:ROOT:runbooks/exoscale/restore_dbaas.adoc[]

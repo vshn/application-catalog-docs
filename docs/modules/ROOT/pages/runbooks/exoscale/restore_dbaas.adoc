@@ -1,0 +1,75 @@
+= Manually Restore DBaaS Backup
+
+== icon:glasses[] Overview
+
+NOTE: You can't restore from a `+hobbyist-2+` instance. You have to scale it up first.
+
+This documentation is for manually restoring a DBaaS instance.
+
+== Get and Configure The Exo CLI
+
+Some features of Exoscale DBaaS can only be done via API or CLI.
+
+The Exo CLI can be installed from this repository: https://github.com/exoscale/cli
+
+For MacOS users it can be installed via brew:
+
+[source,shell]
+----
+brew install exoscale/tap/exoscale-cli
+----
+
+Login to the Exoscale Project where the instance is running:
+[source,shell]
+----
+exo config #Choose configure new account and follow the prompts
+----
+
+== List Existing Instances
+
+[source,shell]
+----
+exo dbaas list
+┼────────────────┼────────────┼────────────┼──────────┼
+│      NAME      │    TYPE    │    PLAN    │   ZONE   │
+┼────────────────┼────────────┼────────────┼──────────┼
+│ e2e-test-kafka │ kafka      │ startup-2  │ ch-dk-2  │
+│ e2e-test-mysql │ mysql      │ hobbyist-2 │ ch-dk-2  │
+│ test1-28z5q    │ opensearch │ startup-4  │ ch-gva-2 │
+┼────────────────┼────────────┼────────────┼──────────┼
+----
+
+== Scale up Instance
+
+[source,shell]
+----
+exo dbaas update -z ch-gva-2 $myinstance --plan startup-4
+----
+
+== Restore Instance
+
+[source,shell]
+----
+# List available Backups
+exo dbaas show $myinstance -z ch-gva-2 --backups
+
+┼─────────────────────────────────────┼───────────────────────────────┼──────────┼
+│                NAME                 │             DATE              │   SIZE   │
+┼─────────────────────────────────────┼───────────────────────────────┼──────────┼
+│ 2021-10-30_20-28_0.00000000.pghoard │ 2021-10-30 20:28:01 +0000 UTC │ 36341760 │
+│ 2021-10-31_20-28_0.00000000.pghoard │ 2021-10-31 20:28:04 +0000 UTC │ 36382720 │
+┼─────────────────────────────────────┼───────────────────────────────┼──────────┼
+
+# Create a fork from backup
+# With point-in-time
+exo dbaas create pg startup-4 fork-test-pg --pg-recovery-backup-time 2021-10-30 23:35 --pg-fork-from $myinstance -z ch-gva-2
+
+# Without point-in-time (restores latest available)
+exo dbaas create pg startup-4 fork-test-pg --pg-fork-from $myinstance -z ch-gva-2
+----
+
+There will be a new instance, which is not AppCat managed!
+To get the data into an AppCat Managed Service again:
+
+* dump the data from the restore
+* restore the dump either into the existing AppCat service, or a new one
