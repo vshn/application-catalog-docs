@@ -21,8 +21,8 @@
 ** xref:app-catalog:ROOT:explanations/decisions/crossplane.adoc[Crossplane as Control Plane]
 ** xref:app-catalog:ROOT:explanations/decisions/composition-deployments.adoc[Composition Deployments]
 ** xref:app-catalog:ROOT:explanations/decisions/api-design.adoc[API Design]
-** xref:app-catalog:ROOT:explanations/decisions/postgresql.adoc[PostgreSQL Operator]
 ** xref:app-catalog:ROOT:explanations/decisions/converged-service-loc.adoc[Converged Service Provisioning Location]
+** xref:app-catalog:ROOT:explanations/decisions/postgresql.adoc[]
 ** xref:app-catalog:ROOT:explanations/decisions/redis.adoc[]
 ** xref:app-catalog:ROOT:explanations/decisions/mariadb.adoc[]
 ** Archive

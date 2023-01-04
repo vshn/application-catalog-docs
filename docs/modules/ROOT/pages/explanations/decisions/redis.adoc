@@ -46,7 +46,9 @@ Some additional Notes:
 
 == Decision
 
-Redis Bitnami Helm Chart.
+https://github.com/bitnami/charts/tree/master/bitnami/redis[Redis Bitnami Helm Chart].
+
+The instantiation of the Helm Charts will be handled by `+provider-kubernetes+`.
 
 Advantages::
 
@@ -56,6 +58,14 @@ Advantages::
 Disadvantages::
 
 * Bitnami had breaking changes in the past, so we probably run into these in the future as well
+
+If a breaking change occurs there are currently two ideas how to tackle them:
+
+* Fork the chart and maintain it ourselves
+* Grandfathering out the old chart version.
+Any new instances will use the new chart and existing ones use the old one.
+
+Further details will be explored in case of breaking changes.
 
 === Rationale
 
