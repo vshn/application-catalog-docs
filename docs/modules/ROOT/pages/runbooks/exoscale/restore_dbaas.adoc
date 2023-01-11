@@ -73,3 +73,157 @@ To get the data into an AppCat Managed Service again:
 
 * dump the data from the restore
 * restore the dump either into the existing AppCat service, or a new one
+
+=== Dump and Restore PostgreSQL
+
+Requirements:
+
+* psql
+* source db credentials
+* target db credentials
+
+The credentials can be found either in the Exoscale GUI for the instances or if it's an AppCat service in the service's secret.
+
+To dump all databases locally:
+
+[source,shell]
+----
+#!/bin/sh
+
+set -e
+
+sourcehost=...
+sourceport=...
+sourcepassword='...'
+
+for db in $(PGPASSWORD="${sourcepassword}" psql -h "${sourcehost}" -p "${sourceport}" -U avnadmin -d defaultdb -t -c "select datname from pg_database where (not datistemplate) and (datname !='_aiven')" | grep '\S' | awk '{$1=$1};1'); do
+  PGPASSWORD="${sourcepassword}" pg_dump -h "${sourcehost}" -p "${sourceport}" -U avnadmin "${db}" | PGPASSWORD=
+done
+
+----
+
+**This script is very generic, it might be necessary to create the databases with specific settings!**
+
+To migrate directly between the instances:
+
+[source,shell]
+----
+#!/bin/sh
+
+set -e
+
+sourcehost=...
+sourceport=...
+sourcepassword='...'
+
+targethost=...
+targetport=...
+targetpassword='...'
+
+for db in $(PGPASSWORD="${sourcepassword}" psql -h "${sourcehost}" -p "${sourceport}" -U avnadmin -d defaultdb -t -c "select datname from pg_database where (not datistemplate) and (datname !='_aiven')" | grep '\S' | awk '{$1=$1};1'); do
+  PGPASSWORD="${targetpassword}" psql -h "${targethost}" -p "${targetport}" -U avnadmin -d defaultdb -t -c "create database ${db}" || true
+  PGPASSWORD="${sourcepassword}" pg_dump -h "${sourcehost}" -p "${sourceport}" -U avnadmin "${db}" | PGPASSWORD="${targetpassword}" psql -h "${targethost}" -p "${targetport}" -U avnadmin -d "${db}"
+done
+
+----
+
+=== Dump and Restore MySQL
+
+Requirements:
+
+* mysqldump
+* source db credentials
+* target db credentials
+
+The credentials can be found either in the Exoscale GUI for the instances or if it's an AppCat service in the service's secret.
+
+To dump all databases locally:
+
+[source,shell]
+----
+#!/bin/sh
+
+set -e
+
+sourcehost=...
+sourceport=...
+sourcepassword='...'
+
+for db in $(mysql -h "${sourcehost}" -P "${sourceport}" -uavnadmin -p$sourcepassword -Bse "SELECT schema_name FROM information_schema.schemata WHERE schema_name NOT IN ('mysql','information_schema','performance_schema','sys')"); do
+  mysqldump -h "${sourcehost}" -P "${sourceport}" -uavnadmin -p${sourcepassword} --set-gtid-purged=OFF --triggers --routines --events "${db}" > "${db}".sql
+done
+
+----
+
+To migrate directly between the instances:
+
+[source,shell]
+----
+#!/bin/sh
+
+set -e
+
+sourcehost=...
+sourceport=...
+sourcepassword='...'
+
+targethost=...
+targetport=...
+targetpassword='...'
+
+for db in $(mysql -h "${sourcehost}" -P "${sourceport}" -uavnadmin -p$sourcepassword -Bse "SELECT schema_name FROM information_schema.schemata WHERE schema_name NOT IN ('mysql','information_schema','performance_schema','sys')"); do
+  mysql -h "${targethost}" -P "${targetport}" -uavnadmin -p${targetpassword} -Bse "CREATE DATABASE IF NOT EXISTS ${db};"
+  mysqldump -h "${sourcehost}" -P "${sourceport}" -uavnadmin -p${sourcepassword} --set-gtid-purged=OFF --triggers --routines --events "${db}" | mysql -h "${targethost}" -P "${targetport}" -uavnadmin -p${targetpassword} "${db}"
+done
+
+----
+
+=== Dump and Restore Redis
+
+Requirements:
+
+* https://developer.redis.com/riot/riot-file/index.html#_install[riot-file] for dumps
+* https://developer.redis.com/riot/riot-redis/index.html#_install[riot-redis] for direct migration
+* source db credentials
+* target db credentials
+
+The credentials can be found either in the Exoscale GUI for the instances or if it's an AppCat service in the service's secret.
+
+To dump all keys locally:
+
+[source,shell]
+----
+#!/bin/sh
+
+set -e
+
+sourceuri=...
+
+riot-file --uri "${sourceuri}" export export.json
+
+----
+
+To migrate directly between the instances:
+
+[source,shell]
+----
+#!/bin/sh
+
+set -e
+
+sourceuri=...
+targeturi=...
+
+riot-redis --uri "${sourceuri}" replicate --uri "${targeturi}"
+
+----
+
+=== Dump and Restore Kafka
+
+Kafka doesn't seem to have any reliable backup and restore tooling available.
+Even Exoscale/Aiven themselves don't provide backups for this service.
+
+=== Dump and Restore OpenSearch
+
+OpenSearch's backup and restore methods are a bit more involved and need settings to be changed on the instances.
+Please see https://docs.aiven.io/docs/products/opensearch/howto/migrating_elasticsearch_data_to_aiven[Aiven's docs] for information about migrating data between instances.
