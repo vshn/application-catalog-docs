@@ -24,11 +24,11 @@ Also, depending on the cluster where a given service is running, there could be 
 
 To accommodate for all these variations, the default identifier of each product in the database should be as follows:
 
-$servicename-$sla:$provider:$tenant:$namespace:$architecture
+$servicename:$provider:$tenant:$namespace:$architecture-$sla
 
 * `servicename`: The name of the AppCatalog service, in this example PostgreSQL
 * `provider`: The provider type of the service, for example `exoscale` or `vshn`.
-* `sla`: The name of the applied SLA. There are two values `BestEffort` and `Guaranteed`
+* `sla`: The name of the applied SLA. There are two values `BestEffort` and `Guaranteed`. The SLA might be omitted for cloud provider instances if they do not apply.
 * `architecture`: The architecture of the service. For cloud providers this can be plans (for example Exoscale startup-4). For VSHN Managed Services it's the architecture (for example standalone, cluster, replicated).
 * `tenant`: The customer who's invoiced. Usually maps to the `organization` label.
 * `namespace`: The namespace where the resource is running.
@@ -57,9 +57,9 @@ label_replace(
   label_replace(
     label_replace(
       vector(42), <1>
-      "category", "AppCatalog - my-product", "", "" <2>
+      "category", "my-provider:my-namespace", "", "" <2>
     ),
-    "product", "my-product-my-sla:my-provider:my-tenant:my-namespce:my-architecture", "", "" <3>
+    "product", "my-product:my-provider:my-tenant:my-namespce:my-architecture-my-sla", "", "" <3>
   ),
   "tenant", "my-tenant", "", "" <4>
 )
