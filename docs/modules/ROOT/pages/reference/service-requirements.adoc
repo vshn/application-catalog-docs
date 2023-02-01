@@ -13,7 +13,7 @@ A service is allowed to deviate from a requirement when it makes sense and can b
 
 To understand the personas referenced in this document, see xref:reference/glossary.adoc#_personas[Glossary - Personas].
 
-== Initial Release "Alpha"
+== Initial Release: Provisioning
 
 As a user of the service I can:
 
@@ -27,7 +27,7 @@ See also:
 * xref:reference/quality-requirements/usability/api-validation.adoc[Service Instance API Validation]
 * xref:reference/quality-requirements/usability/provisioning-time.adoc[Provisioning Time]
 
-== Iteration "Bathin"
+== Iteration: Backup and Restore
 
 As a user of the service I can:
 
@@ -40,7 +40,7 @@ See also:
 * xref:reference/quality-requirements/portability/backup-exports.adoc[Backups Can Be Exported]
 * xref:reference/quality-requirements/reliability/backup-interval.adoc[Minimum Backup Interval]
 
-== Iteration "Settulco"
+== Iteration: Logs
 
 As a user of the service I can:
 
@@ -50,14 +50,14 @@ See also:
 
 * xref:reference/quality-requirements/usability/logs.adoc[Service Instance Logs]
 
-== Iteration "Melchom"
+== Iteration: Metrics
 
 As a user of the service I can:
 
 * see metrics of a service instance
 * access a dashboard showing pre-crafted diagrams
 
-== Iteration "Abigor"
+== Iteration: Alerting
 
 As a user of the service I can:
 
@@ -72,13 +72,13 @@ See also:
 
 * xref:reference/quality-requirements/usability/actionable-alerts.adoc[Actionable Alerts]
 
-== Iteration "Marbas"
+== Iteration: Maintenance
 
 As a user of the service I can:
 
 * enable regular maintenance on a service instance
 
-== Iteration "Dantalion"
+== Iteration: Version Upgrade
 
 As a user of the service I can:
 
