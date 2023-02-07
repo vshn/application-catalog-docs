@@ -1,10 +1,11 @@
-= Service Requirements and Iterations
+= Service Maturity
+:page-aliases: service-requirements.adoc
 
 Implementing and maintaining a service is iterative work.
 The idea is to release early and release often, without having the urge to have all features available right from the beginning.
 
-This page gives an idea on the iterative steps.
-Except the initial version and the feature complete version, all steps in-between can be in any order, as it fits best.
+This page gives an idea on the iterative steps and a way to assess the service maturity.
+Except the provisioning maturity and the stable release, all steps in-between can be in any order, as it fits best.
 With "feature complete" it's not meant that the service doesn't receive new functionality or doesn't get maintained anymore, we're talking about the default scope outlined on this page.
 
 Important is that every step is independent of each other. A service that implements `Backup and Restore` doesn't necessarily already implement `Logs`.
@@ -12,6 +13,8 @@ That in turn also means we must allow some leeway for each service in respect to
 A service is allowed to deviate from a requirement when it makes sense and can be documented and reasoned about accordingly.
 
 To understand the personas referenced in this document, see xref:reference/glossary.adoc#_personas[Glossary - Personas].
+
+We currently maintain the service maturity assessment for each service on our product documentation site under https://products.docs.vshn.ch/products/appcat/services_index.html[VSHN Application Catalog -> Services^].
 
 == Initial Release: Provisioning
 
