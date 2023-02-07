@@ -1,0 +1,49 @@
+= Billing AppCat services on APPUiO Cloud
+
+To bill AppCat services on APPUiO Cloud we reuse the APPUiO Cloud billing system.
+We make sure that the relevant facts are added to the billing database and the existing system handles the invoice generation.
+
+This means we need to collect the service resources we want to bill and insert it in the billing database together with the tenant name and in which zone and namespace it runs in.
+
+To get a deeper understanding of the APPUiO Cloud Billing system, please look at https://kb.vshn.ch/appuio-cloud/references/architecture/metering-data-flow.html[the architecture reference.]
+
+== Billing Cloud Services
+
+The collection of billing metrics from cloud providers is handled by the `billing-collector-cloudservices`.
+The collector runs periodically as a cronjob and fetches the resource usage from the cloud provider and syncs it to the billing database.
+
+For objectstorage on cloudscale.ch and Exoscale this means it will collect the reported storage usage for the last day and write it to the database.
+
+For DBaaS on Exoscale the collector is executed every 15 minutes, fetches the currently running number of databases and will add the number to the billing database.
+
+
+=== References
+* https://github.com/vshn/billing-collector-cloudservices[Cloud Service Billing Collector].
+* https://github.com/vshn/billing-collector-cloudservices/tree/master/component[Component to install the cronjobs to fill the billing database]
+
+
+== Billing VSHN managed Services
+
+VSHN managed services run in a dedicated service namespace on APPUiO Cloud itself.
+So we use the metrics collected in Thanos to bill them to our customers.
+
+
+The resource usage of these services are billed directly through the normal APPUiO Cloud billing system, by adding the organization label of the customer to the dedicated namespace.
+
+We also bill a fixed cost per instance hour.
+For this we add all billing relevant information as a label to the service namespace.
+This means we add up to three labels:
+
+* `appcat.vshn.io/servicename`: The name of the service that runs in the namespace. 
+For example `postgresql-standalone`.
+* `appcat.vshn.io/claim-namespace`: The namespace of the claim that resulted in the creation of the service.
+* `appcat.vshn.io/sla`: The SLA for the service.
+This is usually either `besteffort` or `guaranteed` and can usually be left empty.
+
+Based on this we get all necessary information by looking at the Prometheus metric `kube_namespace_labels`.
+Each hour we run a cronjob that collects the billing metrics from Thanos and writes it to the billing database.
+
+=== References
+* https://github.com/appuio/component-appuio-cloud-reporting[Component to install the cronjobs to fill the billing database]
+* https://github.com/appuio/appuio-cloud-reporting/blob/master/pkg/db/seeds/appcat_postgresql_vshn_standalone.promql[Query to collect the number of running PostgreSQL instance]
+
