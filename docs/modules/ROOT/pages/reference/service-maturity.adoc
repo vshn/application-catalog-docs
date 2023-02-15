@@ -23,6 +23,7 @@ As a user of the service I can:
 * create a service instance
 * update the configuration of a service instance
 * delete a service instance
+* connect to the service in a secure way
 
 See also:
 
