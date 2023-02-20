@@ -58,16 +58,16 @@ See also:
 
 As a user of the service I can:
 
-* see metrics of a service instance
-* see SLO reports
-* access a dashboard showing pre-crafted diagrams
+* see the raw metrics of a service instance
+* see the SLO reports
+* access a dashboard showing pre-crafted diagrams of the available metrics
 
 == Iteration: Alerting
 
 As a user of the service I can:
 
 * enable alerting on pre-defined SLIs to VSHN so that VSHN can resolve incidents with priority
-* enable alerting on pre-defined incident prevention to me so that I can prevent potential incidents
+* enable alerting on the capacity of the instances to an alert channel of my choice so that I can prevent incidents
 
 As an engineer of the service I can:
 
