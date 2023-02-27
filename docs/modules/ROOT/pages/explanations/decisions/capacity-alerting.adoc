@@ -1,4 +1,4 @@
-= Capacity Alerting and Incident Prevention
+= Handling of Capacity Alerts for Incident Prevention
 
 == Problem
 
@@ -11,13 +11,13 @@ We can write Prometheus queries that predict the resource usage and alert based 
 The main question is how we want to handle these alerts.
 
 From experience from similar system, we know that in nearly all cases capacity issues can only be resolved by the customers themselves, either by freeing up resources or by scaling up the instance.
-So first and foremost we need a process to inform the customer about potential capacity issues.
+So first and foremost we need a process to inform the service user about potential capacity issues.
 
 == Proposals
 
 === Alert Responsible Ops
 
-The simplest approach would be to alert the engineer that does responsible ops.
+The simplest approach would be to alert the engineer that does https://handbook.vshn.ch/role_responsibleops.html[responsible ops^].
 This is how we are used to handling alerts and how we handled this in previous systems.
 
 In practice this means we will deploy fixed Prometheus alert rules and alert-manager configs in every database namespace that will send alerts to Opsgenie.
@@ -27,7 +27,7 @@ This can be solved by https://github.com/vshn/espejo[espejo] or through a custom
 
 === Expose User-Workload Monitoring
 
-OpenShift4 and as a result APPUiO Cloud and Managed come with a versatile user-workload monitoring system that allows a user to specify their own alert-manager configuration on a namespace level.
+APPUiO Cloud and APPUiO Managed OpenShift come with a versatile user-workload monitoring system that allows a user to specify their own alert-manager configuration on a namespace level.
 
 We could expose the alert manager configuration of this system directly in the database claim and the composition will then create an `AlertManagertConfig` resource in the database namespace.
 This would enable a customer to decide for themselves how they want to be alerted about capacity issues.
@@ -61,7 +61,7 @@ spec:
 === Send E-Mail Alert through Alert-Manager and mailgun
 
 VSHN has the option to send e-mails automatically through https://www.mailgun.com/[mailgun].
-This can be leveraged to infrom customer through e-mail without a lot of setup overhead by the customer.
+This can be leveraged to inform customer through e-mail without a lot of setup overhead by the customer.
 
 In practice this can be implemented fairly similarly to forwarding alerts to Opsgenie.
 The composition will create an `AlertManagertConfig` resource in the database namespace that configures alert-manager to send mails to the provided e-mail address.
