@@ -10,7 +10,7 @@ Writing these predictive capacity alerts is generally a solved problem.
 We can write Prometheus queries that predict the resource usage and alert based on the predicted usage.
 The main question is how we want to handle these alerts.
 
-From experience from similar system, we know that in nearly all cases capacity issues can only be resolved by the customers themselves, either by freeing up resources or by scaling up the instance.
+From experience from similar system, we know that in nearly all cases capacity issues can only be resolved by the service users themselves, either by freeing up resources or by scaling up the instance.
 So first and foremost we need a process to inform the service user about potential capacity issues.
 
 == Proposals
@@ -30,9 +30,9 @@ This can be solved by https://github.com/vshn/espejo[espejo] or through a custom
 APPUiO Cloud and APPUiO Managed OpenShift come with a versatile user-workload monitoring system that allows a user to specify their own alert-manager configuration on a namespace level.
 
 We could expose the alert manager configuration of this system directly in the database claim and the composition will then create an `AlertManagertConfig` resource in the database namespace.
-This would enable a customer to decide for themselves how they want to be alerted about capacity issues.
+This would enable a service user to decide for themselves how they want to be alerted about capacity issues.
 
-With such a system the database claim could look similar to the following, which would configure all alerts to be sent to the customers slack instance.
+With such a system the database claim could look similar to the following, which would configure all alerts to be sent to the service users slack instance.
 
 [source,yaml]
 ----
@@ -61,7 +61,7 @@ spec:
 === Send E-Mail Alert through Alert-Manager and mailgun
 
 VSHN has the option to send e-mails automatically through https://www.mailgun.com/[mailgun].
-This can be leveraged to inform customer through e-mail without a lot of setup overhead by the customer.
+This can be leveraged to inform service users through e-mail without a lot of setup overhead.
 
 In practice this can be implemented fairly similarly to forwarding alerts to Opsgenie.
 The composition will create an `AlertManagertConfig` resource in the database namespace that configures alert-manager to send mails to the provided e-mail address.
@@ -94,14 +94,14 @@ We implement both exposing the user-workload monitoring and automated e-mail ale
 
 === Rationale
 
-Manual intervention for capacity alerts generates a lot of unnecessary toil, as in most cases the engineer can't do anything but inform the customer.
+Manual intervention for capacity alerts generates a lot of unnecessary toil, as in most cases the engineer can't do anything but inform the service user.
 That's why we believe that the task should be automated, and no engineer should be alerted for potential capacity issues.
 
 Exposing the whole capabilities of the user-workload monitoring system is fairly simple to implement, while at the same time very versatile.
-It allows our customers to send alerts exactly where they are needed.
+It allows our service users to send alerts exactly where they are needed.
 
 On the other hand automatic e-mail alerts through mailgun has a much better UX for simple deployments.
-With this solution, customers don't need to handle any mail gateway or care about alert-manager configuration.
+With this solution, service users don't need to handle any mail gateway or care about alert-manager configuration.
 They simply provide an e-mail address, and they will be informed about capacity issues.
 
 Exposing the user-workload monitoring system and the automated e-mail solution can co-exist and will complement each other.
