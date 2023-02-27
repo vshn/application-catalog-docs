@@ -1,109 +1,51 @@
-= PostgreSQL Managed by VSHN Monitoring
+= PostgreSQL by VSHN Availability check
 
 == Problem
 
-We need to provide PostgreSQL Managed by VSHN monitoring checks:
+We need to monitor availability of PostgreSQL by VSHN, based on:
 
-* Availability check
+* SLA: 99.99%
+* SLO: 99.995%
+* SLI: 99.995%
 
-== Requirements for availability check
+== Requirements for SLI
 
 * PostgreSQL is accessible on network level
-* it's possible to login to PostgreSQL
-* it's possible to execute queries 
+* The end user is able to login and execute database queries
 
 == Solutions
 
-PostgreSQL managed by Stackgres:
+1. Integrated postgresql_exporter into Stackgres cluster
+2. Postgresql_exporter managed and run by VSHN
+3. Customly written exporter
 
-* it doesn't reuse generated connection string which our users will use, which could lead to situation where our monitoring is green, but users can't login (issues with Service)
-* it's sidecar, issue with exporter would require pod restarting
-* prometheusAutobind from SGCluster doesn't work, so I have a fear that whole monitoring isn't really well tested
+== Pros and cons of all solutions
 
-PostgreSQL managed by VSHN:
+"Exporter" should be understood as https://github.com/prometheus-community/postgres_exporter[PostgreSQL_Exporter]
 
-* the same functionalities as above
-* solves issues presented above
+[cols="1,1,1,1"]
+|===
+|Requirements/Options |Exporter provided by VSHN |Exporter provided by Stackgres |Custom exporter
 
-== Decision
+|Checks network connectivity |✅  |✅ |✅
 
-Use postgresql_exporter managed by VSHN, created as Kubernetes Object in our composition:
-```
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: exporter-testing
-  labels:
-    name: exporter-testing
----
-apiVersion: vshn.appcat.vshn.io/v1
-kind: VSHNPostgreSQL
-metadata:
-  name: my-postgres-example
-  namespace: exporter-testing
-spec:
-  parameters:
-    service:
-      majorVersion: "15"
-    backup:
-      schedule: '0 22 * * *'
-    size: 
-      cpu: "300m"
-      memory: "64Mi"
-      disk: "1Gi"
-  writeConnectionSecretToRef:
-    name: postgres-creds-connection
----
-apiVersion: v1
-kind: Pod
-metadata:
-  name: "postgres-exporter"
-  namespace: exporter-testing
-  labels:
-    app: "postgres-exporter"
-spec:
-  containers:
-  - name: postgres-exporter
-    image: "prometheuscommunity/postgres-exporter"
-    command: ["/bin/sh", '-c']
-    args: ["/bin/postgres_exporter --log.level=debug"]
-    resources:
-      limits:
-        cpu: 200m
-        memory: 500Mi
-      requests:
-        cpu: 100m
-        memory: 200Mi
-    env:
-    - name: DATA_SOURCE_URI
-      valueFrom:
-        secretKeyRef:
-          name: postgres-creds-connection
-          key: POSTGRESQL_HOST
-    - name: DATA_SOURCE_USER
-      valueFrom:
-        secretKeyRef:
-          name: postgres-creds-connection
-          key: POSTGRESQL_USER
-    - name: DATA_SOURCE_PASS
-      valueFrom:
-        secretKeyRef:
-          name: postgres-creds-connection
-          key: POSTGRESQL_PASSWORD
-    - name: PG_EXPORTER_AUTO_DISCOVER_DATABASES
-      value:  'true'
-    ports:
-    - containerPort:  9187
-  restartPolicy: Always
----
-# kubectl -n exporter-testing port-forward pods/postgres-exporter 9187
-# curl localhost:9187/metrics | grep -v '#'
-```
-Advantages::
+|Login to database the same way as customer do |✅ |❌ |✅
 
-* the same set of metrics
-* we test connection in the same way as our customers use it
+|PostgreSQL metrics |✅ |✅ |❌
+
+|Easily integrates with prometheus |✅ |❌ |✅
+
+|Read queries check |✅ |✅ |✅
+
+|Write queries check |❌ |❌ |✅
+
+|===
 
 === Rationale
 
-We should go with postgresql_exporter managed by us, not Stackgres, as it solves few issues instead of creating potential ones
+PostgreSQL_exporter comes with many useful metrics we can use later for Grafana charts, also it has `pg_up` metric which tells us that PostgreSQL was able to handle a connection, authenticate user and execute SELECT queries. 
+
+=== Decision
+
+We should use postgresql_exporter which runs in user namespace and reuses user's credential to handle connection and queries execution.
+
