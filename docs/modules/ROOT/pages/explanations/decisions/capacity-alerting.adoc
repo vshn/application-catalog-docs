@@ -91,6 +91,7 @@ This could be done through a custom controller.
 == Decision
 
 We implement both exposing the user-workload monitoring and automated e-mail alerts through mailgun.
+E-mail based alerting should be mandatory to ensure that we can prove that the service user was informed of the issue.
 
 === Rationale
 
@@ -103,6 +104,8 @@ It allows our service users to send alerts exactly where they are needed.
 On the other hand automatic e-mail alerts through mailgun has a much better UX for simple deployments.
 With this solution, service users don't need to handle any mail gateway or care about alert-manager configuration.
 They simply provide an e-mail address, and they will be informed about capacity issues.
+
+A further advantage of sending alerts as e-mails through mailgun is, that we have a clear paper trail that the alert was sent and received by the service user.
 
 Exposing the user-workload monitoring system and the automated e-mail solution can co-exist and will complement each other.
 The user-workload based approach is quickly implemented and gives power users a lot of control, while the automated e-mail system will significantly improve the UX for simple deployments once it is ready.
