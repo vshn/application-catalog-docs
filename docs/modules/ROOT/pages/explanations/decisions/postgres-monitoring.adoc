@@ -2,26 +2,32 @@
 
 == Problem
 
-We need to monitor availability of PostgreSQL by VSHN, based on:
+We need to monitor availability of PostgreSQL by VSHN to be able to measure "Up" https://products.docs.vshn.ch/products/appcat/postgresql.html#_service_level_indicator_sli[SLI]
 
-* SLA: 99.99%
-* SLO: 99.995%
-* SLI: 99.995%
+== Goals
 
-== Requirements for SLI
+* measure Up SLI
+* idea how to integrate SLI https://products.docs.vshn.ch/products/service_levels.html#_exceptions_to_availability_guarantee[Exceptions]
 
-* PostgreSQL is accessible on network level
-* The end user is able to login and execute database queries
+== Non Goals
+
+1. Collect any futher metrics
+2. SLO Definition
+3. Detailed concept of the SLI exceptions
 
 == Solutions
 
-1. Integrated postgresql_exporter into Stackgres cluster
-2. Postgresql_exporter managed and run by VSHN
-3. Customly written exporter
+=== Postgresql_exporter by Stackgres
+    
+    Stackgres provides us built-in postgresql_exporter running as a side car in database pod, which contains many useful metrics, but one especially usefull from availability monitoring perspective - pg_up. Pg_up is a metric created when all preconfigured checks SQL queries are properly executed and no one returned an error. Such metric could generate false positives in situation when one of the queries will be dropped by PostgreSQL. This exporter also connects locally, which makes such solution unreliable for us, because our customers connects in different way, connection has to pass through pg bouncer, it has to reuse user credentials and shouldn't generate false positives if one of two pods crash. It doesn't check for WRITE operations, only read operations.
 
-== Pros and cons of all solutions
+=== Postgresql_exporter by VSHN
 
-"Exporter" should be understood as https://github.com/prometheus-community/postgres_exporter[PostgreSQL_Exporter]
+    We can also deploy our own instance of postgresql_exporter to database namespace. We'll receive the same amount of metrics, we'll also be able to measure uptime using pg_up metric, but in this solution we can configure exporter to use the same route, user, password and database as our customers use. It doesn't check for WRITE operations, only read operations.
+
+===  Customly written exporter
+
+    We can write our own exporter which we could run in database namespace. In such scenarion we can write minimalistic exporter that checks connectivity reusing customer connection string, can execute WRITE queries and it'll return for example pg_up metric if connectivity and filesystem are both ok. Such small exporter can be then reused for other services to do the same job for us. 
 
 [cols="1,1,1,1"]
 |===
@@ -31,9 +37,7 @@ We need to monitor availability of PostgreSQL by VSHN, based on:
 
 |Login to database the same way as customer do |✅ |❌ |✅
 
-|PostgreSQL metrics |✅ |✅ |❌
-
-|Easily integrates with prometheus |✅ |❌ |✅
+|Easily integrates with prometheus |✅ |✅ |✅
 
 |Read queries check |✅ |✅ |✅
 
@@ -43,9 +47,19 @@ We need to monitor availability of PostgreSQL by VSHN, based on:
 
 === Rationale
 
-PostgreSQL_exporter comes with many useful metrics we can use later for Grafana charts, also it has `pg_up` metric which tells us that PostgreSQL was able to handle a connection, authenticate user and execute SELECT queries. 
+The best solution would be to use customly written exporter, because it'll do exactly what we want with minimal footprint on resources. It disadvantage is:
+
+* cost - we need time to write and maintain code
+
+Its advantages are:
+
+* flexibility - we can extend and adapt code and functionalities as we want to
+* reliability - such exporter reuses customer credentials and connection method so, we're sure customer can connect to the database without issues
+* optimisation - minimal footprint and resource usage
+* operational - we can write it's logic to perform checks each second, this way we can better measure how long PostgreSQL is up or down
+* additional features - compared to postgresql_exporter we can actually check if postgresql is operational by performing write operations on database
 
 === Decision
 
-We should use postgresql_exporter which runs in user namespace and reuses user's credential to handle connection and queries execution.
+We're using custom exporter
 
