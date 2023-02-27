@@ -91,7 +91,7 @@ This could be done through a custom controller.
 == Decision
 
 We implement both exposing the user-workload monitoring and automated e-mail alerts through mailgun.
-E-mail based alerting should be mandatory to ensure that we can prove that the service user was informed of the issue.
+E-mail based alerting should be strong encouraged, and might be mandatory in some cases, to ensure that we can prove that the service user was informed of the issue.
 
 === Rationale
 
