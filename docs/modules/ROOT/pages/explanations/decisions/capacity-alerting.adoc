@@ -29,7 +29,7 @@ This can be solved by https://github.com/vshn/espejo[espejo] or through a custom
 
 APPUiO Cloud and APPUiO Managed OpenShift come with a versatile user-workload monitoring system that allows a user to specify their own Alertmanager configuration on a namespace level.
 
-We could expose the Alertmanager configuration of this system directly in the database claim and the composition will then create an `AlertManagertConfig` resource in the database namespace.
+We could expose the Alertmanager configuration of this system directly in the database claim and the composition will then create an `AlertmanagerConfig` resource in the database namespace.
 This would enable a service user to decide for themselves how they want to be alerted about capacity issues.
 
 With such a system the database claim could look similar to the following, which would configure all alerts to be sent to the service users slack instance.
@@ -64,7 +64,7 @@ VSHN has the option to send e-mails automatically through https://www.mailgun.co
 This can be leveraged to inform service users through e-mail without a lot of setup overhead.
 
 In practice this can be implemented fairly similarly to forwarding alerts to Opsgenie.
-The composition will create an `AlertManagertConfig` resource in the database namespace that configures Alertmanager to send mails to the provided e-mail address.
+The composition will create an `AlertmanagerConfig` resource in the database namespace that configures Alertmanager to send mails to the provided e-mail address.
 
 With such a system the database claim could look similar to the following, which would send all alerts as e-mails to `oncall@example.com`
 [source,yaml]
