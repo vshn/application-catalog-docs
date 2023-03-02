@@ -27,7 +27,7 @@ We need to monitor availability of PostgreSQL by VSHN to be able to measure "Up"
 
 ===  Customly written exporter
 
-    We can write our own exporter which we could run in database namespace. In such scenarion we can write minimalistic exporter that checks connectivity reusing customer connection string, can execute WRITE queries and it'll return for example pg_up metric if connectivity and filesystem are both ok. Such small exporter can be then reused for other services to do the same job for us. 
+    We can write our own exporter which we could run in database namespace. In such scenarion we can write minimalistic exporter that checks connectivity reusing customer connection string, can execute WRITE queries and it'll return for example pg_up metric if connectivity and filesystem are both ok. Such small exporter can be then reused for other services to do the same job for us. The custom exporter allows us to be more flexible in how we handle the exceptions to the availability guarantee, as we can handle them in a general purpose programming language instead of having to model them in PromQL.
 
 [cols="1,1,1,1"]
 |===
