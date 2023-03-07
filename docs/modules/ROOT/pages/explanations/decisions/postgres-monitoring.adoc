@@ -62,7 +62,7 @@ The best solution would be to write a custom exporter, because it'll do exactly 
 
 It disadvantage is:
 
-* cost - we need time to write and maintain code
+* Cost - We need time to write and maintain code
 
 Its advantages are:
 
