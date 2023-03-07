@@ -26,9 +26,12 @@ One limitation if this metric is that it could generate false positives in situa
 The exporter also connects locally, which makes such solution unreliable for us, because our customers connects in different way, connection has to pass through pg bouncer, it has to reuse user credentials and shouldn't generate false positives if one of two pods crash. 
 It doesn't check for WRITE operations, only read operations.
 
-=== Postgresql_exporter by VSHN
+=== PostgreSQL Server Exporter by VSHN
 
-    We can also deploy our own instance of postgresql_exporter to database namespace. We'll receive the same amount of metrics, we'll also be able to measure uptime using pg_up metric, but in this solution we can configure exporter to use the same route, user, password and database as our customers use. It doesn't check for WRITE operations, only read operations.
+We can also deploy our own PostgreSQL Server Exporter instance in the database namespace.
+
+We'll scrape the same metrics, we'll also be able to measure uptime using pg_up metric, but in this solution we can configure exporter to use the same route, user, password and database as our customers use. 
+It doesn't check for WRITE operations, only read operations.
 
 ===  Customly written exporter
 
