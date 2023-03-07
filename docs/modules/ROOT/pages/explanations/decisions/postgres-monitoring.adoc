@@ -58,7 +58,9 @@ The custom exporter allows us to be more flexible in what we measure and how we 
 
 === Rationale
 
-The best solution would be to use customly written exporter, because it'll do exactly what we want with minimal footprint on resources. It disadvantage is:
+The best solution would be to write a custom exporter, because it'll do exactly what we want with minimal footprint on resources.
+
+It disadvantage is:
 
 * cost - we need time to write and maintain code
 
