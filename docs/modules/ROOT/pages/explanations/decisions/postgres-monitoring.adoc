@@ -4,16 +4,16 @@
 
 We need to monitor availability of PostgreSQL by VSHN to be able to measure "Up" https://products.docs.vshn.ch/products/appcat/postgresql.html#_service_level_indicator_sli[SLI]
 
-== Goals
+=== Goals
 
-* measure Up SLI
-* idea how to integrate SLI https://products.docs.vshn.ch/products/service_levels.html#_exceptions_to_availability_guarantee[Exceptions]
+* Measure the "UP" SLI
+* Idea how to integrate SLI https://products.docs.vshn.ch/products/service_levels.html#_exceptions_to_availability_guarantee[Exceptions]
 
-== Non Goals
+=== Non Goals
 
-1. Collect any futher metrics
-2. SLO Definition
-3. Detailed concept of the SLI exceptions
+* Collect any further metrics
+* SLO Definition
+* Detailed concept of the SLI exceptions
 
 == Solutions
 
