@@ -48,7 +48,7 @@ The custom exporter allows us to be more flexible in what we measure and how we 
 
 |Login to database the same way as customer do |✅ |❌ |✅
 
-|Easily integrates with prometheus |✅ |✅ |✅
+|Easily integrates with Prometheus |✅ |✅ |✅
 
 |Read queries check |✅ |✅ |✅
 
