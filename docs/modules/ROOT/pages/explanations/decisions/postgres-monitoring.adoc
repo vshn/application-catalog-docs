@@ -17,7 +17,7 @@ We need to monitor availability of PostgreSQL by VSHN to be able to measure "Up"
 
 == Solutions
 
-=== Postgresql_exporter by Stackgres
+=== PostgreSQL Server Exporter by Stackgres
     
     Stackgres provides us built-in postgresql_exporter running as a side car in database pod, which contains many useful metrics, but one especially usefull from availability monitoring perspective - pg_up. Pg_up is a metric created when all preconfigured checks SQL queries are properly executed and no one returned an error. Such metric could generate false positives in situation when one of the queries will be dropped by PostgreSQL. This exporter also connects locally, which makes such solution unreliable for us, because our customers connects in different way, connection has to pass through pg bouncer, it has to reuse user credentials and shouldn't generate false positives if one of two pods crash. It doesn't check for WRITE operations, only read operations.
 
