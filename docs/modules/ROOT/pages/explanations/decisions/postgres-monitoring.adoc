@@ -44,7 +44,7 @@ The custom exporter allows us to be more flexible in what we measure and how we 
 |===
 |Requirements/Options |Exporter provided by VSHN |Exporter provided by Stackgres |Custom exporter
 
-|Checks network connectivity |✅  |✅ |✅
+|Checks network connectivity |✅ |✅ |✅
 
 |Login to database the same way as customer do |✅ |❌ |✅
 
