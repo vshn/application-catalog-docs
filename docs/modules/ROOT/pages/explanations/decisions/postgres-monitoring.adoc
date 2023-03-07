@@ -74,5 +74,5 @@ Its advantages are:
 
 === Decision
 
-We're using custom exporter
+We're using a custom exporter.
 
