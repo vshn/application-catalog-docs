@@ -46,7 +46,7 @@ The custom exporter allows us to be more flexible in what we measure and how we 
 
 |Checks network connectivity |✅ |✅ |✅
 
-|Login to database the same way as customer do |✅ |❌ |✅
+|Login to database the same way as the service user |✅ |❌ |✅
 
 |Easily integrates with Prometheus |✅ |✅ |✅
 
