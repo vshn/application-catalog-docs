@@ -66,11 +66,11 @@ It disadvantage is:
 
 Its advantages are:
 
-* flexibility - we can extend and adapt code and functionalities as we want to
-* reliability - such exporter reuses customer credentials and connection method so, we're sure customer can connect to the database without issues
-* optimisation - minimal footprint and resource usage
-* operational - we can write it's logic to perform checks each second, this way we can better measure how long PostgreSQL is up or down
-* additional features - compared to postgresql_exporter we can actually check if postgresql is operational by performing write operations on database
+* Flexibility - We can extend and adapt code and functionalities as we want to.
+* Reliability - The exporter reuses service user credentials and connection method so we're sure the service user can connect to the database without issues.
+* Optimization - Minimal footprint and resource usage.
+* Resolution - We can write its logic to perform checks each second, this way we can better measure how long PostgreSQL is up or down.
+* Write Checks - Compared to the PostgreSQL Server Exporter we can actually check if PostgreSQL is operational by performing write operations on the database.
 
 === Decision
 
