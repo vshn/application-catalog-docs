@@ -10,7 +10,7 @@ Function is a container to which is passed FunctionIO yaml object as stdin. Func
 
 
 == Preparation step 1
-To start working with Functions we must enable alfa features in Crossplane (at least in version v1.11)
+To start working with Functions we must enable alpha features in Crossplane (at least in version v1.11)
 ```
 helm install crossplane --namespace crossplane-system crossplane-stable/crossplane \
     --create-namespace \
