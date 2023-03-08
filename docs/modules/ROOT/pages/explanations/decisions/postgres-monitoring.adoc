@@ -1,0 +1,78 @@
+= PostgreSQL by VSHN Availability check
+
+== Problem
+
+We need to monitor availability of PostgreSQL by VSHN to be able to measure "Up" https://products.docs.vshn.ch/products/appcat/postgresql.html#_service_level_indicator_sli[SLI]
+
+=== Goals
+
+* Measure the "UP" SLI
+* Idea how to integrate SLI https://products.docs.vshn.ch/products/service_levels.html#_exceptions_to_availability_guarantee[Exceptions]
+
+=== Non Goals
+
+* Collect any further metrics
+* SLO Definition
+* Detailed concept of the SLI exceptions
+
+== Solutions
+
+=== PostgreSQL Server Exporter by Stackgres
+    
+Stackgres provides us built-in https://github.com/prometheus-community/postgres_exporter[PostgreSQL Server Exporter] that runs as a side car, which exposes multiple useful metrics.
+One especially useful from availability monitoring perspective is `pg_up`. The `pg_up` is a metric is set to `1` if all preconfigured SQL query checks are properly executed and no one returned an error. We could use this metric more or less directly as our "Up" SLI.
+
+One limitation if this metric is that it could generate false positives in situation when one of the queries will be dropped by PostgreSQL. 
+The exporter also connects locally, which makes such solution unreliable for us, because our customers connects in different way, connection has to pass through pg bouncer, it has to reuse user credentials and shouldn't generate false positives if one of two pods crash. 
+It doesn't check for WRITE operations, only read operations.
+
+=== PostgreSQL Server Exporter by VSHN
+
+We can also deploy our own PostgreSQL Server Exporter instance in the database namespace.
+
+We'll scrape the same metrics, we'll also be able to measure uptime using pg_up metric, but in this solution we can configure exporter to use the same route, user, password and database as our customers use. 
+It doesn't check for WRITE operations, only read operations.
+
+=== Custom Prometheus Exporter
+
+We can write our own exporter that checks connectivity using the same connection details as the service user. It can also execute WRITE queries and it'll return for example pg_up metric if connectivity and file system are both OK.
+
+The exporter can be then reused for other services to do the same job for us.
+The custom exporter allows us to be more flexible in what we measure and how we handle the exceptions to the availability guarantee, as we can handle them in a general purpose programming language instead of having to model them in PromQL.
+
+[cols="1,1,1,1"]
+|===
+|Requirements/Options |Exporter provided by VSHN |Exporter provided by Stackgres |Custom exporter
+
+|Checks network connectivity |✅ |✅ |✅
+
+|Login to database the same way as the service user |✅ |❌ |✅
+
+|Easily integrates with Prometheus |✅ |✅ |✅
+
+|Read queries check |✅ |✅ |✅
+
+|Write queries check |❌ |❌ |✅
+
+|===
+
+=== Rationale
+
+The best solution would be to write a custom exporter, because it'll do exactly what we want with minimal footprint on resources.
+
+It disadvantage is:
+
+* Cost - We need time to write and maintain code
+
+Its advantages are:
+
+* Flexibility - We can extend and adapt code and functionalities as we want to.
+* Reliability - The exporter reuses service user credentials and connection method so we're sure the service user can connect to the database without issues.
+* Optimization - Minimal footprint and resource usage.
+* Resolution - We can write its logic to perform checks each second, this way we can better measure how long PostgreSQL is up or down.
+* Write Checks - Compared to the PostgreSQL Server Exporter we can actually check if PostgreSQL is operational by performing write operations on the database.
+
+=== Decision
+
+We're using a custom exporter.
+

@@ -25,6 +25,7 @@
 ** xref:app-catalog:ROOT:explanations/decisions/postgresql.adoc[]
 ** xref:app-catalog:ROOT:explanations/decisions/redis.adoc[]
 ** xref:app-catalog:ROOT:explanations/decisions/mariadb.adoc[]
+** xref:app-catalog:ROOT:explanations/decisions/postgres-monitoring.adoc[]
 ** xref:app-catalog:ROOT:explanations/decisions/capacity-alerting.adoc[Capacity Alerts]
 ** Archive
 *** xref:app-catalog:ROOT:explanations/decisions/archive/converged-service-impl.adoc[Converged Service Provisioning Implementation]
