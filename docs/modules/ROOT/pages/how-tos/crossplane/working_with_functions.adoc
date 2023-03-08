@@ -10,7 +10,7 @@ Function is a container to which is passed FunctionIO yaml object as stdin. Func
 
 
 == Preparation step 1
-To start working with Functions we must enable alpha features in Crossplane (at least in version v1.11)
+To start working with Functions we must enable alfa features in Crossplane (at least in version v1.11)
 ```
 helm install crossplane --namespace crossplane-system crossplane-stable/crossplane \
     --create-namespace \
@@ -39,7 +39,7 @@ spec:
 
 == Example function 1 - Golang
 
-As a result of code below there will be ConfigMap created even though it wasn't declared in original composition. This code simply takes input from stdin and unmarshal it into xfnv1alpha1.FunctionIO{}, further we append current list of desired resources by our new resource and print it to stdout. You can see that we also create log entry which will print whole object we received - be carefull with that, as in my case it was almost 5000 lines. 
+As a result of code below there will be ConfigMap created even though it wasn't declared in original composition. This code simply takes input from stdin and unmarshal it into xfnv1alpha1.FunctionIO{}, further we append current list of desired resources by our new resource and print it to stdout. You can see that we also create log entry which will print whole aboject we received - be carefull with that, as in my case it was almost 5000 lines. 
 
 ```
 package main
@@ -194,3 +194,4 @@ ENTRYPOINT [ "python3", "/fnio" ]
 * debugging Functions is hard, it's worth to print our FunctionIO once to log, save it and then operate on it locally
 * OCI Runtime errors are almost always caused by crashing container
 * do not use `FROM scratch` in Dockerfile - it causes issues at least in version v1.11
+* FunctionIO containes everything that Composition manages, including secret values, with Functions we can do whatever we want with all of the resources (create/read/edit/delete)
