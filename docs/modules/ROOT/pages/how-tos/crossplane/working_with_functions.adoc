@@ -39,7 +39,7 @@ spec:
 
 == Example function 1 - Golang
 
-As a result of code below there will be ConfigMap created even though it wasn't declared in original composition. This code simply takes input from stdin and unmarshal it into xfnv1alpha1.FunctionIO{}, further we append current list of desired resources by our new resource and print it to stdout. You can see that we also create log entry which will print whole aboject we received - be carefull with that, as in my case it was almost 5000 lines. 
+As a result of code below there will be ConfigMap created even though it wasn't declared in original composition. This code simply takes input from stdin and unmarshal it into xfnv1alpha1.FunctionIO{}, further we append current list of desired resources by our new resource and print it to stdout. You can see that we also create log entry which will print whole object we received - be carefull with that, as in my case it was almost 5000 lines. 
 
 ```
 package main
