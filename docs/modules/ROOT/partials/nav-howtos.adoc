@@ -1,6 +1,8 @@
 * Crossplane
 ** xref:app-catalog:ROOT:how-tos/crossplane/investigate_service_instances.adoc[Investigate a Service]
 ** xref:app-catalog:ROOT:how-tos/crossplane/enable_plan_upgrade.adoc[Enable Plan Upgrade]
+** xref:app-catalog:ROOT:how-tos/crossplane/working_with_functions.adoc[Functions]
+
 
 * Crossplane Service Broker
 ** xref:app-catalog:ROOT:how-tos/crossplane_service_broker/overview.adoc[Overview]

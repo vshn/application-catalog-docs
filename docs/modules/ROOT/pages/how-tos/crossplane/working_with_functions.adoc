@@ -1,0 +1,196 @@
+= How to work with Crossplane Functions
+
+Crossplane introduced `Functions` in version v1.11 as an Alpha feature: https://docs.crossplane.io/knowledge-base/guides/composition-functions. 
+
+Function is a container to which is passed FunctionIO yaml object as stdin. FunctionIO object is created and managed by Crossplane to keep state of our resources. It has 3 main entries:
+
+* observed: this one describes what is current state of our resources, it's read-only, all changes will be discarded
+* desired: this one is state we want to have and it's place where we can add aditional resources or manage already existing ones
+* results: this one is a logger, we can create log entries with 3 levels of severity: Normal, Warning and Fatal - Fatal breaks function's code execution
+
+
+== Preparation step 1
+To start working with Functions we must enable alfa features in Crossplane (at least in version v1.11)
+```
+helm install crossplane --namespace crossplane-system crossplane-stable/crossplane \
+    --create-namespace \
+    --set "args={--debug,--enable-composition-functions}" \
+    --set "xfn.enabled=true" \
+    --set "xfn.args={--debug}"
+```
+
+
+== Preparation step 2
+Next step is to declare our Function in our managed resource (Composition).
+It's highly recommended to use other container registry than hub.docker.io especially for development because their pull limit can block Your dev environment
+```
+spec:
+  compositeTypeRef:
+    apiVersion: vshn.appcat.vshn.io/v1
+    kind: XVSHNPostgreSQL
+  functions:
+    - name: fnio
+      type: Container
+      container:
+        image: ghcr.io/wejdross/fnio
+        imagePullPolicy: Always
+```
+
+
+== Example function 1 - Golang
+
+As a result of code below there will be ConfigMap created even though it wasn't declared in original composition. This code simply takes input from stdin and unmarshal it into xfnv1alpha1.FunctionIO{}, further we append current list of desired resources by our new resource and print it to stdout. You can see that we also create log entry which will print whole aboject we received - be carefull with that, as in my case it was almost 5000 lines. 
+
+```
+package main
+
+import (
+	"fmt"
+	"io/ioutil"
+	"log"
+	"os"
+
+	xfnv1alpha1 "github.com/crossplane/crossplane/apis/apiextensions/fn/io/v1alpha1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/yaml"
+)
+
+func main() {
+
+	funcIO := xfnv1alpha1.FunctionIO{}
+
+	x, err := ioutil.ReadAll(os.Stdin)
+	if err != nil {
+		log.Fatal(err)
+	}
+    // it's necessary to use sigs.k8s.io/yaml parser, otherwise it's impossible to force functions to work
+	err = yaml.Unmarshal(x, &funcIO)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	object := `
+apiVersion: kubernetes.crossplane.io/v1alpha1
+kind: Object
+metadata:
+  name: testingconfigmaps
+spec:
+  providerConfigRef:
+    name: kubernetes
+  forProvider:
+    manifest:
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: url-config
+        namespace: default
+      data:
+        fullURL: "https://google.pl"`
+
+	k8sapproved, err := yaml.YAMLToJSON([]byte(object))
+	if err != nil {
+		log.Fatal("from k8sapproved", err)
+	}
+
+	funcIO.Desired.Composite.Resource.Raw = funcIO.Observed.Composite.Resource.Raw
+
+	funcIO.Desired.Resources = append(funcIO.Desired.Resources, xfnv1alpha1.DesiredResource{
+		Name: "examplename",
+		Resource: runtime.RawExtension{
+			Raw: k8sapproved,
+		},
+	},
+	)
+
+	funcIO.Results = append(funcIO.Results,
+		xfnv1alpha1.Result{
+			Severity: xfnv1alpha1.SeverityNormal,
+			Message:  fmt.Sprintf("Print whole object: \n\n\n%s\n\n\n", string(x)),
+		},
+	)
+
+	d1, err := yaml.Marshal(funcIO)
+	if err != nil {
+		log.Fatal(err)
+	}
+    // return new state to stdout
+	fmt.Println(string(d1))
+}
+```
+
+Example Dockerfile to build container:
+
+```
+FROM golang:latest AS build
+WORKDIR /build
+COPY go.mod /build/
+COPY go.sum /build/
+RUN go mod download
+COPY main.go /build/
+RUN go build -o /build/fnio
+
+FROM ubuntu:latest
+COPY --from=build /build/fnio /fnio
+ENTRYPOINT [ "/fnio" ]
+```
+
+== Example 2 - Python
+
+In my humble opinion Python is much better for Functions use case and I highly recommend using it. As a result of below code we will add new key:value pair into existing Secret. Resulting secret will contain new entry in stringData:
+POSTGRESQL_URL=postgresql://sally:sallyspassword@dbserver.example:5555/userdata?connect_timeout=10&sslmode=require&target_session_attrs=primary
+
+```
+import sys
+
+import yaml
+
+def read_Functionio() -> dict:
+    """Read the FunctionIO from stdin."""
+    return yaml.load(sys.stdin.read(), yaml.Loader)
+
+
+def write_Functionio(Functionio: dict):
+    """Write the FunctionIO to stdout and exit."""
+    sys.stdout.write(yaml.dump(Functionio))
+    sys.exit(0)
+
+
+def main():
+    fnio = read_Functionio()
+
+    connstring = 'postgresql://sally:sallyspassword@dbserver.example:5555/userdata?connect_timeout=10&sslmode=require&target_session_attrs=primary'
+
+    for elem in fnio['desired']['resources']:
+        if elem['name'] == 'mySecret':
+            elem['resource']['spec']['forProvider']['manifest']['stringData']['POSTGRESQL_URL'] = connstring
+
+    write_Functionio(fnio)
+
+main()
+```
+
+Example Dockerfile to build container:
+```
+FROM python:3.9-slim-buster AS build
+WORKDIR /build
+COPY requirements.txt /build/requirements.txt
+COPY main2.py /fnio
+RUN pip3 install -r requirements.txt
+
+ENTRYPOINT [ "python3", "/fnio" ]
+```
+
+== Worth to know
+
+* All resources in Composition must be named if You plan to use Functions
+```
+    - name: resource1
+      base:
+        apiVersion: kubernetes.crossplane.io/v1alpha1
+        (...)
+```
+
+* it's much easier to write functions in python - less overhead with parsers and types, You just focus on code
+* debugging Functions is hard, it's worth to print our FunctionIO once to log, save it and then operate on it locally
+* OCI Runtime errors are almost always caused by crashing container
+* do not use `FROM scratch` in Dockerfile - it causes issues at least in version v1.11
