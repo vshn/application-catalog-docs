@@ -31,7 +31,7 @@ Every APPUiO cluster already provides some logging stack.
 At the very least on every Kubernetes cluster we can access the logs of a service using `kubectl logs`.
 
 APPUiO Cloud and APPUiO Managed OpenShift provide a logging stack based on Elasticsearch or Loki.
-Service users can access logs in these systems if the have permissions to view the logs using `kubectl`.
+Service users can access logs in these systems if they have permissions to view the logs using `kubectl`.
 
 APPUiO Managed Kubernetes Services provide logs in a logging stack of the underlying cloud provider, which the service user should be able to access.
 
