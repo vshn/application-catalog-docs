@@ -6,7 +6,7 @@
 * Architecture
 ** xref:app-catalog:ROOT:reference/billing-naming.adoc[]
 ** xref:app-catalog:ROOT:reference/billing-appuio.adoc[Billing on APPUiO Cloud]
-** xref:app-catalog:ROOT:reference/service-maturity.adoc[Service Maturity]
+** xref:app-catalog:ROOT:reference/service-maturity.adoc[]
 ** xref:app-catalog:ROOT:reference/framework-requirements.adoc[Framework Requirements]
 ** xref:app-catalog:ROOT:reference/quality-requirements.adoc[Quality Requirements]
 *** xref:app-catalog:ROOT:reference/quality-requirements/maintainability/readiness-standards.adoc[Maintainability]
