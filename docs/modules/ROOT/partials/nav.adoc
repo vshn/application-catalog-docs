@@ -35,6 +35,7 @@
 *** xref:app-catalog:ROOT:explanations/decisions/capacity-alerting.adoc[Capacity Alerting]
 ** xref:app-catalog:ROOT:explanations/decisions/redis.adoc[Redis by VSHN]
 ** xref:app-catalog:ROOT:explanations/decisions/mariadb.adoc[MariaDB by VSHN]
+** xref:app-catalog:ROOT:explanations/decisions/logging.adoc 
 ** xref:app-catalog:ROOT:explanations/decisions/crossplane.adoc[Crossplane as Control Plane]
 ** xref:app-catalog:ROOT:explanations/decisions/composition-deployments.adoc[Composition Deployments]
 ** xref:app-catalog:ROOT:explanations/decisions/api-design.adoc[API Design]
