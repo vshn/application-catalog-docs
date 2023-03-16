@@ -24,7 +24,7 @@
 **** xref:app-catalog:ROOT:reference/quality-requirements/usability/logs.adoc[Service Instance Logs]
 
 * PostgreSQL
-** xref:app-catalog:ROOT:explanations/decisions/postgresql.adoc[]
+** xref:app-catalog:ROOT:explanations/decisions/postgresql.adoc[Operator evaluation]
 ** xref:app-catalog:ROOT:explanations/decisions/postgres-monitoring.adoc[Availability Check]
 ** xref:app-catalog:ROOT:explanations/decisions/capacity-alerting.adoc[PostgreSQL by VSHN Capacity Alerts]
 
