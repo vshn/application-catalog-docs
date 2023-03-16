@@ -2,7 +2,7 @@
 ** xref:app-catalog:ROOT:explanations/what_is.adoc[What is it?]
 ** xref:app-catalog:ROOT:explanations/why_exists.adoc[Why does it exist?]
 ** xref:app-catalog:ROOT:explanations/app_catalog.adoc[Concept]
-** xref:app-catalog:ROOT:reference/glossary.adoc[Glossary]
+** xref:app-catalog:ROOT:reference/glossary.adoc[]
 ** xref:app-catalog:ROOT:reference/billing-naming.adoc[Naming Scheme for Billing]
 ** xref:app-catalog:ROOT:reference/billing-appuio.adoc[Billing on APPUiO Cloud]
 ** xref:app-catalog:ROOT:reference/service-maturity.adoc[Service Maturity]
