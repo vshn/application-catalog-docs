@@ -26,7 +26,7 @@
 * PostgreSQL
 ** xref:app-catalog:ROOT:explanations/decisions/postgresql.adoc[Operator evaluation]
 ** xref:app-catalog:ROOT:explanations/decisions/postgres-monitoring.adoc[Availability Check]
-** xref:app-catalog:ROOT:explanations/decisions/capacity-alerting.adoc[PostgreSQL by VSHN Capacity Alerts]
+** xref:app-catalog:ROOT:explanations/decisions/capacity-alerting.adoc[Capacity Alerting]
 
 * xref:redis.adoc[Redis]
 ** xref:app-catalog:ROOT:explanations/decisions/redis.adoc[]
