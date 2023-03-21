@@ -9,6 +9,15 @@ Function is a container to which is passed FunctionIO yaml object as stdin. Func
 * results: this one is a logger, we can create log entries with 3 levels of severity: Normal, Warning and Fatal - Fatal breaks function's code execution
 
 
+*What can we achieve thank to Crossplane functions:*
+
+* create resource (Kubernetes compliant)
+* read resource (Kubernetes compliant)
+* update resource (Kubernetes compliant)
+* delete resource (Kubernetes compliant)
+* introduce variatic behavior to our compositions (if/else equivalents)
+* connect to external APIs to get/push some infromations
+
 == Preparation step 1
 To start working with Functions we must enable alfa features in Crossplane (at least in version v1.11)
 ```
@@ -190,8 +199,6 @@ ENTRYPOINT [ "python3", "/fnio" ]
         (...)
 ```
 
-* it's much easier to write functions in python - less overhead with parsers and types, You just focus on code
 * debugging Functions is hard, it's worth to print our FunctionIO once to log, save it and then operate on it locally
-* OCI Runtime errors are almost always caused by crashing container
 * do not use `FROM scratch` in Dockerfile - it causes issues at least in version v1.11
-* FunctionIO containes everything that Composition manages, including secret values, with Functions we can do whatever we want with all of the resources (create/read/edit/delete)
+* original composition (fully printed) can we found here: https://github.com/wejdross/crossplanefunctions/blob/master/log.log as well as mentioned above examples
