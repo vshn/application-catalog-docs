@@ -1,26 +1,22 @@
 pages   := $(shell find . -type f -name '*.adoc')
 
-# Choose container engine
-engine_cmd_podman  ?= podman
-engine_opts_podman ?= --rm --tty --userns=keep-id
-engine_cmd_docker  ?= docker
-engine_opts_docker ?= --rm --tty --user "$$(id -u)"
-ifeq ($(CONTAINER_ENGINE),podman)
-	engine_cmd  ?= $(engine_cmd_podman)
-	engine_opts ?= $(engine_opts_podman)
-else ifeq ($(CONTAINER_ENGINE),docker)
-	engine_cmd  ?= $(engine_cmd_docker)
-	engine_opts ?= $(engine_opts_docker)
-else ifeq ($(shell command -v podman &> /dev/null; echo $$?),0)
-	engine_cmd  ?= $(engine_cmd_podman)
-	engine_opts ?= $(engine_opts_podman)
+# Determine whether to use podman
+#
+# podman currently fails when executing in GitHub actions on Ubuntu LTS 20.04,
+# so we never use podman if GITHUB_ACTIONS==true.
+use_podman := $(shell command -v podman 2>&1 >/dev/null; p="$$?"; \
+		if [ "$${GITHUB_ACTIONS}" != "true" ]; then echo "$$p"; else echo 1; fi)
+
+ifeq ($(use_podman),0)
+	engine_cmd  ?= podman
+	engine_opts ?= --rm --tty --userns=keep-id
 else
-	engine_cmd  ?= $(engine_cmd_docker)
-	engine_opts ?= $(engine_opts_docker)
+	engine_cmd  ?= docker
+	engine_opts ?= --rm --tty --user "$$(id -u)"
 endif
 
-preview_cmd ?= $(engine_cmd) run --rm --publish 35729:35729 --publish 2020:2020 --volume "${PWD}":/preview/antora vshn/antora-preview:3.1.1.1 --antora=docs --style=vshn
-vale_cmd ?= $(engine_cmd) run $(engine_opts) --volume "$${PWD}"/docs/modules:/pages:Z docker.io/vshn/vale:2.10.5.1 --minAlertLevel=error --config=/pages/ROOT/pages/.vale.ini /pages
+preview_cmd ?= $(engine_cmd) run --rm --publish 35729:35729 --publish 2020:2020 --volume "${PWD}":/preview/antora ghcr.io/vshn/antora-preview:3.1.2.3 --antora=docs --style=vshn
+vale_cmd ?= $(engine_cmd) run $(engine_opts) --volume "$${PWD}"/docs/modules/ROOT/pages:/pages --workdir /pages ghcr.io/vshn/vale:2.15.5 --minAlertLevel=error .
 
 UNAME := $(shell uname)
 ifeq ($(UNAME), Linux)
