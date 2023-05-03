@@ -1,0 +1,73 @@
+= VSHN Managed PostgreSQL
+
+== Problem
+
+We need to specify how VSHN handles the major and minor upgrades of PostgreSQL by VSHN.
+
+So we need to decide two things:
+
+* How upgrades are handled
+* How we communicate with the customer about it
+
+== Requirements
+
+* How do we upgrade?
+* When do we upgrade?
+* How should customers be informed?
+* When should customers be informed?
+
+== Proposals
+
+=== Upgrades
+
+Proposal 1::
+Automatic Minor and major upgrades
+
+Proposal 2::
+Automatic minor upgrade and manual major upgrades
+
+Proposal 3::
+Manual minor and major upgrades
+
+=== Communication
+
+Proposal 4::
+Inform 3 months before EOL and then stop the instance
+
+Proposal 5::
+Inform 3 months before EOL and then keep the instances but unsupported
+
+Proposal 6::
+Inform 3 months before EOL and then delete the instance with enabled deletion protection
+
+== Decision
+
+=== Upgrades
+
+Proposal 2 and proposal 6
+
+== Rationale
+
+=== Upgrades
+
+For minor upgrades the PostgreSQL docs say this:
+
+[quote, https://www.postgresql.org/support/versioning/]
+For minor releases, the community considers not upgrading to be riskier than upgrading.
+
+The general consent and best practices here is, that we upgrade to the latest available minor version as soon as possible.
+
+However, major version upgrades often bring changes to internal structures and need migrations steps.
+PostgreSQL doesn't maintain backwards compatibility, so there's no way of going back, if an upgrade brings breaking changes.
+They can also contain new features and breaking changes that could have unintended side effects.
+Thus, it's risky to automatically upgrade to the latest major versions.
+
+
+=== Communication
+
+Our upstream in this case isn't PostgreSQL directly, but rather StackGres, who don't have regular releases.
+So we can't predict when a new version is released with new provided PostgreSQL versions and EOLs.
+This means once a new StackGgres version is released that will EOL an existing PostgreSQL version, we'll have to postpone the rollout for 3 months.
+
+Keeping unsupported instances around may give us issues with StackGres.
+So we should remove them as soon as possible, so we're not blocked for upgrades.

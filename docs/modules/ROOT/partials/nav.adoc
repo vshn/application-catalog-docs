@@ -32,6 +32,7 @@
 ** PostgreSQL by VSHN
 *** xref:app-catalog:ROOT:explanations/decisions/postgresql.adoc[Operator evaluation]
 *** xref:app-catalog:ROOT:explanations/decisions/postgres-monitoring.adoc[Availability Check]
+*** xref:app-catalog:ROOT:explanations/decisions/postgres-upgrades.adoc[Upgrade Policy]
 ** xref:app-catalog:ROOT:explanations/decisions/redis.adoc[Redis by VSHN]
 ** xref:app-catalog:ROOT:explanations/decisions/mariadb.adoc[MariaDB by VSHN]
 ** xref:app-catalog:ROOT:explanations/decisions/capacity-alerting.adoc[Converged Service Capacity Alerting]
