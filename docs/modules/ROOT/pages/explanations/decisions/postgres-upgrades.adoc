@@ -3,6 +3,7 @@
 == Problem
 
 We need to specify how VSHN handles the major and minor upgrades of PostgreSQL by VSHN.
+This decision is not about upgrading StackGres, wwhile related to this topic, it doesn't have any customer impact.
 
 So we need to decide two things:
 
@@ -11,10 +12,10 @@ So we need to decide two things:
 
 == Requirements
 
-* How do we upgrade?
-* When do we upgrade?
-* How should customers be informed?
-* When should customers be informed?
+* Specification how we do upgrades
+* Specification when we do upgrades
+* Specification how customers should be informed
+* Specification when customers should be informed
 
 == Proposals
 
@@ -32,19 +33,32 @@ Manual minor and major upgrades
 === Communication
 
 Proposal 4::
-Inform 3 months before EOL and then stop the instance
+Inform 3 months after EOL and then stop the instance
 
 Proposal 5::
-Inform 3 months before EOL and then keep the instances but unsupported
+Inform 3 months after EOL and then keep the instances but unsupported
 
 Proposal 6::
-Inform 3 months before EOL and then delete the instance with enabled deletion protection
+Inform 3 months after EOL and then delete the instance with enabled deletion protection
+
+Proposal 7::
+Inform 3 months after EOL and then force upgrade the instance
 
 == Decision
 
 === Upgrades
 
-Proposal 2 and proposal 6
+Proposal 2 and proposal 7
+
+New minor updates will be tested on lab before we put them live.
+Each StackGres version https://stackgres.io/doc/latest/intro/versions/[supports] specific major and minor versions of PostgreSQL, so it will need to be updated as well.
+After testing and updating StackGres, the new minor version will be rolled out in the next specified maintenance window for each cluster.
+
+Force major upgrades won't be to the most current release, but to the oldest still supported version.
+For example 12.x will be upgraded to 13.x even if 15.x is already available.
+
+For the EOL information we take what PostgreSQL themselves say: https://www.postgresql.org/support/versioning/.
+StackGres will probably adhere to these policies as well.
 
 == Rationale
 
@@ -65,9 +79,5 @@ Thus, it's risky to automatically upgrade to the latest major versions.
 
 === Communication
 
-Our upstream in this case isn't PostgreSQL directly, but rather StackGres, who don't have regular releases.
-So we can't predict when a new version is released with new provided PostgreSQL versions and EOLs.
-This means once a new StackGgres version is released that will EOL an existing PostgreSQL version, we'll have to postpone the rollout for 3 months.
-
 Keeping unsupported instances around may give us issues with StackGres.
-So we should remove them as soon as possible, so we're not blocked for upgrades.
+So we should upgrade them as soon as possible, so we're not blocked for StackGres upgrades.
