@@ -3,7 +3,7 @@
 == Problem
 
 We need to specify how VSHN handles the major and minor upgrades of PostgreSQL by VSHN.
-This decision is not about upgrading StackGres, wwhile related to this topic, it doesn't have any customer impact.
+This decision is not about upgrading StackGres, while related to this topic, it doesn't have any customer impact.
 
 So we need to decide two things:
 
