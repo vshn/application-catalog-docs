@@ -113,15 +113,15 @@ to customers. The tool is connected to Jira therefore customer will have easy ac
 
 Advantages::
 
-* Authentication is available.
+* Authentication and encryption is available.
 * UI User friendly.
 * Easy access for customer with Jira credentials
 * Easy access for VSHNeers.
 
 Disadvantages::
 
-* No encryption.
 * Potential security breach due to the common place of reports for all customers.
+* Arguably difficult to integrate with other tools.
 
 
 === Proposal 2.3: Email
