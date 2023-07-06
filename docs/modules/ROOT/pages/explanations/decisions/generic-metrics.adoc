@@ -1,0 +1,31 @@
+= Monitoring and Metrics for Converges VSHN Services
+
+Based on our decision for link:/app-catalog/explanations/decisions/postgres-monitoring.html[PostgreSQL] we will be using the https://github.com/vshn/appcat/tree/master/pkg/sliexporter[same SLI exporter] to monitor for the SLIs.
+
+The exporter will be extended with all necessary logic to check for SLIs of other services as well.
+To check databases the SLI exporter will perform a trivial query.
+How that query looks like will depend on the database, if the database already provides some health endpoint, that endpoint should be instead.
+If the query is not successful it will be treated as a downtime by the exporter.
+
+For general application metrics, any exporter that is already included with the given solution should be used (for example if a Redis helm chart brings the Redis export with it).
+Similarly, already existing Grafana dashboards should be leveraged and adjusted to our needs.
+These metrics also provide the basis for the capacity alerting.
+
+== SLA Exception Handling
+
+There are https://products.vshn.ch/service_levels.html#_exceptions_to_availability_guarantee[exceptions] that don't apply to the SLA.
+To catch as many of these exceptions as possible, a combination of the custom exporter and Schedar's SLA reporting tool will be necessary.
+Some exceptions can potentially be caught via the reporter, some can only be caught and identified as such after the metrics have already been written.
+
+== Alerting
+
+=== SLO Alerting
+
+SLO Alerting is routed to VSHN and will be handled by whoever is Responsible Ops.
+For that the cluster monitoring will be leveraged and with labels we ensure that the alerts are routed correctly.
+
+=== Capacity Alerting
+
+Capacity alerting for each instance is handled by the user workload monitoring.
+It will route the alerts to an alerting channel of the customer's choice.
+These alerts will not go to VSHN as these kinds of alerts are usually not actionable apart from informing the customer.
