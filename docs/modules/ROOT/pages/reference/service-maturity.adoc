@@ -56,11 +56,14 @@ See also:
 
 == Iteration: Metrics
 
-As a user of the service I can:
+As an engineer of the service I can:
 
 * see the raw metrics of a service instance
-* see the SLA reports
 * access a dashboard showing pre-crafted diagrams of the available metrics
+
+As a user of the service I can:
+
+* see the SLA reports
 
 == Iteration: Alerting
 
