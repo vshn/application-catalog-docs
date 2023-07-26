@@ -19,21 +19,24 @@ As well as the Bitnami Helm charts.
 
 The following section contains the operators that have been looked at.
 
-[cols="1,1,1"]
+[cols="1,1,1,1"]
 |===
-|Requirements |https://github.com/abalki001/mariadb-operator[Official MariaDB Operator] |https://github.com/bitnami/charts/tree/master/bitnami/mariadb-galera[Bitnami Helmchart]
+|Requirements |https://github.com/abalki001/mariadb-operator[Official MariaDB Operator] |https://github.com/bitnami/charts/tree/master/bitnami/mariadb-galera[Bitnami Helmchart]| https://github.com/mariadb-operator/mariadb-operator[New Mariadb Operator]
 
-|Galera and Standalone |❌ no galera |✅
+|Galera and Standalone |❌ no galera |✅|✅Multi master, single master
 
-|Customize MariaDB Settings |❌ |✅
+|Customize MariaDB Settings |❌ |✅|✅
 
-|Metrics |✅ |✅
+|Metrics |✅ |✅|✅
 
-|Backup |✅ |❌
+|Backup |✅ |❌|✅
+|Automatic Restore |❌ |❌|✅
 
-|Regular Maintenance |❌ |❌
+|Regular Maintenance |❌ |❌|❌
 
-|Version Upgrades |✅ |✅
+|Version Upgrades |✅ |✅|✅
+|User management |❌ |❌|✅
+|Logical Database Management |❌ |❌|✅
 
 |===
 
@@ -44,30 +47,24 @@ Some additional Notes:
 * Percona has a MySQL Operator: https://docs.percona.com/percona-operator-for-mysql/pxc/
 * MOCO Operator (MySQL Only): https://github.com/cybozu-go/moco
 ** Has a similar concept to handling clustering like the Patroni framework that is used by Stackgres.
+* New operator, independent from MariaDB project, MIT licensed:  https://github.com/mariadb-operator/mariadb-operator[New Mariadb Operator]
 
 == Decision
 
-https://github.com/bitnami/charts/tree/master/bitnami/mariadb-galera[Galera Bitnami Helm Chart].
+https://github.com/mariadb-operator/mariadb-operator[New Mariadb Operator].
 
-The instantiation of the Helm Charts will be handled by `+provider-kubernetes+`.
+New operator is currently the best what github offers, comes with variety of installation methods and is actively maintained.
 
 Advantages::
 
-* Less complexity than operators, but provides more features
-* Have been used in SPKS for years now
-* Supports Standalone and Galera
+* Supports almost everything we need
+* Easy to integrate with Appcat
+* Actively maintained
+* Advanced Galera support compared to Bitnami
 
 Disadvantages::
 
-* Bitnami had breaking changes in the past, so we probably run into these in the future as well
-
-If a breaking change occurs there are currently two ideas how to tackle them:
-
-* Fork the chart and maintain it ourselves
-* Grandfathering out the old chart version.
-Any new instances will use the new chart and existing ones use the old one.
-
-Further details will be explored in case of breaking changes.
+* Lack of regular, automated maintenance
 
 === Rationale
 
