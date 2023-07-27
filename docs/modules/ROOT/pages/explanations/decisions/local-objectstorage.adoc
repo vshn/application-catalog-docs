@@ -5,9 +5,9 @@
 Having access to S3 compatible storage is required for VSHN managed AppCat services, as well as the APPUiO Managed cluster itself for backups.
 Further it is often used by other applications such as logging and monitoring systems, or directly by the customer.
 
-Most platforms on which we run APPUiO Managed already provides some kind of S3 compatible storage and whenever possible AppCat directly interfaces with it to provide self-service object buckets.
+A lot platforms on which we run APPUiO Managed already provide some kind of S3 compatible storage and when possible AppCat directly interfaces with it to provide self-service object buckets or uses off-site solutions.
 
-However, in some cases the underlying platform doesn't provide any object storage, and we don't have the option to use an off-site solution of another provider.
+However, in some cases the underlying platform doesn't provide any object storage that we can't interface with it and we don't have the option to use an off-site solution of another provider.
 In these cases we still need a self-contained storage solution that can provide S3 compatible storage and self-service object buckets on the platform.
 
 === Goals
@@ -48,7 +48,8 @@ There is a https://github.com/minio/minio-go[Go SDK] to interact with MinIO, but
 There are some concerns around the AGPL v3 license of MinIO.
 Some companies such as https://opensource.google/documentation/reference/using/agpl-policy[Google] categorically avoid any software licensed under AGPL as it is fairly restricitve and may force you to release your own code under the AGPL license.
 However, as we do not in any way modify MinIO itself, so we belief using it should be fine, and we don't need to release AppCat under AGPL.
-But we might need to release our provider under the AGPL v3 license, as the MinIO Admin Go Client SDK is also released under AGPL.
+But we will need to release our provider under the AGPL v3 license, as soon as we link with the MinIO Admin Go Client SDK, which is also released under AGPL.
+
 
 === Ceph Object Gateway
 
@@ -93,7 +94,7 @@ However, the complexity and resource usage of Ceph is simply too big.
 We can't expect every customer to add dedicated storage nodes, just to provide S3 storage.
 
 We see MinIO as the only viable option that can cover all use cases for self-hosted S3.
-It is fairly lightweight, mature, easy to interface with, and we don't think the AGPL license prevents us from using it.
+It is fairly lightweight, mature, easy to interface with, and the AGPL license doesn't prevents us from using it.
 The COSI driver for MinIO is not yet ready, so we will write our own simple provider.
 
 Later we might want to look into supporting COSI buckets in general.
