@@ -70,7 +70,7 @@ Not looked into:
 * https://github.com/abalki001/mariadb-operator[abalki001/mariadb-operator^]: Looks abandonned as of August 2023.
 
 
-=== Analysis: mariadb-operator 
+=== Analysis - mariadb-operator
 
 https://github.com/mariadb-operator/mariadb-operator[mariadb-operator/mariadb-operator^]
 
@@ -93,7 +93,7 @@ Disadvantages::
 * Restores database to new instance, like Stackgres does in PostgreSQL, which is not ideal for us, but we can work around it
 * We would need to write and maintain a new Project Syn Commodore Component to deploy this operator
 
-=== Analysis: Bitnami Helm Chart
+=== Analysis - Bitnami Helm Chart
 
 https://github.com/bitnami/charts/tree/master/bitnami/mariadb-galera[Bitnami Helmchart^].
 
