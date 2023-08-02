@@ -1,0 +1,101 @@
+= VSHN Managed Object Storage
+
+== Problem
+
+Having access to S3 compatible storage is required for VSHN managed AppCat services, as well as the APPUiO Managed cluster itself for backups.
+Further it is often used by other applications such as logging and monitoring systems, or directly by the customer.
+
+A lot platforms on which we run APPUiO Managed already provide some kind of S3 compatible storage and when possible AppCat directly interfaces with it to provide self-service object buckets or uses off-site solutions.
+
+However, in some cases the underlying platform doesn't provide any object storage that we can't interface with it and we don't have the option to use an off-site solution of another provider.
+In these cases we still need a self-contained storage solution that can provide S3 compatible storage and self-service object buckets on the platform.
+
+=== Goals
+
+* Provide S3 compatible storage
+* Few dependencies on the underlying platform
+* Self-service provisioning of object buckets
+
+=== Non-Goals
+
+* Provide any other kind of storage
+* Self-service provisioning of the storage solution itself
+
+== Proposals
+
+=== MinIO
+
+https://min.io/[MinIO] is an open-source, S3 compatible object store.
+It can easily be hosted in Kubernetes and can run with limited resources.
+It only needs access to some kind of persistent volumes.
+
+We already have a component to deploy MinIO, but it uses a legacy chart that has been archived since 2021.
+So we'd have to update the component to use the new Helm chart.
+
+We did not find any provider/operator that allows bucket and user management.
+There is the https://github.com/minio/operator[official Operator] but that operator focuses on deploying and running multiple instances of MinIO itself.
+There also was https://github.com/kubernetes-retired/cosi-driver-minio[the COSI driver MinIO] that was a sample driver for the https://container-object-storage-interface.github.io/[Container Object Storage Interface (COSI) API].
+However, that driver is no longer supported and was never intended to be production ready.
+We suspect MinIO will eventually provide a COSI driver, but as of writing this, there is no operator that let's us manage buckets and users.
+
+We see no advantage in using the MinIO Operator to deploy MinIO itself.
+So we propose to install MinIO using the latest helm chart and component MinIO.
+To create buckets in this MinIO instance, we write a `provider-minio`, which similarly to `provider-cloudscale` and `provider-exoscale` can create buckets and users.
+There is a https://github.com/minio/minio-go[Go SDK] to interact with MinIO, but we might need to use the https://github.com/minio/madmin-go[MinIO Admin Go Client SDK] to create users.
+
+
+==== Concerns
+There are some concerns around the https://choosealicense.com/licenses/agpl-3.0/[GNU AGPLv3^] license of MinIO.
+Some companies such as https://opensource.google/documentation/reference/using/agpl-policy[Google] categorically avoid any software licensed under  GNU AGPLv3 as it is fairly restricitve and may force you to release your own code under the  GNU AGPLv3 license.
+However, as we do not in any way modify MinIO itself, we belief using it should be fine, and we don't need to release AppCat under  GNU AGPLv3.
+But we will need to release our Crossplane provider under the  GNU AGPLv3 license, as soon as we link with the MinIO Admin Go Client SDK, which is also released under  GNU AGPLv3.
+
+
+=== Ceph Object Gateway
+
+https://docs.ceph.com/en/quincy/radosgw/[Ceph Object Gateway] is an object storage interface that exposes an S3 compatible API for a Ceph storage cluster.
+Ceph is a very powerful and mature distributed storage solution.
+
+We already support Ceph on APPUiO Managed using https://rook.io/[Rook] through https://github.com/projectsyn/component-rook-ceph[component-rook-ceph].
+It should be easy to extend the exiting component to also deploy the Ceph Object Gateway by configuring a https://rook.io/docs/rook/v1.11/Storage-Configuration/Object-Storage-RGW/object-storage/[`CephObjectStore`].
+
+Rook Ceph also https://rook.io/docs/rook/v1.11/Storage-Configuration/Object-Storage-RGW/object-storage/#create-a-bucket[already supports the COSI API].
+This means that we don't need to write any custom provider to integrate the Ceph Object Gateway, we can write compositions that deploy buckets using `ObjectBucketClaim` objects.
+
+==== Concerns
+
+Ceph is very resource intensive and comes with rather high operational complexity.
+Enabling Ceph on APPUiO Managed is optional and requires at least three dedicated storage nodes.
+As such it is questionable if service users are willing to add three nodes to the cluster, if they only need object storage.
+
+
+=== Alternatives
+
+Garage::
+https://garagehq.deuxfleurs.fr/[Garage] is a fairly new open-source distributed object storage written in Rust.
+It also uses the APGL v3 license.
+It looks promising, but doesn't seem mature enough at this stage.
+
+SeaweedFS::
+https://github.com/seaweedfs/seaweedfs[SeaweedFS] is a distributed file system with the goal to handle small files efficiently.
+It started as an Object Store, but seems to do a lot more now.
+SeaweedFS seems to be more complex than MinIO and less complex than Ceph, but less mature than both of them.
+
+== Decision
+
+Use https://min.io/[MinIO^] and write a custom Crossplane provider for managing MinIO (`provider-minio`).
+
+== Rational
+
+Neither Garage, nor SeaweedFS seem reliable enough right now.
+
+Rook Ceph is probably the most mature and stable solution, and it also comes with an easy integration into AppCat through the COSI API.
+However, the complexity and resource usage of Ceph is simply too big.
+We can't expect every customer to add dedicated storage nodes, just to provide S3 storage.
+
+We see MinIO as the only viable option that can cover all use cases for self-hosted S3.
+It is fairly lightweight, mature, easy to interface with, and the AGPL license doesn't prevents us from using it.
+The COSI driver for MinIO is not yet ready, so we will write our own simple provider.
+
+Later we might want to look into supporting COSI buckets in general.
+This should be fairly easy to implement with a composition and would automatically give us support for Ceph and any other storage provider that implements COSI in the future.

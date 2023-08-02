@@ -38,6 +38,7 @@
 *** xref:app-catalog:ROOT:explanations/decisions/redis.adoc[Chart evaluation]
 *** xref:app-catalog:ROOT:explanations/decisions/redis-upgrades.adoc[Upgrade Policy]
 ** xref:app-catalog:ROOT:explanations/decisions/mariadb.adoc[MariaDB by VSHN]
+** xref:app-catalog:ROOT:explanations/decisions/local-objectstorage.adoc[ObjectStorage by VSHN]
 ** xref:app-catalog:ROOT:explanations/decisions/capacity-alerting.adoc[Converged Service Capacity Alerting]
 ** xref:app-catalog:ROOT:explanations/decisions/logging.adoc[Converged Service Logging]
 ** xref:app-catalog:ROOT:explanations/decisions/crossplane.adoc[Crossplane as Control Plane]
