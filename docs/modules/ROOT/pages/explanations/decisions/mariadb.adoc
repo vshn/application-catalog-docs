@@ -21,7 +21,7 @@ The following section contains the operators that have been looked at.
 
 [cols="1,1,1,1"]
 |===
-|Requirements |https://github.com/abalki001/mariadb-operator[Official MariaDB Operator] |https://github.com/bitnami/charts/tree/master/bitnami/mariadb-galera[Bitnami Helmchart]| https://github.com/mariadb-operator/mariadb-operator[New Mariadb Operator]
+|Requirements |https://github.com/abalki001/mariadb-operator[abalki001/mariadb-operator] |https://github.com/bitnami/charts/tree/master/bitnami/mariadb-galera[Bitnami Helmchart]| https://github.com/mariadb-operator/mariadb-operator[mariadb-operator/mariadb-operator]
 
 |Galera and Standalone |❌ no galera |✅|✅Multi master, single master
 
@@ -40,35 +40,56 @@ The following section contains the operators that have been looked at.
 
 |===
 
-Some additional Notes:
 
-* The Galera Operator by Orange has been archived: https://github.com/Orange-OpenSource/galera-operator
-* The Official Mariadb operator is linked here: https://mariadb.com/kb/en/kubernetes-operators-for-mariadb/
-* Percona has a MySQL Operator: https://docs.percona.com/percona-operator-for-mysql/pxc/
-* MOCO Operator (MySQL Only): https://github.com/cybozu-go/moco
-** Has a similar concept to handling clustering like the Patroni framework that is used by Stackgres.
-* New operator, independent from MariaDB project, MIT licensed:  https://github.com/mariadb-operator/mariadb-operator[New Mariadb Operator]
+== mariadb-operator/mariadb-operator analysis 
 
-== Decision
+https://github.com/mariadb-operator/mariadb-operator[mariadb-operator/mariadb-operator]
 
-https://github.com/mariadb-operator/mariadb-operator[New Mariadb Operator].
-
-New operator is currently the best what github offers, comes with variety of installation methods and is actively maintained.
+New operator is currently the best what github offers, comes with variety of installation methods and is actively maintained. It is also mentioned in MariaDB knowledge base: https://mariadb.com/kb/en/kubernetes-operators-for-mariadb/#mariadb-operator[mariadb.com]
 
 Advantages::
 
+* Written in Go
 * Supports almost everything we need
 * Easy to integrate with Appcat
-* Actively maintained
+* https://isitmaintained.com/project/mariadb-operator/mariadb-operator[]
 * Advanced Galera support compared to Bitnami
 
 Disadvantages::
 
 * Lack of regular, automated maintenance
+* Maintained by https://repo-tracker.com/r/gh/mariadb-operator/mariadb-operator[one man] only, if he leaves the project, we would have to fork and maintain it ourselves
+* Restores database to new instance, like Stackgres does in PostgreSQL, which is not ideal for us, but we can workaround it
+* We would need to write and maintain new syn component to deploy this operator
 
-=== Rationale
 
-Operators add one more layer of complexity to the setup and one more part that can break.
-In order to justify this added complexity the operators should provide more functionality than a simple Helm Chart.
 
-With experience from SPKS we know how the Bitnami Helm Chart works and that it's capable of satisfying our requirements.
+== bitnami helmchart analysis
+
+https://github.com/bitnami/charts/tree/master/bitnami/mariadb-galera[Bitnami Helmchart]
+
+Bitnami is solid, actively maintained and we already has experience integrating it into our offerings. 
+
+Advantages::
+
+* Supports most of our needs
+* Easy to integrate with Appcat
+* Sufficient Galera support
+* Well tested and widely used by VSHN
+* Faster integration and development as we already know how to work with it
+
+Disadvantages::
+
+* Lack of regular, automated maintenance
+* We need to use other tools for user/logical database management.
+
+
+== Decision
+
+We should use bitnami helmchart.
+
+== Rationale
+
+Mariadb-operator/mariadb-operator seems to be very good solution with high potential, but it is not yet mature enough for us to use it. We would need to invest much more time to integrate it into our offerings and maintain it. It's developed by one person only, which is risky for us.
+
+Bitnami's helmchart isn't that feature rich, but it has a lot of more advantages. Using it we can offer the same quality for our customers, without taking unnecessary risk and with shorter development time.
