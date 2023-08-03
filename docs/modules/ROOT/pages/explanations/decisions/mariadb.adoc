@@ -2,122 +2,76 @@
 
 == Problem
 
-We need to provide MariaDB on Kubernetes with the following features:
+We need to provide MariaDB on Kubernetes with following features:
 
-* Standalone and cluster functionality (Galera)
+* Standalone and Cluster functionality (Galera)
 * Ability to customize MariaDB settings
 * Included metrics exporter
 * Backup
 * Regular Maintenance
 * Version Upgrades
 
+
 == Solutions
 
-For MariaDB there are a few operators available, as well as the various Helm charts.
+For MariaDB there are a few operators available.
+As well as the Bitnami Helm charts.
 
-The following section contains the options that have been looked at.
+The following section contains the operators that have been looked at.
 
-[cols="1,1,1",options="header"]
+[cols="1,1,1"]
 |===
-|Requirement
-|https://github.com/bitnami/charts/tree/master/bitnami/mariadb-galera[Bitnami Helmchart]
-|https://github.com/mariadb-operator/mariadb-operator[mariadb-operator]
+|Requirements |https://github.com/abalki001/mariadb-operator[Official MariaDB Operator] |https://github.com/bitnami/charts/tree/master/bitnami/mariadb-galera[Bitnami Helmchart]
 
-|Standalone
-|✅
-|✅
+|Galera and Standalone |❌ no galera |✅
 
-|Galera
-|✅
-|✅ (Multi master, single master)
+|Customize MariaDB Settings |❌ |✅
 
-|Customize MariaDB Settings
-|✅
-|✅
+|Metrics |✅ |✅
 
-|Metrics
-|✅
-|✅
+|Backup |✅ |❌
 
-|Backup
-|❌
-|✅
+|Regular Maintenance |❌ |❌
 
-|Automatic Restore
-|❌
-|✅
-
-|Regular Maintenance
-|❌
-|❌
-
-|Version Upgrades
-|✅
-|✅
-
-|User management
-|❌
-|✅
-
-|Logical Database Management
-|❌
-|✅
+|Version Upgrades |✅ |✅
 
 |===
 
-Not looked into:
+Some additional Notes:
 
-* https://github.com/abalki001/mariadb-operator[abalki001/mariadb-operator^]: Looks abandonned as of August 2023.
-
-
-=== Analysis - mariadb-operator
-
-https://github.com/mariadb-operator/mariadb-operator[mariadb-operator/mariadb-operator^]
-
-As of writing this document a very new Kubernetes operator, which is currently the best what can be found on GitHub.
-It comes with a variety of installation methods and is actively maintained.
-It is also mentioned in MariaDB knowledge base: https://mariadb.com/kb/en/kubernetes-operators-for-mariadb/#mariadb-operator[Kubernetes Operators for MariaDB^].
-
-Advantages::
-
-* Written in Go
-* Supports almost everything we need
-* Easy to integrate with VSHN AppCat
-* https://isitmaintained.com/project/mariadb-operator/mariadb-operator[It is maintained as of beginning of August 2023^]
-* Advanced Galera support compared to Bitnami
-
-Disadvantages::
-
-* Lack of regular, automated maintenance
-* Maintained by https://repo-tracker.com/r/gh/mariadb-operator/mariadb-operator[a single maintainer] only, if he leaves the project, we would have to fork and maintain it ourselves
-* Restores database to new instance, like Stackgres does in PostgreSQL, which is not ideal for us, but we can work around it
-* We would need to write and maintain a new Project Syn Commodore Component to deploy this operator
-
-=== Analysis - Bitnami Helm Chart
-
-https://github.com/bitnami/charts/tree/master/bitnami/mariadb-galera[Bitnami Helmchart^].
-
-Bitnami Helm Charts are solid, actively maintained, and we already have experience integrating it into our offerings. 
-
-Advantages::
-
-* Supports most of our needs
-* Easy to integrate with VSHN AppCat
-* Sufficient Galera support
-* Well tested and widely used by VSHN
-* Faster integration and development as we already know how to work with it
-
-Disadvantages::
-
-* Lack of regular, automated maintenance
-* We need to use other tools for user/logical database management.
+* The Galera Operator by Orange has been archived: https://github.com/Orange-OpenSource/galera-operator
+* The Official Mariadb operator is linked here: https://mariadb.com/kb/en/kubernetes-operators-for-mariadb/
+* Percona has a MySQL Operator: https://docs.percona.com/percona-operator-for-mysql/pxc/
+* MOCO Operator (MySQL Only): https://github.com/cybozu-go/moco
+** Has a similar concept to handling clustering like the Patroni framework that is used by Stackgres.
 
 == Decision
 
-We use the Bitnami Helm Chart.
+https://github.com/bitnami/charts/tree/master/bitnami/mariadb-galera[Galera Bitnami Helm Chart].
 
-== Rationale
+The instantiation of the Helm Charts will be handled by `+provider-kubernetes+`.
 
-The mariadb-operator project seems to be a very good solution with high potential, but it is not yet mature enough for us to use it. We would need to invest much more time to integrate it into our offerings and maintain it. It's developed by one maintainer only, which is risky for us.
+Advantages::
 
-Bitnami's Helm Chart isn't that feature rich, but it has a lot of more advantages. Using it, we can offer the same quality for our customers, without taking unnecessary risk and with shorter development time. We're also using the Bitnami Helm Chart for our xref:explanations/decisions/redis.adoc#_decision[Redis] offering.
+* Less complexity than operators, but provides more features
+* Have been used in SPKS for years now
+* Supports Standalone and Galera
+
+Disadvantages::
+
+* Bitnami had breaking changes in the past, so we probably run into these in the future as well
+
+If a breaking change occurs there are currently two ideas how to tackle them:
+
+* Fork the chart and maintain it ourselves
+* Grandfathering out the old chart version.
+Any new instances will use the new chart and existing ones use the old one.
+
+Further details will be explored in case of breaking changes.
+
+=== Rationale
+
+Operators add one more layer of complexity to the setup and one more part that can break.
+In order to justify this added complexity the operators should provide more functionality than a simple Helm Chart.
+
+With experience from SPKS we know how the Bitnami Helm Chart works and that it's capable of satisfying our requirements.
