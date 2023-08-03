@@ -17,8 +17,8 @@ For MariaDB there are a few operators available, as well as the various Helm cha
 
 The following section contains the options that have been looked at and chosen among few others that have been discarded for following reasons:
 
-- lack of support for mariadb
-- lack of support for galera
+* Lack of support for MariaDB
+* Lack of support for MariaDB Galera Cluster
 
 [cols="1,1,1",options="header"]
 |===
