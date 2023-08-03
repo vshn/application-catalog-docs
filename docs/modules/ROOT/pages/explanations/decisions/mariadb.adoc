@@ -15,7 +15,10 @@ We need to provide MariaDB on Kubernetes with the following features:
 
 For MariaDB there are a few operators available, as well as the various Helm charts.
 
-The following section contains the options that have been looked at.
+The following section contains the options that have been looked at and chosen among few others that have been discarded for following reasons:
+
+- lack of support for mariadb
+- lack of support for galera
 
 [cols="1,1,1",options="header"]
 |===
