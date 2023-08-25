@@ -25,7 +25,7 @@ For DBaaS on Exoscale the collector is executed every 15 minutes, fetches the cu
 == Billing VSHN managed Services
 
 VSHN managed services run in a dedicated service namespace on APPUiO Cloud itself.
-So we use the metrics collected in Thanos to bill them to our customers.
+So we use the metrics collected in Mimir to bill them to our customers.
 
 
 The resource usage of these services are billed directly through the normal APPUiO Cloud billing system, by adding the organization label of the customer to the dedicated namespace.
@@ -41,7 +41,7 @@ For example `postgresql-standalone`.
 This is usually either `besteffort` or `guaranteed` and can usually be left empty.
 
 Based on this we get all necessary information by looking at the Prometheus metric `kube_namespace_labels`.
-Each hour we run a cronjob that collects the billing metrics from Thanos and writes it to the billing database.
+Each hour we run a cronjob that collects the billing metrics from Mimir and writes it to the billing database.
 
 === References
 * https://github.com/appuio/component-appuio-cloud-reporting[Component to install the cronjobs to fill the billing database]
