@@ -85,7 +85,7 @@ SeaweedFS seems to be more complex than MinIO and less complex than Ceph, but le
 
 Use https://min.io/[MinIO^] and write a custom Crossplane provider for managing MinIO (`provider-minio`).
 
-The provider will be released with the AGPL-3.0 license.
+The provider will be released under the AGPL-3.0 license, just like https://github.com/minio/madmin-go/blob/main/LICENSE[madmin-go^].
 
 == Rationale
 
