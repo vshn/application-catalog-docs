@@ -2,7 +2,7 @@
 
 The way a provider has to be implemented is still (as of Crossplane v1.19) rather not obvious.
 
-Crossplane does have https://crossplane.io/docs/v1.9/contributing/provider_development_guide.html[a simple provider development guide].
+Crossplane does have https://github.com/crossplane/crossplane/blob/master/contributing/guide-provider-development.md[a simple provider development guide].
 
 Basically, one has to implement 2 interfaces in Go: https://pkg.go.dev/github.com/crossplane/crossplane-runtime@v0.17.0/pkg/reconciler/managed#ExternalConnecter[`managed.ExternalConnecter`] and https://pkg.go.dev/github.com/crossplane/crossplane-runtime@v0.17.0/pkg/reconciler/managed#ExternalClient[`managed.ExternalClient`].
 

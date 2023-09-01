@@ -1,5 +1,7 @@
 = Setup HTTP _Basic_ authentication
 
+WARNING: This tutorial is deprecated. Some links may not work.
+
 This how-to will explain how a _Service Catalog_ is connected to a _Crossplane Service Broker_ using HTTP _Basic_ authentication.
 
 == Preparations

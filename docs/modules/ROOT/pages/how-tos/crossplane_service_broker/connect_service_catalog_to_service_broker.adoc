@@ -1,5 +1,7 @@
 = Connect the _Service Catalog_ to a _Service Broker_
 
+WARNING: This tutorial is deprecated. Some links may not work.
+
 This how-to will explain how a _Service Catalog_ is connected to the _Crossplane Service Broker_.
 
 == Preparations

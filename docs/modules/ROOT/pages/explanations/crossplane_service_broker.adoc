@@ -13,7 +13,7 @@ A new implementation has been created with the learnings of the PoC. This implem
 
 > Crossplane [...] is an open source Kubernetes add-on that extends any cluster with the ability to provision and manage cloud infrastructure, services, and applications using kubectl, GitOps, or any tool that works with the Kubernetes API.
 
-See the https://crossplane.io/docs/v1.0/introduction/composition.html#concepts[Crossplane concepts documentation] for a detailed overview of how composing infrastructure works.
+See the https://docs.crossplane.io/latest/concepts/compositions[Crossplane concepts documentation] for a detailed overview of how composing infrastructure works.
 
 == Design
 

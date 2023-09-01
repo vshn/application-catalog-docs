@@ -12,7 +12,7 @@ This includes a _CompositeResourceDefinition_ (XRD) and one _Composition_ per of
 
 See the xref:explanations/crossplane_service_broker.adoc[Crossplane Service Broker explanation] on how these resources map to the open service broker concepts.
 
-See the https://crossplane.io/docs/v1.1/concepts/composition.html[Crossplane documentation] on more general information regarding Crossplane and its different resources.
+See the https://docs.crossplane.io/latest/concepts/compositions[Crossplane documentation] on more general information regarding Crossplane and its different resources.
 
 === CompositeResourceDefinition (XRD)
 The XRD resource defines a new service offering.
@@ -81,7 +81,7 @@ spec:
 
 === Compositions
 The Compositions define the "building blocks" how the service offering is being provisioned.
-See the https://crossplane.io/docs/v1.1/concepts/composition.html[Crossplane documentation] for further information how they work and play together with XRDs and XRs.
+See the https://docs.crossplane.io/latest/concepts/compositions[Crossplane documentation] for further information how they work and play together with XRDs and XRs.
 
 Each offered plan of a service is defined in a Composition.
 
