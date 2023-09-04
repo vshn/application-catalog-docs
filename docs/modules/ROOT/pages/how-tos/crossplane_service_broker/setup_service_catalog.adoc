@@ -1,5 +1,7 @@
 = Install a Service Catalog
 
+WARNING: This tutorial is deprecated. Some links may not work.
+
 The https://svc-cat.io[_service catalog_] provides a single, well-defined API to manage services provided by one or many service brokers, such as the _Crossplane Service Broker_.
 
 [NOTE]
