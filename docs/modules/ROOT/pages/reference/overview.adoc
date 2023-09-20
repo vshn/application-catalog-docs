@@ -3,7 +3,7 @@
 AppCat is not a single monolithic thing.
 It is composed of various different components that work together to provide AppCat.
 
-image::architecture.excalidraw.png[]
+image::architecture.drawio.png[]
 
 == Component AppCat
 
