@@ -1,4 +1,4 @@
-= Monitoring and Metrics for Converges VSHN Services
+= Monitoring and Metrics for Converged VSHN Services
 
 Based on our decision for link:/app-catalog/explanations/decisions/postgres-monitoring.html[PostgreSQL] we will be using the https://github.com/vshn/appcat/tree/master/pkg/sliexporter[same SLI exporter] to monitor for the SLIs.
 
