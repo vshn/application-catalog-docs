@@ -61,7 +61,6 @@ It's feature set and general feel were good during the evaluation phase.
 == Cons
 
 * We can't support PostgreSQL version or extensions that the operator doesn't provide
-* Crossplane's limitations, as discussed https://kb.vshn.ch/app-catalog/explanations/decisions/converged-service-impl.html[here]
 * We have to deal with some opinionated decision by the operator developers and maybe need to work around them, or accept them as given
 * The operator is maintained by a third party, but is open source and we could contribute if needed
 * Upgrading the operator could introduce breaking changes
