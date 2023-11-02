@@ -37,6 +37,10 @@ The operator will reconcile on the relevant source objects and then write the ob
 
 Proposal 2
 
+However, this issue is not too urgent, as the current API Server implementation still works.
+So the implementation of this decision might still be multiple months away.
+If the API Server Builder is maintained again by then, we will re-visit this decision.
+
 == Rationale
 
 Although this use-case is exactly what API Servers are intended for, its additional complexity and the fact that the API Server builder project is dead, makes it the less preferred solution.
