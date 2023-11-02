@@ -49,6 +49,7 @@
 ** xref:app-catalog:ROOT:explanations/decisions/sla-reports.adoc[SLA Reports]
 ** xref:app-catalog:ROOT:explanations/decisions/converged-service-loc.adoc[Converged Service Provisioning Location]
 ** xref:app-catalog:ROOT:explanations/decisions/generic-metrics.adoc[]
+** xref:app-catalog:ROOT:explanations/decisions/apiserver.adoc[API Server Replacement]
 ** Archive
 *** xref:app-catalog:ROOT:explanations/decisions/archive/converged-service-impl.adoc[Converged Service Provisioning Implementation]
 

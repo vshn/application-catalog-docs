@@ -1,0 +1,51 @@
+= API Server Replacement
+
+== Problems
+
+* Cluster affecting bugs caused by the API Server like not being able to delete namespaces (solved now)
+* Framework for https://github.com/kubernetes-sigs/apiserver-builder-alpha[building API Server] seems dead for over a year
+** The project also discourages from using an API Server if not completely necessary
+* Not supported by newer K8s libraries
+* Does not always behave as expected due to implementation (not possible to list all PostgreSQL backups over all namespaces)
+* High complexity
+** Protobufs need to be generated
+** Messy certificate handling and unrelated certificate errors in logs, which makes deploying and debugging the API Server harder
+* If the API Server is down none of the virtual resources are served
+
+== Requirements
+
+* Provide a list of AppCat services available on a given cluster as cluster scoped objects
+* Provide a list of backups for the end-user for any of their services as namespace scoped objects
+
+== Proposals
+
+Proposal 1::
+Keep using API Server but ditch the API Server Builder.
+
+It's possible to leverage the https://github.com/kubernetes-sigs/apiserver-runtime[runtime] directly.
+But this will introduce quite a lot of boilerplate code.
+See https://github.com/kubernetes/sample-apiserver[sample apiserver] for an example
+
+Proposal 2::
+Write an operator that aggregates the information and writes it to CRs.
+
+Most of our data is relatively static for any given cluster.
+This can easily be handled by an operator as well.
+The operator will reconcile on the relevant source objects and then write the objects as needed.
+
+== Decision
+
+Proposal 2
+
+== Rationale
+
+Although this use-case is exactly what API Servers are intended for, its additional complexity and the fact that the API Server builder project is dead, makes it the less preferred solution.
+
+Implementing this as an operator, we can re-use the already defined resources, so no breaking change will happen.
+`kubectl get appcat` will still work the same way and return exactly the same objects.
+Which will result it no changes at all from the user perspective.
+
+Additional points:
+
+* It will return objects, even if the operator is not available or has issues
+* All source data for the aggregated objects is provided as K8s objects within the same cluster, which nullifies one of the API Server's main features (ability to aggregate data not available as resources)
