@@ -1,0 +1,41 @@
+= Cloud Based AppCat Services
+
+This page will explain how the cloud based services will be handled for the usage reporting.
+The structure, content and interval of these metrics are not always under our control.
+We need a system which is flexible in adapting to those parameters.
+
+== Data Flow Overview
+
+See the https://docs.central.vshn.ch/metered-billing-data-flow.html[Data Model and Flow] for a generic overview of the data flow.
+
+Each cluster that provides AppCat cloud services will also have a cronjob configured.
+This cronjob will periodically run the AppCat cloud collector.
+Any necessary metadata will need to be available for this cronjob.
+Either by hard-coding it for a given cluster, or by dynamically querying relevant sources.
+The period at which it will run will depend on the cloud services as we have to match their reporting frequencies.
+
+=== Example configuration
+
+This configuration is abridged from the https://github.com/vshn/billing-collector-cloudservices/blob/master/component/class/defaults.yml[existing config] and only contains example configs for the new Odoo 16 billing.
+
+[code:yaml]
+----
+parameters:
+  billing_collector_cloudservices:
+    billingEndpoint:
+      URL: https://odoo16.vshn.ch <1>
+      API_TOKEN: topsecret <2>
+      SALES_ORDER: ${appuio_managed_info} <3>
+----
+<1> URL of the Odoo 16 billing API
+<2> Token or credentials needed to connect to the Odoo 16 endpoint
+<3> Override the sales order name for APPUiO Manage clusters, if not set it will respect the organization for any given service
+
+== Managing Sales Orders
+
+=== APPUiO Cloud
+The organization label will still be available, however it will need mapping via the `appuio_control_organization_info` Prometheus metric.
+See https://kb.vshn.ch/appuio-cloud/references/architecture/metering-data-flow-appuio-cloud.html#_managing_sales_orders[Managing Sales Orders on APPUiO Cloud] for more details.
+
+=== APPUiO Managed
+Each cluster will have a static cluster fact. https://kb.vshn.ch/oc4/references/architecture/metering-data-flow-appuio-managed.html#_managing_sales_orders[Managing Sales Orders on APPUiO Managed]

@@ -1,0 +1,21 @@
+= VSHN Based AppCat Services
+
+This page will explain how the VSHN based services will be handled for the usage reporting.
+The source metrics for these services are completely under our own control and can be adjusted to fit the new solution.
+
+The current billing model follows closely with the https://kb.vshn.ch/appuio-cloud/references/architecture/metering-data-flow-odoo8.html[legacy billing model of APPUiO Cloud itself].
+The necessary metrics are fed into Prometheus/Mimir and then processed via further tooling.
+Based on that, we can adapt to the new Prometheus/Mimir workflows.
+
+We will keep using Prometheus Recording Rules.
+They serve a few purposes:
+
+* Aligning the metrics, so every AppCat Service produces exactly the same without any additional configuration
+* Reduce the amount of metrics sent to Mimir
+* Simplify the queries needed in the https://kb.vshn.ch/appuio-cloud/references/architecture/metering-data-flow-appuio-cloud.html#_data_flow_overview[later data flow process].
+
+== APPUiO Cloud
+We will be adapting Aldebaran's https://kb.vshn.ch/appuio-cloud/references/architecture/metering-data-flow-appuio-cloud.html[Resource Usage Reporting for APPUiO Cloud]
+
+== APPUiO Managed
+We will be adapting Aldebaran's https://kb.vshn.ch/oc4/references/architecture/metering-data-flow-appuio-managed.html[Resource Usage Reporting for APPUiO Managed]

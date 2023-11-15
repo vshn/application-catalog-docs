@@ -4,8 +4,9 @@
 ** xref:app-catalog:ROOT:explanations/app_catalog.adoc[Concept]
 ** xref:app-catalog:ROOT:reference/glossary.adoc[]
 * Architecture
-** xref:app-catalog:ROOT:reference/billing-naming.adoc[]
-** xref:app-catalog:ROOT:reference/billing-appuio.adoc[Billing on APPUiO Cloud]
+** AppCat Usage Reporting
+*** xref:app-catalog:ROOT:reference/vshn-usage-reporting.adoc[]
+*** xref:app-catalog:ROOT:reference/cloud-usage-reporting.adoc[]
 ** xref:app-catalog:ROOT:reference/service-maturity.adoc[]
 ** xref:app-catalog:ROOT:reference/framework-requirements.adoc[]
 ** xref:app-catalog:ROOT:reference/slareports.adoc[]
@@ -17,12 +18,17 @@
 **** xref:app-catalog:ROOT:reference/quality-requirements/reliability/mandatory-updates.adoc[Mandatory Updates]
 **** xref:app-catalog:ROOT:reference/quality-requirements/reliability/backup-interval.adoc[Minimum Backup Interval]
 
+
 *** Usability
 **** xref:app-catalog:ROOT:reference/quality-requirements/usability/actionable-alerts.adoc[Actionable Alerts]
 **** xref:app-catalog:ROOT:reference/quality-requirements/usability/api-declarative.adoc[Declarative Configuration of Instances]
 **** xref:app-catalog:ROOT:reference/quality-requirements/usability/api-validation.adoc[Service Instance API Validation]
 **** xref:app-catalog:ROOT:reference/quality-requirements/usability/provisioning-time.adoc[Automated Provisioning of a Service]
 **** xref:app-catalog:ROOT:reference/quality-requirements/usability/logs.adoc[Service Instance Logs]
+
+** Archive
+*** xref:app-catalog:ROOT:reference/billing-appuio.adoc[Billing on APPUiO Cloud]
+*** xref:app-catalog:ROOT:reference/billing-naming.adoc[]
 
 * Exoscale DBaaS
 ** xref:app-catalog:ROOT:how-tos/exoscale_dbaas/price-api.adoc[Exoscale Price API]
