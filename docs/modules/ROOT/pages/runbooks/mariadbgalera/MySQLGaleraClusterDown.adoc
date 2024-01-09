@@ -1,0 +1,24 @@
+= Alert rule: MySQLGaleraClusterDown
+
+== icon:glasses[] Overview
+
+Checks if a Galera Cluster is down.
+This could be caused by full PVC, OOM event, network issues or underlying infrastructure issues.
+
+== icon:bug[] Steps for Debugging
+
+See xref:how-tos/mariadbgalera/debug.adoc[How to debug MariaDB Galera] on how to determine the cluster status and specifically xref:how-tos/mariadbgalera/bootstrap_cluster.html[Boostrap a cluster] on how to bring the cluster back up.
+
+[WARNING]
+====
+Make sure you boostrap from the *last* healthy pod. There are multiple options to find the last healthy pod:
+
+- Create a debug mariadb to mount the PVC and follow these https://mariadb.com/kb/en/galera-cluster-recovery/[instructions].
+
+====
+
+IMPORTANT: If the cluster is down, due to full PVC storage, you first have to resize the underlying PVC.
+This needs to be done by the customer, by choosing a higher instance tier.
+
+
+
