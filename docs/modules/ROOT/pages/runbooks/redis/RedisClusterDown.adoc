@@ -1,0 +1,49 @@
+= Alert rule: RedisClusterDown
+
+== icon:glasses[] Overview
+
+This rule checks if a Redis cluster is down.
+If the whole cluster is down for 5 minutes, this rule will alert.
+It will inform which instance is affected, for example `instance="b0c79416-f16f-430a-a3f1-5b7726e0cae4"`.
+
+== icon:bug[] Steps for Debugging
+
+Check why the affected instance is down.
+Use `kubectl -n <instance_namespace> get pods -o wide`, `kubectl events`, `kubectl -n <instance_namespace> logs <pod-name>`.
+
+The most common issue, is that the cluster doesn't have a master anymore, because the configuration points to an IP address that doesn't exist anymore (pod got restarted and the IP address hasn't properly been adjusted).
+In that case see xref:how-tos/redis/no_active_leader.adoc[Fix wrong/invalide leader] for guidance.
+In this case however, there won't be a pod running at all anymore. So you will have to choose any pod as a new master.
+
+The easiest approach will be to scale the instance to 1 and then set the new master to that pods IP address:
+
+[source,shell]
+----
+INSTANCE=<instance_name>
+kubectl -n $INSTANCE <scale statefulset redis-node --replicas 1
+kubectl -n $INSTANCE get pod -o wide # copy IP address of the remaining pod for the step below <NEW_IP_ADDRESS>
+
+kubectl -n $INSTANCE exec redis-node-0 -c sentinel -it -- bash
+redis-cli -a $(< $REDIS_PASSWORD_FILE) -p 6379
+
+REPLICAOF NO ONE
+exit
+
+redis-cli -a $(< $REDIS_PASSWORD_FILE) -p 26379
+SENTINEL REMOVE mymaster
+SENTINEL MONITOR mymaster <NEW_IP_ADDRESS> 6379 1
+exit
+exit
+
+kubectl -n $INSTANCE get pods # verify that pod is up and running
+kubectl -n $INSTANCE scale statefulset redis-node --replicas 3
+----
+
+If all of that fails, as a last resort you can scale down the instance to 0 and then back up to 3:
+
+[source,shell]
+----
+INSTANCE=<instance_name>
+kubectl -n $INSTANCE scale statefulset redis-node --replicas 0
+kubectl -n $INSTANCE scale statefulset redis-node --replicas 3
+----

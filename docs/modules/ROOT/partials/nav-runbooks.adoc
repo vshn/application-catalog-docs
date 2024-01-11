@@ -2,6 +2,7 @@
 ** xref:app-catalog:ROOT:runbooks/redis/RedisClusterFlapping.adoc[RedisClusterFlapping]
 ** xref:app-catalog:ROOT:runbooks/redis/RedisDisconnectedSlaves.adoc[RedisDisconnectedSlaves]
 ** xref:app-catalog:ROOT:runbooks/redis/RedisDown.adoc[RedisDown]
+** xref:app-catalog:ROOT:runbooks/redis/RedisClusterDown.adoc[RedisClusterDown]
 ** xref:app-catalog:ROOT:runbooks/redis/RedisKeyEviction.adoc[RedisKeyEviction]
 ** xref:app-catalog:ROOT:runbooks/redis/RedisMasterMissing.adoc[RedisMasterMissing]
 ** xref:app-catalog:ROOT:runbooks/redis/RedisMemoryHigh.adoc[RedisMemoryHigh]
@@ -10,6 +11,7 @@
 ** xref:app-catalog:ROOT:runbooks/redis/RedisTooManyMasters.adoc[RedisTooManyMasters]
 
 * MariaDB Galera
+** xref:app-catalog:ROOT:runbooks/mariadbgalera/MySQLGaleraClusterDown.adoc[MySQLGaleraClusterDown]
 ** xref:app-catalog:ROOT:runbooks/mariadbgalera/MySQLGaleraClusterEvenNodes.adoc[MySQLGaleraClusterEvenNodes]
 ** xref:app-catalog:ROOT:runbooks/mariadbgalera/MySQLGaleraClusterSmall.adoc[MySQLGaleraClusterSmall]
 ** xref:app-catalog:ROOT:runbooks/mariadbgalera/MySQLGaleraDonorFallingBehind.adoc[MySQLGaleraDonorFallingBehind]

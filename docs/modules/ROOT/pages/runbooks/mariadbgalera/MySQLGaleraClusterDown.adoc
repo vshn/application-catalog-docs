@@ -1,0 +1,124 @@
+= Alert rule: MySQLGaleraClusterDown
+
+== icon:glasses[] Overview
+
+Checks if a Galera Cluster is down.
+This could be caused by full PVC, OOM event, network issues or underlying infrastructure issues.
+
+== icon:bug[] Steps for Debugging
+
+See xref:how-tos/mariadbgalera/debug.adoc[How to debug MariaDB Galera] on how to determine the cluster status and specifically xref:how-tos/mariadbgalera/bootstrap_cluster.html[Boostrap a cluster] on how to bring the cluster back up.
+
+[WARNING]
+====
+Make sure you boostrap from the *last* healthy pod.
+You can use the following pod definition to quickly find the last healthy pod (set `INSTANCE` to the affected instance id).
+Before you can run the pod, ensure that the statefulset is scaled to `0`
+
+[source,bash]
+----
+INSTANCE=<instance_id>
+kubectl -n $INSTANCE scale sts mariadb --replicas=0
+
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mariadb-debug-pod
+  namespace: $INSTANCE
+spec:
+  containers:
+  - command:
+    - bash
+    - -ec
+    - |
+      for i in 0 1 2; do
+        if [[ "$(cat /bitnami/mariadb-$i/data/grastate.dat 2>/dev/null | grep safe_to_bootstrap)" == "safe_to_bootstrap: 1" ]]; then
+          echo "It's safe to bootstrap from pod mariadb-$i";
+          exit;
+        fi
+      done
+      pos=-1
+      uid=""
+      instance=-1
+      for i in 0 1 2; do
+        tmp_uid=$(mysqld --wsrep-recover --bind-address=127.0.0.1 --datadir=/bitnami/mariadb-$i/data 2>/dev/null | grep "WSREP: Recovered position" | cut -d ':' -f 5)
+        if (( "$i" != 0 )); then
+          if [[ "$tmp_uid" != "$uid" ]]; then
+            diff_uid=true
+          fi
+        fi
+        uid=$tmp_uid
+        pos_tmp=$(mysqld --wsrep-recover --bind-address=127.0.0.1 --datadir=/bitnami/mariadb-$i/data 2>/dev/null | grep "WSREP: Recovered position" | cut -d ':' -f 6)
+        if [[ $pos_tmp != "" ]] && (( "$pos_tmp" > "$pos")); then
+          pos=$pos_tmp
+          instance=$i
+        fi
+        echo "Mariadb-$i: $tmp_uid:$pos_tmp"
+      done
+      if [[ $diff_uid ]]; then
+        echo "UID different across instances, please check manually (see individual output above)"
+        echo "Most likely pod to boostrap from is mariadb-$instance"
+        exit
+      fi
+      echo "It's safe to bootstrap from pod mariadb-$instance"
+    image: remote-docker.artifactory.swisscom.com/bitnami/mariadb-galera:10.5.21-debian-11-r10
+    imagePullPolicy: IfNotPresent
+    name: mariadb-galera
+    ports:
+    - containerPort: 3306
+      name: mysql
+      protocol: TCP
+    resources:
+      limits:
+        cpu: "1"
+        memory: 2560Mi
+      requests:
+        cpu: 100m
+        memory: 100Mi
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+    volumeMounts:
+    - mountPath: /bitnami/mariadb-0
+      name: data-0
+    - mountPath: /bitnami/mariadb-1
+      name: data-1
+    - mountPath: /bitnami/mariadb-2
+      name: data-2
+    - mountPath: /opt/bitnami/mariadb/conf/my.cnf
+      name: mariadb-galera-config
+      subPath: my.cnf
+  dnsPolicy: ClusterFirst
+  restartPolicy: Never
+  serviceAccount: default
+  serviceAccountName: default
+  terminationGracePeriodSeconds: 30
+  volumes:
+  - name: data-0
+    persistentVolumeClaim:
+      claimName: data-mariadb-0
+  - name: data-1
+    persistentVolumeClaim:
+      claimName: data-mariadb-1
+  - name: data-2
+    persistentVolumeClaim:
+      claimName: data-mariadb-2
+  - configMap:
+      defaultMode: 420
+      name: mariadb-configuration
+    name: mariadb-galera-config
+EOF
+----
+
+Once the pod has run, check the logs to find out from which node to bootstrap from and delete the pod afterwards:
+
+[source, bash]
+----
+kubectl -n $INSTANCE logs -f mariadb-debug-pod
+kubectl -n $INSTANCE delete pod mariadb-debug-pod
+----
+
+====
