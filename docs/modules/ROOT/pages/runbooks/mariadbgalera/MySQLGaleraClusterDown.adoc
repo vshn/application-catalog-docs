@@ -7,7 +7,7 @@ This could be caused by full PVC, OOM event, network issues or underlying infras
 
 == icon:bug[] Steps for Debugging
 
-See xref:how-tos/mariadbgalera/debug.adoc[How to debug MariaDB Galera] on how to determine the cluster status and specifically xref:how-tos/mariadbgalera/bootstrap_cluster.html[Boostrap a cluster] on how to bring the cluster back up.
+See xref:how-tos/mariadbgalera/debug.adoc[How to debug MariaDB Galera] on how to determine the cluster status and specifically xref:how-tos/mariadbgalera/bootstrap_cluster.adoc[Boostrap a cluster] on how to bring the cluster back up.
 
 [WARNING]
 ====
