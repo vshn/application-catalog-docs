@@ -85,6 +85,7 @@
 *** xref:app-catalog:ROOT:how-tos/mariadbgalera/find_cluster_for_instance.adoc[Find the Service Cluster]
 *** xref:app-catalog:ROOT:how-tos/mariadbgalera/bootstrap_cluster.adoc[Bootstrap Cluster]
 *** Runbooks
+**** xref:app-catalog:ROOT:runbooks/mariadbgalera/MySQLGaleraClusterDown.adoc[MySQLGaleraClusterDown]
 **** xref:app-catalog:ROOT:runbooks/mariadbgalera/MySQLGaleraClusterEvenNodes.adoc[MySQLGaleraClusterEvenNodes]
 **** xref:app-catalog:ROOT:runbooks/mariadbgalera/MySQLGaleraClusterSmall.adoc[MySQLGaleraClusterSmall]
 **** xref:app-catalog:ROOT:runbooks/mariadbgalera/MySQLGaleraDonorFallingBehind.adoc[MySQLGaleraDonorFallingBehind]

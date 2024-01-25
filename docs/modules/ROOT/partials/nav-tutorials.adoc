@@ -1,3 +1,0 @@
-
-* Crossplane Service Broker
-** xref:app-catalog:ROOT:tutorials/crossplane_service_broker/setting_up_crossplane_service_broker.adoc[Complete Setup]
