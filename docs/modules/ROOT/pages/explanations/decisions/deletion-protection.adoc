@@ -117,13 +117,13 @@ Disadvantages::
 
 == Decision
 
-**PROPOSED DECISION, NOT YET FINAL, NOT YET DISCUSSED WITH THE TEAM**
-
 * End-user Proposal 1: Protect claim deletion via webhooks
 * Backend Proposal 3: Deletion protection by custom validation webhook
+* Minimal backend proposal 2: Make a mini function that makes sure that the namespace is always in the desired state.
 
 == Rationale
 While we loose the ability to delay the deletion with Webhooks, they are less complex to implement.
 Patching and managing finalizers on objects that are already managed by another controller leads to race conditions and bugs, as the current implementation shows.
 Webhooks also provide a much nicer user experience all around, as the user will get direct feedback from the system, if an invalid deletion command is issued.
 As the deletion will not hit the actual Kubernetes API, the `deletionTimestamp` is not set on the object, which effectively results in a no-op.
+Adding a small function which ensures that the namespace is always present doesn't increase the complexity too much.
