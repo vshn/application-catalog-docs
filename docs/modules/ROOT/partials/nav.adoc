@@ -120,3 +120,4 @@
 
 * Runbooks
 ** xref:app-catalog:ROOT:how-tos/appcat/appuio-quotas.adoc[]
+** xref:app-catalog:ROOT:how-tos/appcat/vshn/postgres/manual-restore.adoc[]
