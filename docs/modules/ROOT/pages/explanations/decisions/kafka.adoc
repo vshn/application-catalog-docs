@@ -1,0 +1,92 @@
+= VSHN Managed Kafka
+
+== Problem
+
+Kafka is a very complex software.
+We want to provide it via AppCat.
+In order to do so we need to find the most suiting solution to deploying and managing Kafka.
+
+=== Goals
+
+* Find solution to install Kafka
+* Find solution to configure Kafka
+
+=== Non-Goals
+
+* N/A
+
+== Proposals
+
+=== Provisioning Proposal 1: via helm
+
+Bitnami provides a Kafka helm chart: https://github.com/bitnami/charts/tree/main/bitnami/kafka.
+So Kafka itself could be deployed via `provider-helm` and then the configuration can be managed by some other part.
+
+Advantages::
+* No operator required, less complexity
+* We're already familiar with Bitnami charts
+* A lot of AppCat code already exists to handle Helm Charts
+
+Disadvantages::
+* The chart can only configure the broker and zookeeper parts
+* No all-in-one solution, some separate tool would need to configure Kafka
+
+=== Provisioning Proposal 2: via Strimzi
+
+Strimzi is a powerful operator that can install Kafka: https://strimzi.io/.
+It is not a single operator, but rather a collection of operators.
+
+Advantages::
+* Modular, we can mix and match various operators if there's a better solution to manage users or topics, we're not bound to Strimzi.
+* Can handle most aspects of Kafka.
+
+Disadvantages::
+* Adds complexity by introducing potentially multiple operators to the mix.
+* All Strimzi CRs will be abstracted by provider-kubernetes.
+* Strimzi is written in Java so contributing will be hard for us
+
+=== Configuration Proposal 1: via Strimzi
+
+We also use Strimzi to leverage all configurations surrounding Kafka.
+
+Advantages::
+* Doesn't introduce 3rd party operators into the architecture.
+
+Disadvantages::
+* The Strimzi operators might not bring all necessary options with them.
+* All Strimzi CRs will be abstracted by provider-kubernetes.
+
+=== Configuration Proposal 2: via provider-kafka
+
+There's a crossplane provider for Kafka: https://github.com/crossplane-contrib/provider-kafka.
+It can handle ACLs and topics.
+
+Advantages::
+* Integrates cleaner with Crossplane, as we would not need to use provider-kubernetes.
+
+Disadvantages::
+* Can only do ACLs and topics.
+
+=== Configuration Proposal 2: via custom provider
+
+An custom provider which would enable missing functionality of provider-kafka.
+Instead of starting from scratch we could contribute to provider-kafka or fork it.
+
+Advantages::
+* Integrates cleaner with Crossplane, as we would not need to use provider-kubernetes.
+* Can handle all our needs.
+
+Disadvantages::
+* Will take a lot more effort
+
+== Decision
+
+Provisioning proposal 2 and configuration proposal 1.
+Additionally, if some use-cases cannot be handled by Strimzi directly we would also implement configuration proposal 2.
+
+=== Rationale
+
+Strimzi is currently the most complete operator to deploy Kafka on Kubernetes.
+Due to its modularity we can start with basic provisioning and the iterate and add more functionality as we go.
+
+In the unlikely case that Strimzi and Crossplane functions can't provide a specific feature, we might want to opt for a custom provider which implements that feature.
