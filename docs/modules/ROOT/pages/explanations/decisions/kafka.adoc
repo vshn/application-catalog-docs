@@ -17,7 +17,7 @@ In order to do so we need to find the most suiting solution to deploying and man
 
 == Proposals
 
-=== Provisioning Proposal 1: via helm
+=== Provisioning Proposal 1: Via helm
 
 Bitnami provides a Kafka helm chart: https://github.com/bitnami/charts/tree/main/bitnami/kafka.
 So Kafka itself could be deployed via `provider-helm` and then the configuration can be managed by some other part.
@@ -31,7 +31,7 @@ Disadvantages::
 * The chart can only configure the broker and zookeeper parts
 * No all-in-one solution, some separate tool would need to configure Kafka
 
-=== Provisioning Proposal 2: via Strimzi
+=== Provisioning Proposal 2: Via Strimzi
 
 Strimzi is a powerful operator that can install Kafka: https://strimzi.io/.
 It is not a single operator, but rather a collection of operators.
@@ -45,7 +45,7 @@ Disadvantages::
 * All Strimzi CRs will be abstracted by provider-kubernetes.
 * Strimzi is written in Java so contributing will be hard for us
 
-=== Configuration Proposal 1: via Strimzi
+=== Configuration Proposal 1: Via Strimzi
 
 We also use Strimzi to leverage all configurations surrounding Kafka.
 
@@ -56,7 +56,7 @@ Disadvantages::
 * The Strimzi operators might not bring all necessary options with them.
 * All Strimzi CRs will be abstracted by provider-kubernetes.
 
-=== Configuration Proposal 2: via provider-kafka
+=== Configuration Proposal 2: Via provider-kafka
 
 There's a crossplane provider for Kafka: https://github.com/crossplane-contrib/provider-kafka.
 It can handle ACLs and topics.
@@ -67,7 +67,7 @@ Advantages::
 Disadvantages::
 * Can only do ACLs and topics.
 
-=== Configuration Proposal 2: via custom provider
+=== Configuration Proposal 2: Via custom provider
 
 An custom provider which would enable missing functionality of provider-kafka.
 Instead of starting from scratch we could contribute to provider-kafka or fork it.
