@@ -24,7 +24,7 @@ It also lacks support for other services and contains a few bugs which prevent i
 == Proposals
 The proposals are split between the end-user and backend deletion protection.
 
-== End-user Proposal 1: Protect claim deletion via webhooks
+=== End-user Proposal 1: Protect claim deletion via webhooks
 The deletion of the claim is blocked via a webhook.
 There will be a new field in every claim that controls the deletion protection.
 For example `.spec.parameters.backup.deletionProtection`, if set to true, the webhook will not allow any deletion operations against the claim.
@@ -42,7 +42,7 @@ Disadvantages::
 * Changing the value in a GitOps environment, as the claim needs to be committed with the disabled deletion protection first
 * Not possible to implement a grace period, as no `deletionTimestamp` is set
 
-== End-user Proposal 2: Protect claims via finalizers and separate controller
+=== End-user Proposal 2: Protect claims via finalizers and separate controller
 There's a controller which watches all claims and sets an additional finalizer on them.
 Additionally, all relevant objects within the service also get a finalizer, for example the namespace or pvcs.
 This finalizer stays on the objects as long as the deletion protection is active.
@@ -58,7 +58,7 @@ Disadvantages::
 * The `deletionTimestamp` gets set on the objects, there's no way to undelete the object at this point. Any important data or manifest needs to be copied away
 * Prone to bugs, as the current implementation shows
 
-== Backend Proposal 1: Set finalizers on specific objects
+=== Backend Proposal 1: Set finalizers on specific objects
 Every service specifies a set of objects that will receive additional finalizers.
 The field to control this protection should be the same as for the end-user protection (`.spec.parameters.backup.deletionProtection`).
 
@@ -71,7 +71,7 @@ Disadvantages::
 * As Crossplane doesn't trigger any reconciles after the `deletionTimestamp` is set, a separate controller is necessary
 * The `deletionTimestamp` gets set on the objects, there's no way to undelete the object at this point. Any important data or manifest needs to be copied away
 
-== Backend Proposal 2: Add additional logic to composition functions to ensure important objects aren't removed
+=== Backend Proposal 2: Add additional logic to composition functions to ensure important objects aren't removed
 Have a composition function which checks at the end, some specified objects from the observed state are still present in the desired state.
 Either the function could simply add the observed object back, or simply abort the composition function with a fatal return.
 
@@ -86,7 +86,7 @@ Disatvantages::
 * Doesn't protect against deletion from outside AppCat
 * It's within composition functions itself
 
-== Backend Proposal 3: Deletion protection by custom validation webhook
+=== Backend Proposal 3: Deletion protection by custom validation webhook
 A validation webhook that will check on namespaces and pvcs.
 If a namespace/pvc belongs to an active AppCat instance, it will block the deletion of the object.
 An active AppCat instance is determined by the existence of the composite.
@@ -102,7 +102,7 @@ Advantages::
 Disatvantages::
 * No grace period time
 
-== Complementary Proposal: Use canary instances on the lab
+=== Complementary Proposal: Use canary instances on the lab
 One instance of each service runs on the lab.
 Each new release will be deployed on the lab and tested extensively.
 After all tests succeed and no issues on the existing instances is observed, the release continues
