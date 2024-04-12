@@ -2,7 +2,7 @@
 
 == Problem
 
-Kafka is a very complex software.
+Kafka is a very complex suite of various applications.
 We want to provide it via AppCat.
 In order to do so we need to find the most suiting solution to deploying and managing Kafka.
 
