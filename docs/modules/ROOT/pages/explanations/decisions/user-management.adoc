@@ -1,13 +1,16 @@
-= Simple User management
+= Simple User management for single tenant services
 
 == Problem
 
 We want to provide easy user management for the AppCat services.
 The customer should be able to create users, permissions and if available for the given service, databases.
 The structure of the API should be similar for each service, just like the rest of the AppCat API is similar between services.
+This decision only concerns itself with services that are single tenant in nature.
+Cluster-wide services with multi-tenant user management are not part of this decision and will be handled in a separate document.
 
 === Goals
 
+* User management for single tenant services like PostgreSQL, MariaDB, Redis, etc.
 * The user management API should adhere to a convention spanning all services so that it follows the same structure for every service
 * Find a decision for simple service. There might be services in the future that have complex user and RBAC mechanisms that may not fit in this concept and need a custom decision
 * The API should be identical for the same service from different providers, given feature parity of the providers
@@ -16,6 +19,7 @@ The structure of the API should be similar for each service, just like the rest 
 === Non-Goals
 
 * Having the exact same API for all services, it's unrealistic and too abstract
+* User management for cluster-wide multi-tenant systems (for example Minio and potentially Kafka)
 
 == Proposals
 
