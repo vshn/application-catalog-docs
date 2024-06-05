@@ -1,12 +1,10 @@
-= PostgreSQL by VSHN Runbooks
+= Alert rule: PostgreSQLConnectionsCritical
 
-== Alert rule: PostgreSQLConnectionsCritical
-
-=== icon:glasses[] Overview
+== icon:glasses[] Overview
 
 This alert triggers if the amount of available free connections are less than 10%.
 
-=== icon:bug[] Steps for Debugging
+== icon:bug[] Steps for Debugging
 
 There are two ways to solve this issue:
 
