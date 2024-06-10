@@ -1,0 +1,64 @@
+= Composition Function Error Handling
+
+In March 2024 we had a severe outage of VSHN PostgreSQL instances.
+This was due to several unfortunate events including our poor handling of errors in composition functions.
+This document will discuss in detail the problem we face with composition functions when errors are not properly handled.
+
+== Problems
+
+* We don't manage errors in our composition functions (CFs) and we assume Crossplane will take care of everything.
+* Missing managed resources from desired function when an unexpected error happens can have dire consequences, such as removal of the whole service.
+* Returning early from composition function (CF) due to a warning can lead to missing managed resources.
+
+== Requirements
+
+* A comprehensive guide on how we should deal with error management.
+* A solution to missing managed resources from desired function when errors occur.
+
+== Proposals
+
+Proposal 1:: Manage Errors in CFs
+
+We don't throw fatal errors but use mostly warnings in our composition functions.
+Using warnings and return right away can remove vital parts of a service.
+In order to mitigate this issue we could define the return error (warning or fatal) directly in the runtime.
+This would allow us to better control the error flow and would make sure that runtime go functions return the same type of error (warning or fatal) independently of which composition function were used.
+The solution does not integrate all errors as each composition function has its own business logic outside runtime go functions.
+Therefore, it is of paramount importance that engineers distinguish between fatal and warning errors.
+Engineers should know when it's appropriate to use which crossplane error type.
+For that matter a comprehensive guide should be added to this solution.
+
+Proposal 2:: Manage Desired state at the End of CFs
+
+An easy solution to guarantee that the desired state is satisfied when finishing our CFs for a service is to check whether all managed resources are in the desired state before giving the function to Crossplane.
+Using annotations and other tricks on managed resources would allow us to know at the end of CF which resources must be deleted and which must be retained.
+For instance - annotate managed resources that have to be removed, in that case runtime would ignore those resources from being populated at the end.
+The difficulty arises when individual changes to managed resources are taken into consideration or when an early error occurs.
+This solution therefore, can lead to object inconsistencies and create more problems then it resolves.
+Another difficulty would be when the desired state requires multiple reconciliations before it is ready.
+It is not clear how to manage the desired state in that case.
+A POC would shed more light into this solution before it can be taken into consideration.
+
+
+Proposal 3:: Manage Desired state at the Beginning of CFs
+
+A similar solution to the proposal 2 but having the desired state checked right at the beginning of the CFs.
+Since we cannot copy the entire observed to desire state, as this would make deletion of managed resources unnecessarily difficult, we can make use of annotations.
+We copy into desired only `static` managed resources or better - resources that should never be deleted such as namespaces or service deployments.
+These resources are guaranteed to be at the end of CFs so we just make them already available at the start of our CFs.
+Meanwhile managed resources such as users, databases that can easily be deleted via the claim are assigned as `dynamic`.
+The `dynamic` resources are not critical resources per se and would naturally be added with the CFs workflow.
+This solution would also require a POC since a lot of things might go wrong.
+
+== Decision
+
+We start with Proposal 1 and try a POC of Proposal 3
+
+== Rationale
+
+The Proposal 1 is least invasive and would give us more control over the error handling at little to no cost in the short term.
+We need to figure out in runtime functions such as `SetDesired()` or `GetObserved()` go functions which type of Crossplane Result we want to return, either Fatal or Warning.
+This can be decided at Team level during review. Moreover, a guideline to error handling would be welcomed any time.
+That being said, the proposal 1 is not enough to resolve problems of this document long term, therefore we need a POC to make bigger changes.
+The proposal 3 seems to be safer and with fewer difficulties along the way then Proposal 2.
+Also, a POC which combines the Proposal 2 and 3 should not be dismissed.
