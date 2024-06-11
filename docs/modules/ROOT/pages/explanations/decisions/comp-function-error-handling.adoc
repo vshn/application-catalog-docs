@@ -6,7 +6,7 @@ This document will discuss in detail the problem we face with composition functi
 
 == Problems
 
-* We don't manage errors in our composition functions (CFs) and we assume Crossplane will take care of everything.
+* We don't properly manage errors in our composition functions (CFs) and we assume Crossplane will take care of everything.
 * Missing managed resources from desired function when an unexpected error happens can have dire consequences, such as removal of the whole service.
 * Returning early from composition function (CF) due to a warning can lead to missing managed resources.
 
@@ -14,6 +14,14 @@ This document will discuss in detail the problem we face with composition functi
 
 * A comprehensive guide on how we should deal with error management.
 * A solution to missing managed resources from desired function when errors occur.
+
+== Definitions
+
+* Fatal Result error - the error that stops crossplane from reconciliation which means the desired object will not be applied in the cluster.
+Typically safe move which will ensure no changes to the service, but we rarely use this type of error.
+Moreover, `Usage` of the fatal error at the wrong point will lead to deadlocks.
+* Warning Result error - the error that we mostly return and one that endangers the service.
+Crossplane will still apply the desired state with a warning error therefore returning early in CFs may result in managed resources being deleted.
 
 == Proposals
 
