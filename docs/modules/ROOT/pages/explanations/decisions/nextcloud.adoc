@@ -4,7 +4,7 @@
 
 We need to provide Nextcloud on Kubernetes with the following features:
 
-* Possiblt to Single Sign-On with Keycloak
+* Possibility to Single Sign-On with Keycloak
 * Nextcloud Office with Collabora on backend
 * PostgreSQL as database
 * Extensions management
@@ -22,6 +22,7 @@ The Nextcloud Helm Chart is a good starting point for our offering. It is active
 
 For backup and restore there is necessity to use a separate solution like k8up.
 For extension management we need to provide a custom solution.
+There is another helm chart for Office extension: https://open.greenhost.net/stackspin/nextcloud (not official)
 
 Advantages::
 
@@ -35,6 +36,7 @@ Disadvantages::
 ** Maintenance
 ** Backup and restore
 ** Extension management
+** Office package deployment and integration
 
 === Analysis - Custom Provider
 
