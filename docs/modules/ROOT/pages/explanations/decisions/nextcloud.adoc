@@ -20,6 +20,8 @@ We need to provide Nextcloud on Kubernetes with the following features:
 
 The Nextcloud Helm Chart is a good starting point for our offering. It is actively maintained and has a lot of features. It is also the official Helm Chart for Nextcloud.
 
+Nextcloud provides also: https://github.com/nextcloud/all-in-one docker image, which contains a lot of features including Office package.
+
 For backup and restore there is necessity to use a separate solution like k8up.
 For extension management we need to provide a custom solution.
 There is another helm chart for Office extension: https://open.greenhost.net/stackspin/nextcloud (not official)
