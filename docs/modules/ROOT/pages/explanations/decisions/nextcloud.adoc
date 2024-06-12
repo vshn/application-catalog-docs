@@ -59,4 +59,4 @@ We use the Nextcloud Helm Chart.
 
 == Rationale
 
-As I really like concept of writing our own provider, I think that the Nextcloud Helm Chart is a good starting point for our offering. It is actively maintained and has a lot of features already present. It is also the official Helm Chart for Nextcloud. We can still add features on top of it, like backup and restore, extension management, etc. 
+As I really like concept of writing our own provider, I think that the Nextcloud Helm Chart is a good starting point for our offering. It is actively maintained and has a lot of features already present. It is also the official Helm Chart for Nextcloud. Thanks to composition-functions we can still add features on top of it, like backup and restore, extension management, etc. 
