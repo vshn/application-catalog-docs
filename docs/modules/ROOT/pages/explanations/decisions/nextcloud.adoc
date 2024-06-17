@@ -1,0 +1,64 @@
+= VSHN Managed Nextcloud on Kubernetes
+
+== Problem
+
+We need to provide Nextcloud on Kubernetes with the following features:
+
+* Possibility to Single Sign-On with Keycloak
+* Nextcloud Office with Collabora on backend
+* PostgreSQL as database
+* Extensions management
+* full lifecycle of an application: deploy, update, backup, restore, monitoring, scaling, etc.
+
+
+== Solutions
+
+- helm chart available for Nextcloud: https://github.com/nextcloud/helm
+- Writing our own provider-nextcloud 
+
+=== Analysis - Helm Chart
+
+The Nextcloud Helm Chart is a good starting point for our offering. It is actively maintained and has a lot of features. It is also the official Helm Chart for Nextcloud.
+
+Nextcloud provides also: https://github.com/nextcloud/all-in-one docker image, which contains a lot of features including Office package.
+
+For backup and restore there is necessity to use a separate solution like k8up.
+For extension management we need to provide a custom solution.
+There is another helm chart for Office extension: https://open.greenhost.net/stackspin/nextcloud (not official)
+
+Advantages::
+
+* Official Helm Chart
+* Actively maintained
+* Supports various databases, metrics, persistance, ingress, some basic rbac
+
+Disadvantages::
+
+* We still need to cover a lot of topics manually:
+** Maintenance
+** Backup and restore
+** Extension management
+** Office package deployment and integration
+
+=== Analysis - Custom Provider
+
+Writing our own provider would give us the most flexibility. We could implement all the features we need and integrate them into our existing solutions. We could probably handle more features than the Helm Chart.
+
+Advantages::
+
+* Full Flexibility over deployment, backup, restore, monitoring, scaling, etc.
+* VSHN would be the first to offer a Nextcloud provider for Kubernetes - unique marketing opportunity
+
+Disadvantages::
+
+* High development effort
+* Time consuming
+* High risk of introducing bugs
+
+== Decision
+
+We use the Nextcloud Helm Chart.
+
+== Rationale
+
+As I really like concept of writing our own provider, I think that the Nextcloud Helm Chart is a good starting point for our offering. It is actively maintained and has a lot of features already present. It is also the official Helm Chart for Nextcloud. Thanks to composition-functions we can still add features on top of it, like backup and restore, extension management, etc. 
