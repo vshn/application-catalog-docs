@@ -144,5 +144,11 @@ kubectl -n $INSTANCE_ID scale statefulset mariadb \
     --replicas 0
 ----
 
-Delete the `StatefulSet` again and then reverse your changes in the helm release.
-Now the Galera service should start again without errors.
+Delete the `StatefulSet` again:
+
+[source,shell]
+----
+kubectl -n $INSTANCE_ID delete statefulset mariadb --cascade=orphan
+----
+
+Reverse your changes in the helm release. Now the Galera service should start again without errors.
