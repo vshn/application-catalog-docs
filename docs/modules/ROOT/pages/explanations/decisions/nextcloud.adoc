@@ -8,23 +8,23 @@ We need to provide Nextcloud on Kubernetes with the following features:
 * Nextcloud Office with Collabora on backend
 * PostgreSQL as database
 * Extensions management
-* full lifecycle of an application: deploy, update, backup, restore, monitoring, scaling, etc.
+* Full lifecycle of an application: deploy, update, backup, restore, monitoring, scaling, etc.
 
 
 == Solutions
 
-- helm chart available for Nextcloud: https://github.com/nextcloud/helm
+- Helm chart available for Nextcloud: https://github.com/nextcloud/helm
 - Writing our own provider-nextcloud 
 
 === Analysis - Helm Chart
 
-The Nextcloud Helm Chart is a good starting point for our offering. It is actively maintained and has a lot of features. It is also the official Helm Chart for Nextcloud.
+The Nextcloud Helm Chart is a good starting point. It is actively maintained and has the needed features. Additionally, it is the official Helm Chart for Nextcloud.
 
-Nextcloud provides also: https://github.com/nextcloud/all-in-one docker image, which contains a lot of features including Office package.
+Nextcloud provides: https://github.com/nextcloud/all-in-one docker image, which contains a lot of features including Office package.
 
-For backup and restore there is necessity to use a separate solution like k8up.
-For extension management we need to provide a custom solution.
-There is another helm chart for Office extension: https://open.greenhost.net/stackspin/nextcloud (not official)
+k8up or similar solution needs to be used for backup and restore management.
+A custom solution needs to be provided for extension management.
+A not-official helm chart exists for Office extension: https://open.greenhost.net/stackspin/nextcloud 
 
 Advantages::
 
@@ -34,7 +34,7 @@ Advantages::
 
 Disadvantages::
 
-* We still need to cover a lot of topics manually:
+* Several topics need to be handled manually:
 ** Maintenance
 ** Backup and restore
 ** Extension management
@@ -42,7 +42,9 @@ Disadvantages::
 
 === Analysis - Custom Provider
 
-Writing our own provider would give us the most flexibility. We could implement all the features we need and integrate them into our existing solutions. We could probably handle more features than the Helm Chart.
+
+Writing our own provider gives the most flexibility. All the needed features could be directly implemented and integrated into the existing solutions. 
+Potentially more features could be handled than the official Helm Chart supports.
 
 Advantages::
 
@@ -61,4 +63,4 @@ We use the Nextcloud Helm Chart.
 
 == Rationale
 
-As I really like concept of writing our own provider, I think that the Nextcloud Helm Chart is a good starting point for our offering. It is actively maintained and has a lot of features already present. It is also the official Helm Chart for Nextcloud. Thanks to composition-functions we can still add features on top of it, like backup and restore, extension management, etc. 
+The official Nextcloud Helm Chart is a good starting point for the offering. It is actively maintained and has useful features already present. By utilizing composition-functions more features can be added top of it, such as backup and restore, extension management, etc. 
