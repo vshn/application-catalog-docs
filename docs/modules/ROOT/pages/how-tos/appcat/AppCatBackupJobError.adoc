@@ -16,4 +16,4 @@ kubectl -n $instanceNamespace get jobs
 kubectl -n $instanceNamespace logs job/$failedJobName
 ----
 
-The most probable cause for failing backups is unreachable Object Storage or permission issues.
+NOTE: The most probable cause for failing backups is unreachable Object Storage or permission issues.
