@@ -1,0 +1,19 @@
+= Alert rule: AppCatBackupJobError
+
+== icon:glasses[] Overview
+
+This alert triggers, if the backup job failed for any given AppCat service.
+
+== icon:bug[] Steps for Debugging
+
+All current backup solutions depend on jobs to do the actual work.
+To figure out what went wrong with the backup, connect to the K8s cluster and look at the logs of the failed job.
+
+.Find failed job
+[source,bash]
+----
+kubectl -n $instanceNamespace get jobs
+kubectl -n $instanceNamespace logs job/$failedJobName
+----
+
+NOTE: The most probable cause for failing backups is unreachable Object Storage or permission issues.
