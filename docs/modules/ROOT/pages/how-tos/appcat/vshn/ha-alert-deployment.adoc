@@ -5,9 +5,7 @@
 High Available alerts are triggered for VSHN based services with multiple instances.
 This alert is triggered when a VSHN service deployment has less replicas than expected.
 
-
 == icon:bug[] Steps for Debugging
-
 
 Step one:: Connect to the cluster from the alert description.
 Step two:: Get the service instance from the alert description.
