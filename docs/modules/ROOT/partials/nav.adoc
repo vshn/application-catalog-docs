@@ -129,5 +129,5 @@
 ** xref:app-catalog:ROOT:how-tos/appcat/vshn/postgres/manual-restore.adoc[]
 ** xref:app-catalog:ROOT:how-tos/appcat/AppCatBackupJobError.adoc[]
 ** High Available Alerts
-*** xref:app-catalog:ROOT:how-tos/appcat/vshn/ha-alert-statefulset.adoc[]
-*** xref:app-catalog:ROOT:how-tos/appcat/vshn/ha-alert-deployment.adoc[]
+*** xref:app-catalog:ROOT:how-tos/appcat/vshn/AppCatHighAvailableStatefulsetWarning.adoc[]
+*** xref:app-catalog:ROOT:how-tos/appcat/vshn/AppCatHighAvailableDeploymentWarning.adoc[]
