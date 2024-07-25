@@ -61,6 +61,7 @@
 ** xref:app-catalog:ROOT:explanations/decisions/deletion-protection.adoc[]
 ** xref:app-catalog:ROOT:explanations/decisions/user-management.adoc[]
 ** xref:app-catalog:ROOT:explanations/decisions/comp-function-error-handling.adoc[]
+** xref:app-catalog:ROOT:explanations/decisions/release_process.adoc[]
 ** Archive
 *** xref:app-catalog:ROOT:explanations/decisions/archive/converged-service-impl.adoc[Converged Service Provisioning Implementation]
 
