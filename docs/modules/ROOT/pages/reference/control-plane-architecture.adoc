@@ -1,0 +1,37 @@
+= Separate Control Plane from Service Clusters
+
+This page shows the pitfalls and gotchas that we need to keep in mind if we develop for a split architecture.
+
+.Overview AppCat Architecture
+image::appcat_control_cluster.drawio.svg[]
+
+== Provider Configs
+
+The first issue we need to tackle is managing multiple provider configs for provider helm and Kubernetes.
+They need to be able to connect to the service clusters from the control cluster.
+
+== Connection Details
+
+Connection details are only available on the control cluster.
+They are not propagated to the service clusters.
+
+There are various services were the connection details are saved directly into the instance namespaces.
+By splitting the control cluster from the service cluster, this won't be possible anymore.
+Instead of writing the connection details directly into the instance namespaces, we'll have to wrap them into separate secrets and deploy them via provider-kubernetes.
+
+== Webhooks
+
+The backend deletion protection webhooks need to be able to check against the composites on the control cluster.
+
+So each of the service clusters also needs a connection back to the control cluster, in order for the webhooks to do the lookups.
+
+== Managed Resource vs Plain Kubernetes resources
+
+By splitting the control clusters from the service clusters it gets even more important to cleanly differentiate between Crossplane Managed Resources and plain Kubernetes resources.
+
+Managed resources need to always be deployed on the control cluster.
+They will not be available on the services clusters.
+
+Usually those objects implement the `resource.Managed` interface.
+But unfortunately not all the objects do that, for example `ProviderConfigs` and `Usages`.
+Ideally the runtime should take care of wrapping objects automatically.
