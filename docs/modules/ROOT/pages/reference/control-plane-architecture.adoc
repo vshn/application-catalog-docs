@@ -30,7 +30,7 @@ So each of the service clusters also needs a connection back to the control clus
 By splitting the control clusters from the service clusters it gets even more important to cleanly differentiate between Crossplane Managed Resources and plain Kubernetes resources.
 
 Managed resources need to always be deployed on the control cluster.
-They will not be available on the services clusters.
+They will not be available on the service clusters.
 
 Usually those objects implement the `resource.Managed` interface.
 But unfortunately not all the objects do that, for example `ProviderConfigs` and `Usages`.
