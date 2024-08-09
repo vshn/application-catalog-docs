@@ -16,7 +16,7 @@ However, it would also need to be licensed under the SSPL.
 Proposal 2: Use MongoDB Enterprise Operator::
 MongoDB Enterprise Operator can be used to manage MongoDB instances on Kubernetes.
 There have already been preliminary contact with MongoDB about the licensing for our use with AppCat.
-However, these documents are at the time of writing internally.
+At the time of writing, the pricelist is internal and not available.
 There's a https://github.com/mongodb/helm-charts/tree/main/charts/enterprise-operator[helm chart] to deploy it.
 It does need an https://www.mongodb.com/pricing[enterprise license] though.
 Which will require a license key to be present on the K8s clusters.
