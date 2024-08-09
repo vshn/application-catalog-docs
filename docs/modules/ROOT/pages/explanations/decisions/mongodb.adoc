@@ -37,5 +37,7 @@ There's no helm based deployment for MongoDB Enterprise Edition.
 The implementation for this service cannot rely on the generalizations we've made for helm based services.
 It will need more custom implementation, like StackGres based PostgreSQL deployments.
 
+Due to the licensing required, this service will not be deployed by default.
+
 == Rationale
 Either licensing or compatibility prevent us from using any of the other mentioned solutions.
