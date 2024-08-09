@@ -3,7 +3,7 @@
 == Problem
 
 We want to Provide MongoDB via AppCat.
-But their licensing might be an issue.
+MongoDB licensing might be an issue.
 This decision looks closely at the licensing and alternative products that can be used as drop-in replacements for MongoDB.
 
 == Proposals
