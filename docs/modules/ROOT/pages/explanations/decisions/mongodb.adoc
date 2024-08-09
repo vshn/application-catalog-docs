@@ -10,7 +10,7 @@ This decision looks closely at the licensing and alternative products that can b
 
 Proposal 1: Use MongoDB Community Edition::
 MongoDB community edition is licensed under the https://github.com/mongodb/mongo/blob/master/LICENSE-Community.txt[SSPL].
-The SSPL dictates that the source code for the tooling that provides the services, needs to be available to the public as well.
+The SSPL dictates that the source code for the tooling that provides the services needs to be available to the public.
 However, it would also need to be licensed under the SSPL.
 
 Proposal 2: Use MongoDB Enterprise Operator::
