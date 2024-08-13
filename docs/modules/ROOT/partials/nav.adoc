@@ -49,6 +49,7 @@
 *** xref:app-catalog:ROOT:explanations/decisions/local-objectstorage-sli.adoc[SLI]
 ** xref:app-catalog:ROOT:explanations/decisions/mariadb.adoc[MariaDB by VSHN]
 ** xref:app-catalog:ROOT:explanations/decisions/nextcloud.adoc[Nextcloud by VSHN]
+** xref:app-catalog:ROOT:explanations/decisions/mongodb.adoc[MongoDB by VSHN]
 ** xref:app-catalog:ROOT:explanations/decisions/secret-pki-mgmt.adoc[Secret and PKI Management by VSHN]
 ** xref:app-catalog:ROOT:explanations/decisions/capacity-alerting.adoc[Converged Service Capacity Alerting]
 ** xref:app-catalog:ROOT:explanations/decisions/logging.adoc[Converged Service Logging]
@@ -63,7 +64,6 @@
 ** xref:app-catalog:ROOT:explanations/decisions/user-management.adoc[]
 ** xref:app-catalog:ROOT:explanations/decisions/comp-function-error-handling.adoc[]
 ** xref:app-catalog:ROOT:explanations/decisions/release_process.adoc[]
-** xref:app-catalog:ROOT:explanations/decisions/mongodb.adoc[]
 ** Archive
 *** xref:app-catalog:ROOT:explanations/decisions/archive/converged-service-impl.adoc[Converged Service Provisioning Implementation]
 
