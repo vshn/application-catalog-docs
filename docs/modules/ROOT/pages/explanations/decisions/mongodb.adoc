@@ -16,7 +16,7 @@ However, it would also need to be licensed under the SSPL.
 Proposal 2: Use MongoDB Enterprise Operator::
 MongoDB Enterprise Operator can be used to manage MongoDB instances on Kubernetes.
 There has been preliminary contact with MongoDB about the licensing for the AppCat use.
-At the time of writing, the pricelist is internal and not available.
+The pricing options are RAM pricing (128GB 64.5k/yr, 256GB 99.5k/yr) or node pricing (prod 15k/yr, “testing” 7.5k/yr). Additionally, a 10% reseller discount is expected.
 There's a https://github.com/mongodb/helm-charts/tree/main/charts/enterprise-operator[helm chart] to deploy it.
 It does need an https://www.mongodb.com/pricing[enterprise license] though.
 Which will require a license key to be present on the K8s clusters.
@@ -30,7 +30,7 @@ However, it does not implement everything that https://docs.ferretdb.io/diff/[Mo
 So a MongoDB AppCat service based on FerretDB might not be fully compatible with all workloads, which can result in bad UX for the customers.
 
 == Decision
-Use MongoDB Enterprise Operator.
+Proposal 2: Use MongoDB Enterprise Operator.
 
 This is the only viable option to run a MongoDB SaaS on K8s.
 There's no helm based deployment for MongoDB Enterprise Edition.
@@ -38,6 +38,7 @@ The implementation for this service cannot rely on the generalizations we've mad
 It will need more custom implementation, like StackGres based PostgreSQL deployments.
 
 Due to the licensing required, this service will not be deployed by default.
+For development purposes community edition could be used.
 
 == Rationale
-Either licensing or compatibility prevent us from using any of the other mentioned solutions.
+Either licensing or compatibility prevents us from using any of the other mentioned solutions.
