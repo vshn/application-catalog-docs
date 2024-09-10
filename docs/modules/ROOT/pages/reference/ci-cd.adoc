@@ -19,7 +19,7 @@ For this example we change something in AppCat itself.
 1. Push your branch and open a PR
 1. Select a label before you click "create PR"
 1. Once the PR is created it opens a PR in `component-appcat` and also builds all necessary images and packages, this takes a few minutes
-1. After the main PR has been reviewed and approved, just merge it. All necessary steps to release the new version are done automatically.
+1. After the main PR has been reviewed and approved, just merge it. All necessary steps to release the new version are done automatically
 1. Check the PR in `component-appcat`, if it's just a version bump, approve it and merge. If more changes are needed, implement them and let someone else approve the PR
 1. The `component-appcat` does not have automatic release on merge. Create a tag as usual.
 
