@@ -15,7 +15,7 @@ In order to streamline our development process, we improved the CI/CD with follo
 
 For this example we change something in AppCat itself.
 
-1. Create a new branch and implement your featur
+1. Create a new branch and implement your feature
 1. Push your branch and open a PR
 1. Select a label before you click "create PR"
 1. Once the PR is created it opens a PR in `component-appcat` and also builds all necessary images and packages, this takes a few minutes
