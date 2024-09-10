@@ -5,7 +5,7 @@ They all converge in the `component-appcat`, which is responsible for deploying 
 
 In order to streamline our development process, we improved the CI/CD with following steps:
 
-* Creating a PR in an AppCat repository automatically builds images and packes
+* Creating a PR in an AppCat repository automatically builds images and packages
 * Creating a PR in an AppCat repository automatically creates a PR on the component that reflect the changes, so it can instantly be deployed any SYN cluster to test
 * Proper labels on the PRs are enforced
 * Merging a PR will automatically create a release, according to the labels it will detect what version increment it needs to do
