@@ -1,0 +1,31 @@
+= AppCat CI/CD Processes
+
+AppCat contains many repositories.
+They all converge in the `component-appcat`, which is responsible for deploying everything.
+
+In order to streamline our development process, we improved the CI/CD with following steps:
+
+* Creating a PR in an AppCat repository automatically builds images and packages
+* Creating a PR in an AppCat repository automatically creates a PR on the component that reflects the changes, so it can instantly be deployed any SYN cluster to test
+* Proper labels on the PRs are enforced
+* Merging a PR will automatically create a release, according to the labels it will detect what version increment it needs to do
+* The auto release is not active on the component repository
+
+== How to do a change in an AppCat repository
+
+For this example we change something in AppCat itself.
+
+1. Create a new branch and implement your feature
+1. Push your branch and open a PR
+1. Select a label before you click "create PR"
+1. Once the PR is created it opens a PR in `component-appcat` and also builds all necessary images and packages, this takes a few minutes
+1. After the main PR has been reviewed and approved, just merge it. All necessary steps to release the new version are done automatically
+1. Check the PR in `component-appcat`, if it's just a version bump, approve it and merge. If more changes are needed, implement them and let someone else approve the PR
+1. The `component-appcat` does not have automatic release on merge. Create a tag as usual.
+
+== How to manage the CI/CD pipelines
+
+All the files that specify the process are managed via cruft and cookiecutter.
+The repository is: https://github.com/vshn/appcat-cookiecutter.
+Each of the AppCat repos contains a cronjob that checks for changes every 60 minutes.
+If there are changes it will open a new PR.

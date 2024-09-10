@@ -11,6 +11,7 @@
 ** xref:app-catalog:ROOT:reference/framework-requirements.adoc[]
 ** xref:app-catalog:ROOT:reference/slareports.adoc[]
 ** xref:app-catalog:ROOT:reference/control-plane-architecture.adoc[]
+** xref:app-catalog:ROOT:reference/ci-cd.adoc[]
 ** xref:app-catalog:ROOT:reference/quality-requirements.adoc[Quality Requirements]
 *** xref:app-catalog:ROOT:reference/quality-requirements/maintainability/readiness-standards.adoc[Maintainability]
 *** xref:app-catalog:ROOT:reference/quality-requirements/portability/backup-exports.adoc[Portability]
