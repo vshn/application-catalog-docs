@@ -1,0 +1,36 @@
+= Alert rule: GuaranteedUptimeTarget
+
+== icon:glasses[] Overview
+
+This alert is based on our SLI Exporter and how we in Appcat measure uptime of our services. Each second SLI Exporter checks if the service is up and running and produce respective Prometheus metrics. If Service in last 5 minutes was down for 1 minute (20% of failed alerts) AND 45 seconds in 1 minute (75% of failed alerts) AND database is marked as "guaranteed_availability", then this alert is triggered.
+
+== icon:bug[] Steps for Debugging
+
+There is no obvious reason why it happend, but we can easily check what happened. Evevry "guaranteed_availability" database has at least 2 replicas and PodDistruptionBudget set to 1. So, if one replica is down, the second one should be up and running. If that failed it means that there is some issue with the database or node itself. 
+
+.Finding the failed database
+Check database name and namespace from alert. There are 2 relevant namespaces: claim namespace and instance namespace. Instance namespace is generated and always has format "vshn-<service_name(postgresql, redis, (...etc))>-<instance_name>".
+
+[source,bash]
+----
+kubectl -n $instanceNamespace get pods 
+kubectl -n $instanceNamespace describe $failing_pod
+kubectl -n $instanceNamespace logs pods/$failing_pod
+----
+
+It might be also worth checking for failing Kubernetes Objects and Composite:
+[source,bash]
+----
+#$instanceNamespace_generated_chars can be obtained in a way: `echo vshn-postgresql-my-super-prod-5jfjn | rev | cut -d'-' -f1 | rev` ===> 5jfjn
+kubectl --as cluster-admin get objects | egrep $instanceNamespace_generated_chars # here look for False objects and describe them to find out what is wrong
+kubectl --as cluster-admin get xvshn[TAB here for specific service] | egrep $instanceNamespace_generated_chars # also describe to read what happened
+----
+
+.Check logs of our comp-functions
+
+[source,bash]
+----
+kubectl -n syn-crossplane logs deployments/function-appcat-aeb2dbb03cf6 # <--- this number changes regularly
+----
+
+For stuck resources, You can create dummy label on object and then rollout restart crossplane function-appcat and provider-kubernetes. 
