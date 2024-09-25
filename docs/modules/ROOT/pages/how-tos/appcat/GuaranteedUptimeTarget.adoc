@@ -26,11 +26,35 @@ kubectl --as cluster-admin get objects | egrep $instanceNamespace_generated_char
 kubectl --as cluster-admin get xvshn[TAB here for specific service] | egrep $instanceNamespace_generated_chars # also describe to read what happened
 ----
 
-.Check logs of our comp-functions
-
+.Check SLI Prober logs
 [source,bash]
 ----
-kubectl -n syn-crossplane logs deployments/function-appcat-aeb2dbb03cf6 # <--- this number changes regularly
+kubectl -n syn-appcat-slos logs pods/appcat-sliexporter-controller-manager-$RANDOM_CHARS
 ----
+Possible reasons for failing SLI Prober:
 
-For stuck resources, You can create dummy label on object and then rollout restart crossplane function-appcat and provider-kubernetes. 
+* timeout:
+** network connection between nodes
+** network policy
+** overloaded resource
+** hanged process
+* connection refused:
+** broken process inside container
+** no port available
+* wrong credentials
+** restart sli prober
+** check if credentials are correct
+*** get secret from claim namespace: `kubectl -n $claim_namespace get secret $secret_name -o yaml'`
+*** postgresql example: `kubectl -n $instance_namespace port-forward service/responsible_service 5432:5432`
+*** on local machine: `psql -h localhost -U $username -d $database_name`
+** if problem persists, then it's probably a bug or customer manual intervention
+
+
+.Check providers responsible for the service
+
+* VSHNPostgreSQL
+** `` kubectl -n syn-stackgres-operator get pod ``
+** `` kubectl -n syn-stackgres-operator logs deployments/stackgres-operator ``
+
+* VSHNRedis, VSHNKeycloak, VSHNNextcloud, VSHNMariaDB, VSHNMinio
+** ``kubectl -n syn-crossplane logs deployments/provider-helm-4d90a08b9ede``
