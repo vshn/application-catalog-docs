@@ -22,8 +22,9 @@ It might be also worth checking for failing Kubernetes Objects and Composite:
 [source,bash]
 ----
 #$instanceNamespace_generated_chars can be obtained in a way: `echo vshn-postgresql-my-super-prod-5jfjn | rev | cut -d'-' -f1 | rev` ===> 5jfjn
-kubectl --as cluster-admin get objects | egrep $instanceNamespace_generated_chars # here look for False objects and describe them to find out what is wrong
-kubectl --as cluster-admin get xvshn[TAB here for specific service] | egrep $instanceNamespace_generated_chars # also describe to read what happened
+kubectl --as cluster-admin get objects | egrep $instanceNamespace_generated_chars
+kubectl --as cluster-admin describe objects $objectname
+kubectl --as cluster-admin describe xvshn[TAB here for specific service] | egrep $instanceNamespace_generated_chars
 ----
 
 .Check SLI Prober logs
@@ -58,3 +59,32 @@ Possible reasons for failing SLI Prober:
 
 * VSHNRedis, VSHNKeycloak, VSHNNextcloud, VSHNMariaDB, VSHNMinio
 ** ``kubectl -n syn-crossplane logs deployments/provider-helm-4d90a08b9ede``
+
+.Example based on an real alert
+
+[source,bash]
+-----
+Details: 	
+OnCall 	                    : 	true
+alertname 	                : 	vshn-vshnpostgresql-GuaranteedUptimeTarget
+
+(...)
+
+name 	                    : 	postgresql-analytics-kxxxa
+namespace 	                : 	postgresql-analytics-db
+
+(...)
+reason 	                    : 	fail-unknown
+service 	                : 	VSHNPostgreSQL
+service_level               : 	best_effort
+severity 	                : 	warning
+sla 	                    : 	besteffort
+
+(...)
+-----
+
+After You receive such alert on email, you can easily check interesting information, like in this case:
+
+* instance namespace: `vshn-postgresql-postgresql-analytics-kxxxa`
+* instanceNamespace_GeneratedChars: `kxxxa`
+* claim namespace: `postgresql-analytics-db`
