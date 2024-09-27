@@ -1,0 +1,90 @@
+= Alert rule: GuaranteedUptimeTarget
+
+== icon:glasses[] Overview
+
+This alert is based on our SLI Exporter and how we in Appcat measure uptime of our services. Each second SLI Exporter checks if the service is up and running and produce respective Prometheus metrics. If Service in last 5 minutes was down for 1 minute (20% of failed alerts) AND 45 seconds in 1 minute (75% of failed alerts) AND database is marked as "guaranteed_availability", then this alert is triggered.
+
+== icon:bug[] Steps for Debugging
+
+There is no obvious reason why it happend, but we can easily check what happened. Evevry "guaranteed_availability" database has at least 2 replicas and PodDistruptionBudget set to 1. So, if one replica is down, the second one should be up and running. If that failed it means that there is some issue with the database or node itself. 
+
+.Finding the failed database
+Check database name and namespace from alert. There are 2 relevant namespaces: claim namespace and instance namespace. Instance namespace is generated and always has format "vshn-<service_name(postgresql, redis, (...etc))>-<instance_name>".
+
+[source,bash]
+----
+kubectl -n $instanceNamespace get pods 
+kubectl -n $instanceNamespace describe $failing_pod
+kubectl -n $instanceNamespace logs pods/$failing_pod
+----
+
+It might be also worth checking for failing Kubernetes Objects and Composite:
+[source,bash]
+----
+#$instanceNamespace_generated_chars can be obtained in a way: `echo vshn-postgresql-my-super-prod-5jfjn | rev | cut -d'-' -f1 | rev` ===> 5jfjn
+kubectl --as cluster-admin get objects | egrep $instanceNamespace_generated_chars
+kubectl --as cluster-admin describe objects $objectname
+kubectl --as cluster-admin describe xvshn[TAB here for specific service] | egrep $instanceNamespace_generated_chars
+----
+
+.Check SLI Prober logs
+[source,bash]
+----
+kubectl -n syn-appcat-slos logs pods/appcat-sliexporter-controller-manager-$RANDOM_CHARS
+----
+Possible reasons for failing SLI Prober:
+
+* timeout:
+** network connection between nodes
+** network policy
+** overloaded resource
+** hanged process
+* connection refused:
+** broken process inside container
+** no port available
+* wrong credentials
+** restart sli prober
+** check if credentials are correct
+*** get secret from claim namespace: `kubectl -n $claim_namespace get secret $secret_name -o yaml'`
+*** postgresql example: `kubectl -n $instance_namespace port-forward service/responsible_service 5432:5432`
+*** on local machine: `psql -h localhost -U $username -d $database_name`
+** if problem persists, then it's probably a bug or customer manual intervention
+
+
+.Check providers responsible for the service
+
+* VSHNPostgreSQL
+** `` kubectl -n syn-stackgres-operator get pod ``
+** `` kubectl -n syn-stackgres-operator logs deployments/stackgres-operator ``
+
+* VSHNRedis, VSHNKeycloak, VSHNNextcloud, VSHNMariaDB, VSHNMinio
+** ``kubectl -n syn-crossplane logs deployments/provider-helm-4d90a08b9ede``
+
+.Example based on an real alert
+
+[source,bash]
+-----
+Details: 	
+OnCall 	                    : 	true
+alertname 	                : 	vshn-vshnpostgresql-GuaranteedUptimeTarget
+
+(...)
+
+name 	                    : 	postgresql-analytics-kxxxa
+namespace 	                : 	postgresql-analytics-db
+
+(...)
+reason 	                    : 	fail-unknown
+service 	                : 	VSHNPostgreSQL
+service_level               : 	best_effort
+severity 	                : 	warning
+sla 	                    : 	besteffort
+
+(...)
+-----
+
+After You receive such alert on email, you can easily check interesting information, like in this case:
+
+* instance namespace: `vshn-postgresql-postgresql-analytics-kxxxa`
+* instanceNamespace_GeneratedChars: `kxxxa`
+* claim namespace: `postgresql-analytics-db`
