@@ -132,6 +132,7 @@
 ** xref:app-catalog:ROOT:how-tos/appcat/appuio-quotas.adoc[]
 ** xref:app-catalog:ROOT:how-tos/appcat/vshn/postgres/manual-restore.adoc[]
 ** xref:app-catalog:ROOT:how-tos/appcat/AppCatBackupJobError.adoc[]
+** xref:app-catalog:ROOT:how-tos/appcat/GuaranteedUptimeTarget.adoc[]
 ** High Available Alerts
 *** xref:app-catalog:ROOT:how-tos/appcat/vshn/AppCatHighAvailableStatefulsetWarning.adoc[]
 *** xref:app-catalog:ROOT:how-tos/appcat/vshn/AppCatHighAvailableDeploymentWarning.adoc[]
