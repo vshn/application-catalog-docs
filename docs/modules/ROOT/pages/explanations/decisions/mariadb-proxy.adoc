@@ -153,7 +153,7 @@ We use ProxySQL
 
 Maxscale is only available as a bundle with MariaDB Enterprise, which is too expensive for our use case and would make the whole product very hard to sell.
 
-Athough we have quite some experience with HAProxy and is performing very well, it unfortunately lacks any support for SQL query based routing / load balancing.
+Athough we have quite some experience with HAProxy and it is performing very well, it unfortunately lacks any support for SQL query based routing / load balancing.
 This is a huge draw back and limits the usages of a galera cluster considerably as we won't the Galera nodes only during failover scenarios, but not for load balancing in general.
 
 ProxySQL is also a rather lightweight solution build for high performance. However, it can't keep up with the performance of the Layer 3 HAProxy solution.
