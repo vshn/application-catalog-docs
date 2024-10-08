@@ -9,8 +9,7 @@ different feature sets and price tags.
 
 == Solutions
 
-The following section contains the solutions that are the most widely used on the market. We list 
-them here with the features that they support:
+The following section contains a list of the solutions that are the most widely used on the market. The features that each solution supports are listed below the solution:
 
 [cols="1,1,1",options="header"]
 |===
