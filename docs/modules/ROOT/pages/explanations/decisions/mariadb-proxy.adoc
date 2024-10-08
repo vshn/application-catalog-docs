@@ -107,7 +107,7 @@ Disadvantages::
 
 ProxySQL is a lightweight SQL proxy published under the GPL 3.0. The software itself is
 free to use. The company offers support plans if desired.
-ProxySQL is not as feature rich Maxscale, but it still has a quite big feature list. Most notably the read-write splitting.
+ProxySQL is not as feature rich as Maxscale, but it still has a quite big feature list. Most notably the read-write splitting.
 
 Advantages::
 
