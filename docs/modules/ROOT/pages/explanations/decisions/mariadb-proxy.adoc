@@ -3,7 +3,7 @@
 == Problem
 
 We want to provide a HA Galera service to our customers. In order to be able to properly use Galera, 
-we need a proxy solution in front of Galera forwards the queries to the "correct" galera node.
+we need a proxy solution in front of Galera so that it forwards the queries to the "correct" Galera node.
 There are multiple products on the market that can act as a proxy for galera. They all come with 
 different feature sets and price tags.
 
