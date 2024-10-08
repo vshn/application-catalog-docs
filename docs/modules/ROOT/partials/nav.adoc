@@ -45,10 +45,12 @@
 ** Redis by VSHN
 *** xref:app-catalog:ROOT:explanations/decisions/redis.adoc[Chart evaluation]
 *** xref:app-catalog:ROOT:explanations/decisions/redis-upgrades.adoc[Upgrade Policy]
+** MariaDB By VSHN
+*** xref:app-catalog:ROOT:explanations/decisions/mariadb.adoc[Chart/Operator evaluation]
+*** xref:app-catalog:ROOT:explanations/decisions/mariadb-proxy.adoc[Proxy for HA setups]
 ** ObjectStorage by VSHN
 *** xref:app-catalog:ROOT:explanations/decisions/local-objectstorage-provider.adoc[Provider Evaluation]
 *** xref:app-catalog:ROOT:explanations/decisions/local-objectstorage-sli.adoc[SLI]
-** xref:app-catalog:ROOT:explanations/decisions/mariadb.adoc[MariaDB by VSHN]
 ** xref:app-catalog:ROOT:explanations/decisions/nextcloud.adoc[Nextcloud by VSHN]
 ** xref:app-catalog:ROOT:explanations/decisions/mongodb.adoc[MongoDB by VSHN]
 ** xref:app-catalog:ROOT:explanations/decisions/secret-pki-mgmt.adoc[Secret and PKI Management by VSHN]
