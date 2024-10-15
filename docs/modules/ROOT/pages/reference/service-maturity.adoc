@@ -31,18 +31,23 @@ See also:
 * xref:reference/quality-requirements/usability/api-validation.adoc[Service Instance API Validation]
 * xref:reference/quality-requirements/usability/provisioning-time.adoc[Provisioning Time]
 
-== Iteration: Backup and Restore
+== Iteration: Backup
 
 As a user of the service I can:
 
 * enable Backup on a service instance
 * disable Backup on a service instance
-* manually restore data for a service instance
 
 See also:
 
 * xref:reference/quality-requirements/portability/backup-exports.adoc[Backups Can Be Exported]
 * xref:reference/quality-requirements/reliability/backup-interval.adoc[Minimum Backup Interval]
+
+== Iteration: Restore
+
+As a user of the service I can:
+
+* manually restore data for a service instance
 
 == Iteration: Logs
 
