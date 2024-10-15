@@ -98,6 +98,12 @@ As a user of the service I can:
 
 * adjust the size of the service (provision replicas/instances)
 
+== Iteration: User Management
+
+As a user of the service I can:
+
+* manage roles, grants and databases
+
 == Stable Release
 
 As a user of the service I can:
