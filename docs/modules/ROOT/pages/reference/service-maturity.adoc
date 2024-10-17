@@ -37,6 +37,7 @@ As a user of the service I can:
 
 * enable Backup on a service instance
 * disable Backup on a service instance
+* request a restore for a service instance
 
 See also:
 
