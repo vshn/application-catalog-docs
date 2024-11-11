@@ -1,0 +1,403 @@
+= Central Control Plane (CCP)
+
+image::universal-control-plane.drawio.svg[]
+
+The Central Control Plane (CCP) provides the multi-tenant multi-service-provider aggregation and central entry-point.
+All access to the Meta VSHN Application Marketplace happens through this control plane.
+It offers features needed to separate organizations, control access, service provisioning and gives a central view over multi cloud providers and the instances running this way.
+
+We inherit the original architecture of the https://kb.vshn.ch/appuio-cloud/references/architecture/control-api.html[APPUiO Control API^] and extend it for the CCP.
+
+It's crucial to know where an organization is coming from, because that dictates various important aspects like what services are available, how billing works and more.
+For this we track the origin of an organization in a new field on the `Organization` resource called `.spec.originRef` and configure the origin-specific aspects in `OrganizationOriginConfig`.
+
+As the available services is tied to the organization, and it's origin, the catalog of services is provided in namespaced `ServiceOffering` resources.
+To filter the catalog, we introduce the `ProvidedService` resource kind, which can dictate per organization what is available.
+Besides showing what's available, provisioning itself is also guarded by the availability of services through admission control.
+
+For the user of the CCP it doesn't matter where a service instance is created, it's always the same API.
+For example `VSHNPostgreSQL` is the same resource kind, no matter if it's created on the Central Control Plane, on the CSP Control Plane or even on the local cluster.
+The main difference lies in the selected Composition, hidden from the user.
+
+[mermaid,ucp,png]
+....
+flowchart TD
+    subgraph Cluster
+        Org["Organization"]
+        OrgConfig["OrganizationOriginConfig"]
+        BE["BillingEntity"]
+    end
+
+    subgraph Namespace
+        PS["ProvidedService"]
+        Cat["Catalog"]
+    end
+
+    Org -- "references via<br/>spec.origin" --> OrgConfig
+    Org -- "represents" --> Namespace
+    OrgConfig -- "controls<br/> billingEntityRef" --> Org
+    OrgConfig -- "can ref" --> BE
+
+    OrgConfig -- "defines available" --> Cat
+    PS -- "influences configuration" --> Cat
+....
+
+== Terminology
+
+Central Control Plane (CCP)::
+This is the aggregated view and entry point for the user.
+It provides the mechanisms for the multi-tenant, multi-service-provider self-service portal.
+
+CSP Control Plane (CSPCP)::
+This runs Crossplane and the AppCat Control Plane which manages all the service instances on worker clusters.
+Each zone of a CSP runs at least one CSPCP.
+
+Worker Cluster::
+Clusters running the actual workload, managed by the CSPCP.
+Each zone of a CSP runs at least one Worker Cluster.
+Services are directly exposed to the end-user.
+
+Service::
+A managed service which can be instantiated (ordered) and parametrized according to the specification.
+
+Plan::
+A pre-defined set of parameters for a service.
+
+Crossplane specific terms::
+* Compositions - A template to define how to create resources.
+* Composite Resource Definition (`XRD`) - A custom API specification.
+* Composite Resource (`XR`) - Created by using the custom API defined in a Composite Resource Definition. XRs use the Composition template to create new managed resources.
+* Claims (`XRC`) - Like a Composite Resource, but with namespace scoping.
+* Managed Resource (`MR`) - Represents an external service in a Provider.
+* Providers enable Crossplane to provision infrastructure on an external service. Providers create new Kubernetes APIs and map them to external APIs.
+
+== Organization Enhancements
+
+=== Organization Origin
+
+This enhances https://kb.vshn.ch/appuio-cloud/references/architecture/control-api-org.html[APPUiO Control API: Organization^] with the aspect of the origin of an organization.
+The origin specifies from where an organization originates, either from VSHN, a CSP like Exoscale or Cloudscale or any other entity taking part.
+
+This origin is used in further processes, like filtering of resources or access control.
+
+It's part of the `Organization` resource, in `.spec.originRef` which references a `OrganizationOriginConfig` (see <<Organization Origin Configuration>>.
+
+.Example Organization
+[source,yaml]
+----
+apiVersion: organization.appuio.io/v1
+kind: Organization
+metadata:
+  name: acme-corp 
+spec:
+  displayName: Acme Corp.
+  originRef: csp-a
+----
+
+.Example Organization Namespace
+[source,yaml]
+----
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: acme-corp
+  labels:
+    appuio.io/resource.type: organization
+    vshn.io/organization-ref-name: csp-a <1>
+  annotations:
+    organization.appuio.io/display-name: Acme Corp.
+----
+<1> The value of `spec.originRef.name` from the `Organization` resource
+
+=== Organization Origin Configuration
+
+An organization origin is configured a resource kind called `OrganizationOriginConfig`.
+This resource is referenced in the `.spec.originRef` of the `Organization` resource kind and is used to parametrize further processes.
+
+[source,yaml]
+----
+apiVersion: vamp.vshn.io/v1
+kind: OrganizationOriginConfig
+metadata:
+  name: csp-a
+spec:
+  compositionSelector: <1>
+    - matchLabels:
+        metadata.appcat.vshn.io/serviceprovider: csp-a
+    - matchLabels:
+        metadata.appcat.vshn.io/serviceprovider: csp-b
+  mandatoryProvidedService: "true" <2>
+  defaultBillingEntityRef: "be-42" <3>
+  mandatoryLegalAcceptance: "true" <4>
+----
+<1> Array of label selectors to filter the available services in the organization origin. Entries in the array will be combined with an `OR` operation.
+<2> Require `ProvidedService` to enable access to services
+<3> An optional reference to a https://kb.vshn.ch/appuio-cloud/references/architecture/control-api-billing-entity.html[`BillingEntity`]
+<4> When set to true, the Organization needs to accept the legal terms before it is allowed to use the platform. TODO via "Organization" resource or via "BillingEntity"? Where should it land in the end? In VSHN Central?
+
+This configuration can be overwritten per organization namespace with annotations, for example to give access to "beta" services or additional zones.
+
+=== Organization Billing Entity
+
+Each organization needs a reference to a https://kb.vshn.ch/appuio-cloud/references/architecture/control-api-billing-entity.html[`BillingEntity`] so that we know where to send invoices to.
+
+We introduce a new field on the `Organization` resource kind under the status sub-resource called `.status.effectiveBillingEntityRef`.
+This new field contains the effective reference to the `BillingEntity`, to be used for all processes needing a reference to the `BillingEntity`.
+
+When the organization origin configuration has `.spec.defaultBillingEntityRef` configured, this will be used for the `.status.effectiveBillingEntityRef` field.
+Otherwise the content of `.spec.billingEntityRef` from the `Organization` resource itself is used.
+
+== Service Catalog
+
+The service catalog is composed of the available https://docs.crossplane.io/v1.18/concepts/compositions/[Crossplane Compositions^].
+The Compositions define the exact characteristic of a service, exposing all the possible parameters via the https://docs.crossplane.io/v1.18/concepts/composite-resource-definitions/[Crossplane Composite Resource Definitions (XRD)^].
+
+The service catalog is defined on the CCP by adding the necessary configurations via a Project Syn Commodore Component.
+The XRD for each service on the CCP is exactly the same as the one on the CSPCP, the differentiation lies in the https://docs.crossplane.io/latest/concepts/composite-resources/#composition-selection[`spec.compositionRef`^].
+
+Depending on which Composition is selected, the service is instantiated at a different place (for example service provider zone).
+This allows for true portability, the API spec per service is the same, no matter if the service is provisioned on the CCP, on a CSPCP or directly in a cluster.
+
+The Composition on the CCP wraps the Claim in an `Object` type from https://github.com/crossplane-contrib/provider-kubernetes[provider-kubernetes^].
+It has `spec.providerConfigRef.name` set to the CSPCP which handles selection of the worker cluster for the service instance.
+This means we need a Composition for each Service/CSPCP combination.
+
+In the <<Organization Origin Configuration>> we have a label selector for the Compositions configured, which is used to select the Compositions available to the organization.
+This automatically includes which XRDs are available.
+
+Access to list the available XRDs and Compositions on cluster scope is denied to users of the CCP.
+See <<Listing>> on how the service catalog is made available.
+
+.Example Composition
+[source,yaml]
+----
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  labels:
+    metadata.appcat.vshn.io/serviceprovider: exoscale
+    metadata.appcat.vshn.io/zone: de-fra-1
+    metadata.appcat.vshn.io/servicename: VSHNPostgreSQL
+    metadata.appcat.vshn.io/description: PostgreSQL by VSHN
+    metadata.appcat.vshn.io/displayname: PostgreSQL by VSHN
+    metadata.appcat.vshn.io/end-user-docs-url: https://vs.hn/vshn-postgresql
+    metadata.appcat.vshn.io/product-description: https://products.docs.vshn.ch/products/appcat/postgresql.html
+  name: de-fra-1.exoscale.vshnpostgres.vshn.appcat.vshn.io
+spec:
+  compositeTypeRef:
+    apiVersion: vshn.appcat.vshn.io/v1
+    kind: XVSHNPostgreSQL
+  mode: Pipeline
+  pipeline:
+  - step: patch-and-transform
+    functionRef:
+      name: function-patch-and-transform
+    input:
+      apiVersion: pt.fn.crossplane.io/v1beta1
+      kind: Resources
+      resources:
+      - name: claim-transfer-to-ccsp
+        base:
+          apiVersion: kubernetes.crossplane.io/v1alpha2
+          kind: Object
+          spec:
+            forProvider:
+              manifest:
+                apiVersion: vshn.appcat.vshn.io/v1
+                kind: VSHNPostgreSQL
+            providerConfigRef:
+                name: exoscale-de-fra-1
+        patches: <1>
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec
+          toFieldPath: spec.forProvider.manifest.spec
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata
+          toFieldPath: spec.forProvider.manifest.metadata
+  writeConnectionSecretsToNamespace: syn-crossplane
+----
+<1> We want to transfer the whole manifest
+
+As we need several combinations of Compositions where only the CSPCP connection details are different they are generated via a Project Syn Commodore Component.
+
+=== Listing
+
+The available service catalog is subject to the organization, and specifically it's origin configuration.
+Therefore, the catalog of available services is made available in the organization's context through multiple instances of a namespaced resource called `ServiceOffering`.  
+
+A CRD `ServiceOffering` is provided. Instances of this kind are reconciled into the organization namespaces.
+
+This allows to query the available services using `kubectl -n myorg get serviceoffering`.
+
+[mermaid,listing,png]
+....
+flowchart TD
+    A[Start] --> B[Get all namespaces with label appuio.io/resource.type=organization]
+    B --> C["For each namespace:<br/>Get OrganizationOriginConfig using label<br/>vshn.io/organization-ref-name"]
+    
+    C --> D{OrgConfig<br/>exists?}
+    D -- No --> E["Skip namespace<br/>Delete existing ServiceOffering"]
+    
+    D -- Yes --> F["Get all Compositions matching<br/>OrganizationOriginConfig.spec.compositionSelector"]
+    F --> G{Found matching<br/>Compositions?}
+    G -- No --> E
+    
+    G -- Yes --> H{Is mandatoryProvidedService<br/>true?}
+    
+    H -- Yes --> I["For each ProvidedService<br/>in namespace"]
+    I --> J{"Does ProvidedService.spec.compositionSelector<br/>match found Composition?"}
+    J -- Yes --> K["Set available='true'<br/>in ServiceOffering"]
+    J -- No --> L["Set available='false'<br/>in ServiceOffering"]
+    
+    H -- No --> M["Create ServiceOffering resources<br/>with available='true'<br/>for all found Compositions"]
+    K --> M
+    L --> M
+    
+    M --> N["Delete ServiceOffering that don't<br/>match any found Composition"]
+    E --> O[End]
+    N --> O
+    
+    style E fill:#ffe6e6,stroke:#333,stroke-width:1px
+    style M fill:#e6ffe6,stroke:#333,stroke-width:1px
+    style N fill:#fff0e6,stroke:#333,stroke-width:1px
+....
+
+When `mandatoryProvidedService` in the origin configuration is enabled, the `ProvidedService` resource kind define which services are available for provisioning.
+
+When the `ProvidedService` has a `spec.deletionTimestamp` set, the service is disabled for provisioning.
+
+.Example Service Offering
+[source,yaml]
+----
+apiVersion: appcat.vshn.io/v1
+kind: ServiceOffering
+metadata:
+  name: ExoscaleDEFRA1VSHNPostgreSQL
+spec:
+  XrdGVK: vshn.appcat.vshn.io/v1/VSHNPostgreSQL
+  compositionRef: de-fra-1.exoscale.vshnpostgres.vshn.appcat.vshn.io
+  serviceProvider: exoscale
+  zone: de-fra-1
+  displayName: PostgreSQL by VSHN at Exoscale DE-FRA-1
+  userDocs: https://vs.hn/vshn-postgresql
+  available: "true" <1>
+----
+<1> Can the service be provisioned? When false, it's a listing only service.
+
+=== ProvidedService
+
+The optional namespaced `ProvidedService` resource kind is used to filter service availability to an Organization.
+
+.Example
+[source,yaml]
+----
+apiVersion: appcat.vshn.io/v1
+kind: ProvidedService
+metadata:
+  name: ExoscaleGVA1VSHNPostgreSQL
+  namespace: $organization
+spec:
+  compositionSelector: <1>
+    metadata.appcat.vshn.io/serviceprovider: exoscale
+    metadata.appcat.vshn.io/zone: de-fra-1
+    metadata.appcat.vshn.io/servicename: VSHNPostgreSQL
+  deletionTimestamp: "Mon, 02 Dec 2024 16:15:25 +0100" <2>
+----
+<1> Label selector to filter the available services in the organization origin
+<2> Timestamp when the ProvidedService has been marked as deleted
+
+The deletion timestamp can be used to mark a `ProvidedService` as deleted so that a cleanup of resources can happen for example after a deletion grace period.
+
+Kubernetes RBAC rules only allows restricted access.
+The user isn't allowed to create, edit or delete this resource.
+
+This resource kind is also used in xref:reference/exoscale-osbapi.adoc[] to track the state in the OSB API.
+
+== Service Provisioning
+
+The CSPCP is an independent Control Plane which also could be used without the CCP.
+
+The CCP acts like "a user" of the CSPCP and therefore places Claims into an organization namespace at the CSPCP.
+This Claim is then reconciled into the service instance.
+
+[mermaid,svcprov,png]
+....
+sequenceDiagram
+    autonumber
+    actor EU as User
+    participant CCP as Central Control Plane
+    participant CSPCP as CSP Control Plane
+    participant WRK as Worker Cluster / Zone
+
+    EU->>CCP: Create Claim
+    Note over EU, CCP: E.g. VSHNPostgreSQL
+    CCP->>CCP: Validate Claim
+    CCP->>CSPCP: Create Claim
+    Note over CCP, CSPCP: Wrapped in "Object"
+    CSPCP->>WRK: Create Instance
+    Note over CSPCP, WRK: Standard procedure
+    WRK->>CSPCP: Created
+    CSPCP->>CCP: Created
+    CCP->>EU: Created
+....
+
+.Example
+[source,yaml]
+----
+apiVersion: vshn.appcat.vshn.io/v1
+kind: VSHNPostgreSQL
+metadata:
+  name: pgsql-app1-prod 
+  namespace: prod-app 
+spec:
+  writeConnectionSecretToRef:
+    name: postgres-creds 
+  compositionRef:
+    name: de-fra-1.exoscale.vshnpostgres.vshn.appcat.vshn.io
+----
+
+=== Connection Secrets
+
+Connection secrets are made available in the organization namespace through standard Crossplane functionality.
+By specifying `spec.writeConnectionSecretToRef` the connection details are written to the named secret.
+
+=== Dynamic Data
+
+There is some dynamic data on the CSPCPs which needs to be made available on the CCP.
+For example the backup listing is fully dynamic.
+
+For that, a API server is proxying these resources on the CCP from the CSPCPs.
+
+=== Service Access
+
+As the service instances are running on Worker Clusters, services are exposed there and the user directly connects to the service on the Worker Cluster.
+No access is provided to the CSPCP.
+
+=== Admission Control
+
+Addition validation is needed of every service instance, besides the normal service spec validation:
+
+* Is the service actually allowed (GVK of the service)?
+* Is the the Composition in `spec.compositionRef` allowed?
+
+This validation is basically the same procedure as in <<Listing>>, only services from the available catalog are allowed to be instantiated.
+
+=== Organization Namespace on CSPCP
+
+An Organization namespace is required on each CSPCP where a service is provisioned, to place the Claim into it.
+
+For that we use `provider-kubernetes` as we already have the configuration available.
+The Composition Function handles the creation of the Namespace and does observe only on it.
+
+Removal of Organization namespaces is handled in a CronJob which checks for empty namespaces and removes them.
+No Namespace removal is conducted with Crossplane.
+
+== Service Deprovisioning
+
+Service deprovisioning happens by deleting the Claim in the CCP.
+It has the same deletion protection like on the CSPCP.
+
+== Control Plane Deployment
+
+All control planes are running in a https://www.vcluster.com/[vcluster^].
+This allows for portability and a flexible deployment.
