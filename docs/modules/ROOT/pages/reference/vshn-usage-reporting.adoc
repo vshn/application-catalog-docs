@@ -49,7 +49,7 @@ The rule is enriched with additional labels, such as `tenant_name`, `tenant_id`,
 
 == APPUiO Cloudscale CronJobs
 
-The component-appcat creates CronJobs that run every hour, as specified by the cron expression 30 * * * *.
+The component-appcat creates CronJobs that run every hour, as specified by the default cron expression `30 * * * *`.
 These jobs are organized by service type (for example - Redis, MinIO), service category (APPUiO Managed or Cloud), and SLA (best-effort or guaranteed).
 
 Example: A CronJob for Redis on APPUiO Managed with a best-effort SLA is named `appcat-vshn-redis-besteffort-managed`.
@@ -73,10 +73,11 @@ This configuration is abridged from the https://github.com/vshn/component-appcat
 billing:
   vshn:
     enableCronjobs: false
-    schedule: 30 * * * *
-    # Deploy metering prometheus rules
-    meteringRules: true
+    schedule: 30 * * * * <1>
+    meteringRules: true <2>
 ----
+<1> Data is collected every hour from 00:30.
+<2> Whether to deploy deploy metering rules.
 
 == Odoo Integration
 
