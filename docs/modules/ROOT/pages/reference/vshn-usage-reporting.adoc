@@ -1,21 +1,92 @@
 = VSHN Based AppCat Services
 
-This page will explain how the VSHN based services will be handled for the usage reporting.
-The source metrics for these services are completely under our own control and can be adjusted to fit the new solution.
+This page explains how VSHN based services handle usage reporting.
 
-The current billing model follows closely with the https://kb.vshn.ch/appuio-cloud/references/architecture/metering-data-flow-odoo8.html[legacy billing model of APPUiO Cloud itself].
-The necessary metrics are fed into Prometheus/Mimir and then processed via further tooling.
-Based on that, we can adapt to the new Prometheus/Mimir workflows.
+== Data Flow Overview
 
-We will keep using Prometheus Recording Rules.
-They serve a few purposes:
+image::vshn-based-billing-flow.svg[VSHN]
 
-* Aligning the metrics, so every AppCat Service produces exactly the same without any additional configuration
-* Reduce the amount of metrics sent to Mimir
-* Simplify the queries needed in the https://kb.vshn.ch/appuio-cloud/references/architecture/metering-data-flow-appuio-cloud.html#_data_flow_overview[later data flow process].
+The usage reporting process involves four main steps, where data is gathered and transferred across multiple applications:
 
-== APPUiO Cloud
-We will be adapting Aldebaran's https://kb.vshn.ch/appuio-cloud/references/architecture/metering-data-flow-appuio-cloud.html[Resource Usage Reporting for APPUiO Cloud]
+Data is gathered and exposed through AppCat composition functions.
+Data is sent to Prometheus at the cluster level.
+Data is sent to Mimir at the organization level.
+Data is sent to Odoo using CronJobs on the APPUiO Cloudscale cluster.
 
-== APPUiO Managed
-We will be adapting Aldebaran's https://kb.vshn.ch/oc4/references/architecture/metering-data-flow-appuio-managed.html[Resource Usage Reporting for APPUiO Managed]
+== Data in AppCat Composition Functions
+
+Service usage data is collected via the `AddBilling()` composition function for each service instance.
+A PrometheusRule is created with the following example rule:
+
+[code, yaml]
+----
+  - expr: vector(1) <1>
+    labels: <2>
+      label_appcat_vshn_io_claim_name: my-postgres-name
+      label_appcat_vshn_io_claim_namespace: my-postgres-namespace
+      label_appcat_vshn_io_sla: besteffort
+      label_appuio_io_billing_name: appcat-postgresql
+      label_appuio_io_organization: vshn
+    record: appcat:metering <3>
+----
+<1> Instant Vector: Wraps the number of nodes for the service instance (for example - 3 for HA setups, 1 for single-node setups).
+<2> Labels: Identify the service instance and are essential for usage reporting.
+<3> Recording Rule: Name of the precomputed Prometheus query.
+
+The distinction between Cloud and Managed services is made using the salesOrder parameter, passed via a component from the cluster's facts.
+If this parameter exists, the service is considered APPUiO Managed, and the `sales_order` label is added to the `appcat:metering` recording rule.
+
+== Data in Prometheus
+
+Service usage data is stored in Prometheus and is accessible through the `appcat:metering` recording rule.
+A time series is created for each service instance, capturing the usage metrics.
+
+== Data in Mimir
+
+The data is then collected in the centralized time-series database, https://insights.appuio.net/?orgId=1[Mimir].
+In the Explore tab, the appcat:metering recording rule displays metrics from all clusters using AppCat services.
+The rule is enriched with additional labels, such as `tenant_name`, `tenant_id`, `cluster_id`, and `cluster_name`.
+
+== APPUiO Cloudscale CronJobs
+
+The component-appcat creates CronJobs that run every hour, as specified by the default cron expression `30 * * * *`.
+These jobs are organized by service type (for example - Redis, MinIO), service category (APPUiO Managed or Cloud), and SLA (best-effort or guaranteed).
+
+Example: A CronJob for Redis on APPUiO Managed with a best-effort SLA is named `appcat-vshn-redis-besteffort-managed`.
+
+Since billing is calculated per minute, the data from the initial recording rule is adjusted.
+The following query ensures minute-based billing:
+
+[code, yaml]
+----
+sum_over_time(appcat:metering{labels...}[59m:1m]) / 60
+----
+
+The CronJobs are configurable via component-appcat.
+
+=== Example Configuration
+
+This configuration is abridged from the https://github.com/vshn/component-appcat/blob/master/class/defaults.yml[existing config].
+
+[code:yaml]
+----
+billing:
+  vshn:
+    enableCronjobs: false
+    schedule: 30 * * * * <1>
+    meteringRules: true <2>
+----
+<1> Data is collected every hour from 00:30.
+<2> Whether to deploy deploy metering rules.
+
+== Odoo Integration
+
+Data is processed in Odoo via a https://central.vshn.ch/web#action=1172&model=queue_message.metered_usage&view_type=list&menu_id=587&cids=1[Job Queue].
+Each job corresponds to a CronJob, and you can view messages that are either accepted or rejected.
+If accepted, data is accessible and filterable on the https://central.vshn.ch/web#action=1171&model=vshn.metered.usage&view_type=list&menu_id=216&cids=1[Sales] webpage.
+
+NOTE: Some links may require permissions and might not be accessible if you lack the necessary rights.
+
+=== Data Model and Flow
+
+See the https://docs.central.vshn.ch/metered-billing-data-flow.html[Data Model and Flow] for a generic overview of the data flow for Odoo.
