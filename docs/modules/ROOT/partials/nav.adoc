@@ -128,6 +128,9 @@
 
 ** xref:app-catalog:ROOT:how-tos/haproxy/stats.adoc[HAProxy]
 
+* HowTos
+** xref:app-catalog:ROOT:how-tos/appcat/backfill_billing.adoc[]
+
 * Runbooks
 ** PostgreSQL By VSHN
 *** xref:app-catalog:ROOT:how-tos/appcat/vshn/postgres/PostgreSQLConnectionsCritical.adoc[]
