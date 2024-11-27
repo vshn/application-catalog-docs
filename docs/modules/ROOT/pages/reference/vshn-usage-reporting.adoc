@@ -90,3 +90,9 @@ NOTE: Some links may require permissions and might not be accessible if you lack
 === Data Model and Flow
 
 See the https://docs.central.vshn.ch/metered-billing-data-flow.html[Data Model and Flow] for a generic overview of the data flow for Odoo.
+
+== Special testing namespace
+
+On each APPUiO cluster there's a special testing namespace that will not create any usage reporting.
+
+It's usually `vshn-test`, it's defined in `appcat.billing.ignoreNamespace` in the component-appcat.
