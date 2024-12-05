@@ -1,4 +1,4 @@
-= Separate Control Plane from Service Clusters
+= Pitfalls
 
 This page shows the pitfalls and gotchas that we need to keep in mind if we develop for a split architecture.
 
