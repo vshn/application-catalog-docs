@@ -4,6 +4,7 @@
 ** xref:app-catalog:ROOT:explanations/app_catalog.adoc[Concept]
 ** xref:app-catalog:ROOT:reference/glossary.adoc[]
 * Architecture
+** xref:app-catalog:ROOT:reference/arch-control-plane.adoc[]
 ** AppCat Usage Reporting
 *** xref:app-catalog:ROOT:reference/vshn-usage-reporting.adoc[]
 *** xref:app-catalog:ROOT:reference/cloud-usage-reporting.adoc[]
@@ -32,8 +33,9 @@
 *** xref:app-catalog:ROOT:reference/billing-appuio.adoc[Billing on APPUiO Cloud]
 *** xref:app-catalog:ROOT:reference/billing-naming.adoc[]
 
-* Exoscale DBaaS
+* Exoscale
 ** xref:app-catalog:ROOT:how-tos/exoscale_dbaas/price-api.adoc[Exoscale Price API]
+** xref:app-catalog:ROOT:reference/exoscale-osbapi.adoc[]
 ** Runbooks
 *** xref:app-catalog:ROOT:runbooks/exoscale/restore_dbaas.adoc[]
 
