@@ -11,7 +11,9 @@
 ** xref:app-catalog:ROOT:reference/service-maturity.adoc[]
 ** xref:app-catalog:ROOT:reference/framework-requirements.adoc[]
 ** xref:app-catalog:ROOT:reference/slareports.adoc[]
-** xref:app-catalog:ROOT:reference/control-plane-architecture.adoc[]
+** Separate Control Plane from Service Clusters
+*** xref:app-catalog:ROOT:reference/control-plane-pitfalls.adoc[]
+*** xref:app-catalog:ROOT:reference/sli-prober-architecture.adoc[]
 ** xref:app-catalog:ROOT:reference/ci-cd.adoc[]
 ** xref:app-catalog:ROOT:reference/quality-requirements.adoc[Quality Requirements]
 *** xref:app-catalog:ROOT:reference/quality-requirements/maintainability/readiness-standards.adoc[Maintainability]
