@@ -65,7 +65,6 @@ The API currently https://community.exoscale.com/documentation/vendor/marketplac
 * Service instance update (plan changes, suspensions, user sync)
 * Service instance deprovisioning
 * Synchronous requests support
-* CloudFoundry platform compatibility mode
 
 == Service Listing
 
@@ -126,7 +125,7 @@ PUT http://exo-osbapi.vshn.net/v2/service_instances/:instance_id
     "service_id": "service-test-guid", <1>
     "plan_id": "plan1-test-guid", <2>
     "organization_guid": "org-guid-here", <3>
-    "space_guid": "space-guid-here", <3>
+    "space_guid": "org-guid-here", <3>
     "parameters": {
         "users": [ <4>
             {
@@ -137,13 +136,16 @@ PUT http://exo-osbapi.vshn.net/v2/service_instances/:instance_id
         ]
     },
     "context": {
+        "platform": "exoscale",
         "organization_guid": "org-guid-here", <3>
-        "space_guid": "space-guid-here", <3>
+        "space_guid": "org-guid-here", <3>
+        "organization_name": "organization-name",
+        "organization_display_name": "organization-display-name",
     }
 }
 ----
-<1> The UUID of the service on VSHN side
-<2> The UUID of the plan on VSHN side
+<1> The ID of the service on VSHN side
+<2> The ID of the plan on VSHN side
 <3> The Exoscale organization UUID
 <4> List of users
 
@@ -160,19 +162,18 @@ Sources:
 On the xref:reference/arch-control-plane.adoc[] an `Organization` object is created by the OSB API if it doesn't exist yet.
 
 Organization Object Name::
-We use the Exoscale organization UUID for the object name `metadata.name`, prefixed by `exo-`.
+We use the Exoscale organization UUID for the object name `.metadata.name`, prefixed by `exo-`.
 
 Organization Display Name::
-The display name `spec.displayName` is set to the name of the Exoscale organization.
-TODO: How do we get this name?
+The display name `.spec.displayName` is set to the name of the Exoscale organization in `.context.organization_display_name`
 
 Organization Origin::
-The origin `spec.origin` is set to "Exoscale" (hardcoded in the OSB API service)
+The field `.spec.originRef` is set to `exoscale` (hardcoded in the OSB API service)
 
 Invitation::
-When the Organization is created the first time, an https://kb.vshn.ch/appuio-cloud/references/architecture/control-api-invitation.html[`Invitation`^] object is created, sending an invitation to the user in the field `parameters.users[0].email` from the OSB API.
+When the Organization is created the first time, an https://kb.vshn.ch/appuio-cloud/references/architecture/control-api-invitation.html[`Invitation`^] resource is created, sending an invitation to the user in the field `parameters.users[0].email` from the OSB API.
 
-To keep track of provisioning requests and enabling access to services, we store an `ProvidedService` (see xref:reference/arch-control-plane.adoc[]) object in the organization namespace, containing all the details of the provisioning call, including `.status` which stores the details what happened (for example organization created or already existed, Exoscale API informed, ...)
+To keep track of provisioning requests and enabling access to services, we store a `ProvidedService` (see xref:reference/arch-control-plane.adoc[]) resource in the organization namespace, containing all the details of the provisioning call, including `.status` which stores the details what happened (for example organization created or already existed, Exoscale API informed, ...)
 
 === Suspension
 
