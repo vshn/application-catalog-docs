@@ -39,6 +39,8 @@ As a user of the service I can:
 * disable Backup on a service instance
 * request a restore for a service instance
 
+The backup includes e2e tests.
+
 See also:
 
 * xref:reference/quality-requirements/portability/backup-exports.adoc[Backups Can Be Exported]
