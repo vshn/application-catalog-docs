@@ -1,0 +1,71 @@
+= Odoo Hosting Architecture
+
+Odoo will be hosted together with Mint System.
+
+== Ordering and Subscription
+
+Ordering and subscriptions will be handled by an Odoo Webshop.
+This webshop handles all important steps like creating, updating or deleting an Odoo instance, as well as the whole billing processes.
+
+It connects to the xref:reference/arch-control-plane.adoc[] and works directly with `VSHNOdoo` objects.
+
+== API
+
+.Example
+[source,yaml]
+----
+apiVersion: vshn.appcat.vshn.io/v1
+kind: VSHNOdoo
+metadata:
+  name: acme
+  namespace: odoos
+spec:
+  parameters:
+    service:
+      majorVersion: "18" 
+    size: 
+      plan: plus-4
+    backup: 
+      schedule: "30 23 * * *"
+      retention: 12
+  writeConnectionSecretToRef:
+    name: postgres-creds 
+----
+
+== Deployment
+
+An Odoo deployment consists of several Kubernetes resources:
+
+* Deployment
+* Service
+* Ingress
+* PVC
+
+These Kubernetes resources are defined in the Crossplane Composition and are delivered using `provider-kubernetes` to the worker cluster.
+
+=== Performance Configuration
+
+TODO
+
+* Requests / Limits
+* Workers
+
+== Container Image
+
+TODO
+
+== Odoo Addon handling
+
+TODO
+
+== Database
+
+Odoo makes heavy use of PostreSQL.
+The database instance is provided by https://products.vshn.ch/appcat/postgresql.html[PostgreSQL by VSHN^].
+
+== Links
+
+* https://wiki.mint-system.ch/mint-cloud-spezifikation.html[Mint Cloud^]
+* https://wiki.mint-system.ch/specification-website-sale-kubernetes-subscription-oca.html[Specification Website Sale Kubernetes Subscription OCA^]
+* https://wiki.mint-system.ch/specification-git-kubernetes.html[Specification Git Kubernetes^]
+* https://wiki.mint-system.ch/mint-cloud.html[Mint Cloud^] // https://wiki.mint-system.ch/uri-cloud.html[Uri Cloud^]
