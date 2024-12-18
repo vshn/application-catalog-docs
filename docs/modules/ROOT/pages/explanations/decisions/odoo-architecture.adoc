@@ -1,15 +1,125 @@
 = Odoo Hosting Architecture
 
 Odoo will be hosted together with Mint System.
+This page describes the VSHN AppCat integration and how this all plays together.
 
 == Ordering and Subscription
 
 Ordering and subscriptions will be handled by an Odoo Webshop.
-This webshop handles all important steps like creating, updating or deleting an Odoo instance, as well as the whole billing processes.
+It handles all important steps like creating, updating or deleting an Odoo instance, as well as the whole billing processes.
+
+See https://wiki.mint-system.ch/mint-cloud-spezifikation.html[Mint Cloud Spezifikation^] for more information about this webshop.
 
 It connects to the xref:reference/arch-control-plane.adoc[] and works directly with `VSHNOdoo` objects.
 
-== API
+== Interface with VAMP
+
+=== Variant 1: Open Service Broker API
+
+Odoo uses the Open Service Broker API to enable access to a service on the VSHN Application Marketplace, similar to how it's done in xref:reference/exoscale-osbapi.adoc[].
+
+[mermaid,archosb,png]
+....
+flowchart TB
+    webshop["Mint / Uri Cloud"]
+    eu("End-User (Service buyer)")
+    osbapi["Odoo Webshop OSB API"]
+    vshnccpapi["Application Marketplace API"]
+    vshnccpui["Application Marketplace Portal"]
+
+    webshop-- OpenServiceBroker API -->osbapi-- K8s API --> vshnccpapi
+    eu-- WebUI -->webshop
+    eu-- WebUI -->vshnccpui-- K8s API --> vshnccpapi
+....
+
+==== Flow
+
+[mermaid,flowosb,png]
+....
+sequenceDiagram
+    autonumber
+    actor EU as End-User<br/>(Service buyer)
+    participant ODOO as Odoo Webshop
+    participant OSB as Odoo Webshop OSB API
+    participant CCP as Central Control Plane API
+    participant CCPUI as Central Control Plane WebUI
+
+    EU->>ODOO: Register in Webshop
+    EU->>ODOO: Buy Service<br/>(enable subscription)
+    ODOO->>OSB: Enable Service Access
+    alt New Organization
+        OSB-->>CCP: Create "Organization"
+        CCP-->>EU: Send invitation to Organization
+    end
+    OSB->>CCP: Enable Service Access
+    CCP->>EU: Send Service Welcome Mail
+    EU->>CCPUI: Configure and enable service
+    CCPUI->>CCP: Manage Kubernetes Resource
+    CCP->>CCP: Provision Service
+    ODOO->>EU: Send invoice
+....
+
+==== Pros / Cons
+
+Pros::
+* Same multi-CSP processes as for Exoscale
+* Easily reusable for other webshops
+* Organization creation is handled automatically
+* Full flexibility for configuration for the Odoo service
+* Simple integration in Odoo
+
+Cons::
+* Limited features on the Odoo Webshop site
+* Two differents portals for the end-user to navigate in
+
+=== Variant 2: Kubernetes API
+
+[mermaid,archk8s,png]
+....
+flowchart TB
+    webshop["Mint / Uri Cloud"]
+    eu("End-User (Service buyer)")
+    vshnccpapi["Application Marketplace API"]
+
+    webshop-- K8s API --> vshnccpapi
+    eu-- WebUI -->webshop
+....
+
+==== Flow
+
+[mermaid,flowk8s,png]
+....
+sequenceDiagram
+    autonumber
+    actor EU as End-User<br/>(Service buyer)
+    participant ODOO as Odoo Webshop
+    participant CCP as Central Control Plane API
+
+    EU->>ODOO: Register in Webshop
+    EU->>ODOO: Buy Service<br/>(enable subscription)
+    alt New Organization
+        ODOO-->>CCP: Create "Organization"
+    end
+    EU->>ODOO: Configure Service
+    ODOO->>CCP: Manage Kubernetes Resource
+    CCP->>CCP: Provision Service
+    ODOO->>EU: Send invoice
+....
+
+==== Pros / Cons
+
+Pros::
+* One portal for the customer
+* Simpler architecture
+
+Cons::
+* More implementation work on Odoo side
+* "Duplicate" implementation, CCP portal does the same (service provisioning)
+* Organization creation must be more strict on CCP
+
+== Composite Resource Definition
+
+An example Claim to show how it could look like:
 
 .Example
 [source,yaml]
@@ -18,7 +128,7 @@ apiVersion: vshn.appcat.vshn.io/v1
 kind: VSHNOdoo
 metadata:
   name: acme
-  namespace: odoos
+  namespace: company-1
 spec:
   parameters:
     service:
@@ -29,10 +139,12 @@ spec:
       schedule: "30 23 * * *"
       retention: 12
   writeConnectionSecretToRef:
-    name: postgres-creds 
+    name: odoo-creds 
 ----
 
 == Deployment
+
+TODO
 
 An Odoo deployment consists of several Kubernetes resources:
 
@@ -45,6 +157,8 @@ These Kubernetes resources are defined in the Crossplane Composition and are del
 
 === Performance Configuration
 
+To properly run Odoo on Kubernetes, certain parameters need to be properly tuned.
+
 TODO
 
 * Requests / Limits
@@ -54,13 +168,17 @@ TODO
 
 TODO
 
+* Where does it come from?
+
 == Odoo Addon handling
 
 TODO
 
+* How do we handle Odoo addons?
+
 == Database
 
-Odoo makes heavy use of PostreSQL.
+Odoo makes heavy use of PostgreSQL.
 The database instance is provided by https://products.vshn.ch/appcat/postgresql.html[PostgreSQL by VSHN^].
 
 == Links
