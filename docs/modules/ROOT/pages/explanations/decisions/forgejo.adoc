@@ -1,0 +1,153 @@
+= Forgejo / Codey
+
+== Introduction
+
+We install and manage a Forgejo instance.
+The differences between Forgejo by VSHN (the AppCat service) and Codey:
+
+Codey includes compute resources and has some restrictions and the configuration options.
+Forgejo by VSHN is just like any other AppCat service, available on all clusters where AppCat is installed and fully configurable.
+
+To begin with, we'll use the simplest possible configuration, not using any external services for database, cachec, etc.
+This also means there is no HA available.
+
+== Deployment
+
+Deployment and configuration of Forgejo happens with the official https://code.forgejo.org/forgejo-helm/forgejo-helm[upstream Helm Chart^] and the https://github.com/crossplane-contrib/provider-helm[Crossplane Provider for Helm].
+In the CompositeResourceDefinition (XRD) we expose all required parameters.
+
+=== AppCat Service
+
+TODO
+
+[source,yaml]
+----
+apiVersion: vshn.appcat.vshn.io/v1
+kind: VSHNForgejo
+metadata:
+  name: my-forgejo-prod
+spec:
+  writeConnectionSecretToRef:
+    name: forgejo-creds
+----
+
+=== Codey
+
+TODO
+
+[source,yaml]
+----
+apiVersion: vshn.appcat.vshn.io/v1
+kind: Codey
+metadata:
+  name: my-codey-prod
+spec:
+  writeConnectionSecretToRef:
+    name: codey-creds
+----
+
+== Forgejo Configuration
+
+=== Database
+
+There are several options for the database, most prominently PostgreSQL and SQLite.
+
+To begin with, we're using SQLite as the database backend, with the WAL mode.
+
+Once this is not enough anymore, we'll explore the options to use PostgreSQL as the backend and potentially migrate instances there should it be required.
+Migration to a different database can be done with the https://forgejo.org/docs/latest/admin/command-line/#dump[`forgejo dump`] command.
+
+Links:
+
+* https://forgejo.org/docs/latest/admin/recommendations/#databasedb_type[Recommended Settings and Tips: Database^]
+
+=== Storage
+
+We use local storage for everything, a PVC is mounted to `/data`.
+
+While we could also use object storage for most of the data, it complicates a lot.
+For example backup would become an additional burden, as well as storage space monitoring also won't be that easy anymore.
+And it's not possible to store Git repositories on object storage, this way we'd have multiple storage locations.
+
+Links:
+
+* https://forgejo.org/docs/latest/admin/storage/[Admin documentation: Storage^]
+
+=== Cache
+
+There are several options for caching, most prominently Redis and `twoqueue`.
+
+To begin with, we're using the `twoqueue` mechanisms.
+
+Once instances are growing, and we see issues with caching performance we'll switch to Redis by using https://products.vshn.ch/appcat/redis.html[Redis by VSHN^].
+We're forced to use TLS to connect to this Redis instance, which will impose some complexities making Forgejo aware of the CA certificate used to sign the TLS certificate.
+
+Links:
+
+* https://forgejo.org/docs/latest/admin/config-cheat-sheet/#cache-cache[Configuration Cheat Sheet: Cache^]
+* https://forgejo.org/docs/latest/admin/recommendations/#cacheadapter[Recommended Settings and Tips: Cache^]
+
+=== Queue
+
+There are several options for queuing, most prominently Redis and https://github.com/google/leveldb[LevelDB^].
+
+To begin with, we're using the `level` mechanisms.
+
+As with <<Cache>>, we intend to use Redis once it's necessary to do so.
+
+Links:
+
+* https://forgejo.org/docs/latest/admin/config-cheat-sheet/#queue-queue-and-queue[Configuration Cheat Sheet: Queue^]
+
+
+== Backup and Restore
+
+Two mechanisms are used for Backup:
+
+File-based data::
+K8up regularly stores the content of `/data` in the backup destination.
+
+Database::
+A sidecar container running https://litestream.io/guides/kubernetes/[Litestream^] takes care of making sure the database is always safe.
+Injection of the sidecar happens via https://github.com/crossplane/crossplane/blob/main/design/one-pager-helm-provider.md#post-rendering-patches[Post Rendering Patches^] in `provider-helm`.
+
+To restore an instance ... TODO
+
+== Monitoring
+
+TODO
+
+* Expose application metrics and collect them
+* Grafana Dashboards
+* Alerts on certain metrics
+* Classic HTTPS check
+
+== E-Mail Sending
+
+TODO
+
+* Codey: Send via Mailgun from @codey.ch
+* Forgejo by VSHN: Must be manually configured
+
+== Supported Forgejo Features
+
+* Git LFS
+* Git access only HTTPS
+* Actions: BYO Runner right now
+* E-Mail sending
+* Exposed configuration options
+
+== Links
+
+* https://code.forgejo.org/forgejo-helm/forgejo-helm[Official Helm Chart^]
+* https://forgejo.org/docs/latest/[Forgejo Documentation^]
+* https://code.forgejo.org/infrastructure/k8s-cluster[Forgejo project infrastructure^]
+
+== Example Helm Values
+
+[source,yaml]
+----
+include::attachment$example-forgejo-helm-values.yaml[]
+----
+
+Download: xref:attachment$example-forgejo-helm-values.yaml[example-forgejo-helm-values.yaml]
