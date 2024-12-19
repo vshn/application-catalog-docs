@@ -84,3 +84,7 @@ gitea:
     indexer:
       ISSUE_INDEXER_TYPE: bleve
       REPO_INDEXER_ENABLED: true
+    security:
+      REVERSE_PROXY_TRUSTED_PROXIES: "*"
+    metrics:
+      ENABLED: true

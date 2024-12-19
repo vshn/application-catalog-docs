@@ -5,20 +5,41 @@
 We install and manage a Forgejo instance.
 The differences between Forgejo by VSHN (the AppCat service) and Codey:
 
-Codey includes compute resources and has some restrictions and the configuration options.
+Codey includes compute resources and only offers restricted configuration options.
 Forgejo by VSHN is just like any other AppCat service, available on all clusters where AppCat is installed and fully configurable.
 
-To begin with, we'll use the simplest possible configuration, not using any external services for database, cachec, etc.
+To begin with, we'll use the simplest possible configuration, not using any external services for database, caches, etc.
 This also means there is no HA available.
+
+== Restrictions on Forgejo Features
+
+Du to technical limitations, we cannot support all possible features of Forgejo.
+This section lists these restrictions.
+
+Git access::
+Git access is only possible via HTTPS, SSH is not supported.
+Supporting SSH would require to expose a TCP service which inclines the use of a `LoadBalancer` type service.
+While not impossible, it complicates the configuration by a lot.
+
+Forgejo Actions::
+Forgejo Actions are fully supported, but the Actions runner need to be provided by the user right now.
+We plan to add a managed runner in the future as well.
+
+Exposed configuration options::
+Many features of Forgejo are configured in the `app.ini` file and not via the web interface.
+We expose https://forgejo.org/docs/latest/admin/config-cheat-sheet/[configuration options^] through the <<Deployment>> configuration.
 
 == Deployment
 
 Deployment and configuration of Forgejo happens with the official https://code.forgejo.org/forgejo-helm/forgejo-helm[upstream Helm Chart^] and the https://github.com/crossplane-contrib/provider-helm[Crossplane Provider for Helm].
 In the CompositeResourceDefinition (XRD) we expose all required parameters.
 
+We differentiate between the AppCat service and Codey, exposing a different XRD depending on the chosen service.
+
 === AppCat Service
 
-TODO
+The AppCat Service exposes many configuration options.
+This also implies that the user has to take care of several configuration options themselves, like configuring a suitable SMTP server.
 
 [source,yaml]
 ----
@@ -27,13 +48,35 @@ kind: VSHNForgejo
 metadata:
   name: my-forgejo-prod
 spec:
+  parameters:
+    service:
+      majorVersion: "9"
+      fqdn: poc.mydomain.com
+      adminEmail: admin@example.com
+      forgejoSettings:
+        config: <1>
+          APP_NAME: "Codey PoC"
+          log:
+            LEVEL: "info"
+          server:
+            ROOT_URL: https://poc.codey.ch
+            DOMAIN: poc.codey.ch
+    backup: 
+      schedule: "30 23 * * *"
+      retention: 12
   writeConnectionSecretToRef:
     name: forgejo-creds
 ----
+<1> This is passed to the Helm chart at `.gitea`. Some values will be overwritten, some values will be added. To be figured out which exactly we allow.
+
+Injected configuration values:
+
+* `.gitea.admin`: Handled by the Composition and exposed to the connection secret.
 
 === Codey
 
-TODO
+Codey only offers few configuration options, compared to the AppCat version.
+It also has pre-defined plans which set the compute and storage requests and limits accordingly.
 
 [source,yaml]
 ----
@@ -42,11 +85,25 @@ kind: Codey
 metadata:
   name: my-codey-prod
 spec:
+  parameters:
+    service:
+      majorVersion: "9"
+      adminEmail: admin@example.com
+    size: 
+      plan: mini <1>
   writeConnectionSecretToRef:
     name: codey-creds
 ----
+<1> Plans from https://www.codey.ch/#Beginner[Codey Website^]. See also <<Kubernetes Resource Configuration>>.
+
+Notes:
+
+* The FQDN is automatically set to `.metadata.name`.app.codey.ch
+* We use a default configuration for all Codey instances, for example we use Mailgun to send E-Mail
 
 == Forgejo Configuration
+
+In this section the Forgejo configuration decisions are documented.
 
 === Database
 
@@ -63,7 +120,7 @@ Links:
 
 === Storage
 
-We use local storage for everything, a PVC is mounted to `/data`.
+We use local storage for everything, therefore a PVC is mounted to `/data`.
 
 While we could also use object storage for most of the data, it complicates a lot.
 For example backup would become an additional burden, as well as storage space monitoring also won't be that easy anymore.
@@ -77,10 +134,14 @@ Links:
 
 There are several options for caching, most prominently Redis and `twoqueue`.
 
-To begin with, we're using the `twoqueue` mechanisms.
+To begin with, we're using the `twoqueue` mechanisms with the recommended configuration for the `HOST` parameter:
+
+----
+{"size":100, "recent_ratio":0.25, "ghost_ratio":0.5} 
+----
 
 Once instances are growing, and we see issues with caching performance we'll switch to Redis by using https://products.vshn.ch/appcat/redis.html[Redis by VSHN^].
-We're forced to use TLS to connect to this Redis instance, which will impose some complexities making Forgejo aware of the CA certificate used to sign the TLS certificate.
+We're forced to use TLS to connect to this managed Redis instance, which will impose some complexities making Forgejo aware of the CA certificate used to sign the TLS certificate.
 
 Links:
 
@@ -99,43 +160,80 @@ Links:
 
 * https://forgejo.org/docs/latest/admin/config-cheat-sheet/#queue-queue-and-queue[Configuration Cheat Sheet: Queue^]
 
-
 == Backup and Restore
 
 Two mechanisms are used for Backup:
 
 File-based data::
 K8up regularly stores the content of `/data` in the backup destination.
+Restoring happens with K8up mechanisms to get the files back into the `/data` directory.
 
 Database::
 A sidecar container running https://litestream.io/guides/kubernetes/[Litestream^] takes care of making sure the database is always safe.
 Injection of the sidecar happens via https://github.com/crossplane/crossplane/blob/main/design/one-pager-helm-provider.md#post-rendering-patches[Post Rendering Patches^] in `provider-helm`.
+The database is automatically restored in the `initContainer` by Litestream should it be missing in the container.
 
-To restore an instance ... TODO
+== Metrics and Monitoring
 
-== Monitoring
+We enable the `/metrics` endpoint and scrape metrics accordingly.
+By using the provide https://codeberg.org/forgejo/forgejo/src/branch/forgejo/contrib/gitea-monitoring-mixin[Monitoring Mixin^] we get Grafana dashboards.
+
+Alerting is done on the availability of the service.
+
+== E-Mail
+
+Forgejo needs to send E-Mails and optionally can also receive E-Mails for issue handling.
+
+Sending::
+Codey uses Mailgun to send E-Mails with noreply@codey.ch as sender address.
+The AppCat version exposes the configuration parameters to configure the own SMTP service.
+
+Receiving::
+This is a manual configuration and only supported in the AppCat version.
+
+Links:
+
+* https://forgejo.org/docs/latest/admin/email-setup/[Email setup^]
+* https://forgejo.org/docs/latest/admin/incoming-email/[Incoming Email^]
+
+== Kubernetes Resource Configuration
+
+We set appropriate Kubernetes resources, depending on the service type.
+
+=== AppCat Service
 
 TODO
 
-* Expose application metrics and collect them
-* Grafana Dashboards
-* Alerts on certain metrics
-* Classic HTTPS check
+=== Codey
 
-== E-Mail Sending
+[cols=",,,",options="header"]
+|===
+|Plan
+|Requests
+|Limits
+|Storage
 
-TODO
+|Mini
+|Memory: XX, CPU: XX
+|Memory: XX, CPU: XX
+|10 GiB
 
-* Codey: Send via Mailgun from @codey.ch
-* Forgejo by VSHN: Must be manually configured
+|Small
+|Memory: XX, CPU: XX
+|Memory: XX, CPU: XX
+|50 GiB
 
-== Supported Forgejo Features
+|Medium
+|Memory: XX, CPU: XX
+|Memory: XX, CPU: XX
+|200 GiB
 
-* Git LFS
-* Git access only HTTPS
-* Actions: BYO Runner right now
-* E-Mail sending
-* Exposed configuration options
+|Large
+|Memory: XX, CPU: XX
+|Memory: XX, CPU: XX
+|500 GiB
+
+|===
 
 == Links
 
