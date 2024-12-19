@@ -1,17 +1,36 @@
 = Forgejo / Codey
 
-== Introduction
+This page discusses the technical details for our two products https://products.vshn.ch/appcat/forgejo.html[Forgejo by VSHN^] and https://products.vshn.ch/codey.html[Codey^]: Fully managed, dedicated https://forgejo.org/[Forgejo^] instances.
 
-We install and manage a Forgejo instance.
-The differences between Forgejo by VSHN (the AppCat service) and Codey:
+Main differences between Forgejo by VSHN (the AppCat service) and Codey:
 
-Codey includes compute resources and only offers restricted configuration options.
-Forgejo by VSHN is just like any other AppCat service, available on all clusters where AppCat is installed and fully configurable.
+[cols=",,",options="header"]
+|===
+|
+|Forgejo by VSHN
+|Codey
+
+h|Compute and Storage
+|not included
+|included
+
+h|Resource restrictions
+|depending on underlying infrastructure
+|constraint be the product plan
+
+h|Instance location
+|depends on the underlying cluster
+|pre-defined by Codey
+
+h|Configuration Flexibility
+|most options can be configured
+|only few options are exposed
+|===
 
 To begin with, we'll use the simplest possible configuration, not using any external services for database, caches, etc.
 This also means there is no HA available.
 
-== Restrictions on Forgejo Features
+== Restrictions of Forgejo Features
 
 Du to technical limitations, we cannot support all possible features of Forgejo.
 This section lists these restrictions.
@@ -22,7 +41,7 @@ Supporting SSH would require to expose a TCP service which inclines the use of a
 While not impossible, it complicates the configuration by a lot.
 
 Forgejo Actions::
-Forgejo Actions are fully supported, but the Actions runner need to be provided by the user right now.
+https://forgejo.org/docs/latest/admin/actions/[Forgejo Actions^] are fully supported, but the https://forgejo.org/docs/latest/admin/runner-installation/[Actions runner^] need to be provided by the user right now.
 We plan to add a managed runner in the future as well.
 
 Exposed configuration options::
@@ -32,9 +51,9 @@ We expose https://forgejo.org/docs/latest/admin/config-cheat-sheet/[configuratio
 == Deployment
 
 Deployment and configuration of Forgejo happens with the official https://code.forgejo.org/forgejo-helm/forgejo-helm[upstream Helm Chart^] and the https://github.com/crossplane-contrib/provider-helm[Crossplane Provider for Helm].
-In the CompositeResourceDefinition (XRD) we expose all required parameters.
+In the Crossplane CompositeResourceDefinition (XRD) we expose all required parameters.
 
-We differentiate between the AppCat service and Codey, exposing a different XRD depending on the chosen service.
+We differentiate between the AppCat service and Codey, exposing a different XRD depending on the service.
 
 === AppCat Service
 
@@ -51,23 +70,33 @@ spec:
   parameters:
     service:
       majorVersion: "9"
-      fqdn: poc.mydomain.com
+      fqdn: poc.mydomain.com <1>
       adminEmail: admin@example.com
       forgejoSettings:
-        config: <1>
-          APP_NAME: "Codey PoC"
-          log:
-            LEVEL: "info"
-          server:
-            ROOT_URL: https://poc.codey.ch
-            DOMAIN: poc.codey.ch
+        config: <2>
+          APP_NAME: "My Code Forge"
+          mailer:
+            ENABLED: "true"
+            PROTOCOL: smtps
+            SMTP_ADDR: mail.example.com
+            SMTP_PORT: "465"
+            USER: forgejo
+        additionalConfigFromEnvs:
+        - name: FORGEJO__MAILER__PASSWD
+          valueFrom:
+            secretKeyRef:
+              name: my-passwords
+              key: MAILER_PASSWD
     backup: 
       schedule: "30 23 * * *"
       retention: 12
+    extraSecrets:
+    - name: my-passwords
   writeConnectionSecretToRef:
     name: forgejo-creds
 ----
-<1> This is passed to the Helm chart at `.gitea`. Some values will be overwritten, some values will be added. To be figured out which exactly we allow.
+<1> The FQDN is passed to the Helm values on several places, for example `.ingress.*`, `.gitea.config.server.DOMAIN` and others.
+<2> This is passed to the Helm chart at `.gitea`. Some values will be overwritten, some values will be added. To be figured out which exactly we allow.
 
 Injected configuration values:
 
