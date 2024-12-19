@@ -102,6 +102,8 @@ Injected configuration values:
 
 * `.gitea.admin`: Handled by the Composition and exposed to the connection secret.
 
+See <<_forgejo_by_vshn, default Helm values>>.
+
 === Codey
 
 Codey only offers few configuration options, compared to the AppCat version.
@@ -129,6 +131,8 @@ Notes:
 
 * The FQDN is automatically set to `.metadata.name`.app.codey.ch
 * We use a default configuration for all Codey instances, for example we use Mailgun to send E-Mail
+
+See <<_codey_3, default Helm values>>.
 
 == Forgejo Configuration
 
@@ -270,7 +274,13 @@ TODO
 * https://forgejo.org/docs/latest/[Forgejo Documentation^]
 * https://code.forgejo.org/infrastructure/k8s-cluster[Forgejo project infrastructure^]
 
-== Example Helm Values
+== Helm Values
+
+Following are the default Helm values.
+
+=== Forgejo by VSHN
+
+WARNING: WIP
 
 [source,yaml]
 ----
@@ -278,3 +288,14 @@ include::attachment$example-forgejo-helm-values.yaml[]
 ----
 
 Download: xref:attachment$example-forgejo-helm-values.yaml[example-forgejo-helm-values.yaml]
+
+=== Codey
+
+WARNING: WIP
+
+[source,yaml]
+----
+include::attachment$example-forgejo-helm-values-codey.yaml[]
+----
+
+Download: xref:attachment$example-forgejo-helm-values-codey.yaml[example-forgejo-helm-values-codey.yaml]

@@ -1,0 +1,90 @@
+global:
+  compatibility:
+    openshift:
+      adaptSecurityContext: force
+
+ingress:
+  enabled: true
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-production
+  tls:
+    - hosts:
+        - poc.codey2.ch
+      secretName: ingress-cert
+  hosts:
+    - host: poc.codey.ch
+      paths:
+        - path: /
+          pathType: Prefix
+
+redis-cluster:
+  enabled: false
+redis:
+  enabled: false
+postgresql:
+  enabled: false
+postgresql-ha:
+  enabled: false
+
+persistence:
+  enabled: true
+
+strategy:
+  type: "Recreate"
+
+gitea:
+  admin:
+    username: "TheAdminUser"
+    password: "AGoodPassword"
+    email: "root@admin.ch"
+  config:
+    APP_NAME: "Codey PoC"
+    log:
+      LEVEL: "info"
+    server:
+      ROOT_URL: https://poc.codey.ch
+      DOMAIN: poc.codey.ch
+      DISABLE_SSH: true
+      LFS_START_SERVER: true
+      OFFLINE_MODE: true
+      LANDING_PAGE: login
+      MINIMUM_KEY_SIZE_CHECK: true
+    repository:
+      ROOT: /data/git/repositories
+    lfs:
+      PATH: /data/git/lfs
+    service:
+      DEFAULT_KEEP_EMAIL_PRIVATE: true
+      ENABLE_NOTIFY_MAIL: true
+      ALLOW_ONLY_EXTERNAL_REGISTRATION: true
+    admin:
+      SEND_NOTIFICATION_EMAIL_ON_NEW_USER: true
+    cron:
+      ENABLED: true
+    mailer:
+      ENABLED: false
+    database:
+      PATH: /data/gitea.db
+      DB_TYPE: sqlite3
+      SQLITE_JOURNAL_MODE: wal
+    session:
+      PROVIDER: db
+    cache:
+      ADAPTER: twoqueue
+      HOST: '{"size":100, "recent_ratio":0.25, "ghost_ratio":0.5}'
+    packages:
+      LIMIT_SIZE_CONTAINER: "2 GiB"
+    oauth2_client:
+      UPDATE_AVATAR: true
+    queue:
+      TYPE: level
+    cron.archive_cleanup:
+      SCHEDULE: "@hourly"
+      OLDER_THAN: "2h"
+    indexer:
+      ISSUE_INDEXER_TYPE: bleve
+      REPO_INDEXER_ENABLED: true
+    security:
+      REVERSE_PROXY_TRUSTED_PROXIES: "*"
+    metrics:
+      ENABLED: true
