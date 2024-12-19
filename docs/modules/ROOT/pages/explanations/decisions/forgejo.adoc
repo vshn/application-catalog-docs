@@ -1,0 +1,307 @@
+= Forgejo / Codey
+
+This page discusses the technical details for our two products https://products.vshn.ch/appcat/forgejo.html[Forgejo by VSHN^] and https://products.vshn.ch/codey.html[Codey^]: Fully managed, dedicated https://forgejo.org/[Forgejo^] instances.
+
+Codey is a product name for a very specific configuration and product offering of Forgejo by VSHN.
+Codey won't be available on the regular in-cluster VSHN AppCat offering, only Forgejo by VSHN will.
+A instance of Codey has to be ordered via the Codey website and is running on pre-defined "black-box" OpenShift OKE service clusters to which the customer doesn't have access to.
+
+The offering of Codey combines compute resources, storage and the managed service into a pre-defined package.
+
+Main differences between Forgejo by VSHN (the AppCat service) and Codey:
+
+[cols=",,",options="header"]
+|===
+|
+|Forgejo by VSHN
+|Codey
+
+h|Compute and Storage
+|not included
+|included
+
+h|Resource restrictions
+|depending on underlying infrastructure
+|constraint be the product plan
+
+h|Instance location
+|depends on the underlying cluster
+|pre-defined by Codey
+
+h|Configuration Flexibility
+|most options can be configured
+|only few options are exposed
+|===
+
+To begin with, we'll use the simplest possible configuration, not using any external services for database, caches, etc.
+This also means there is no HA available.
+
+== Restrictions of Forgejo Features
+
+Due to technical limitations, we cannot support all possible features of Forgejo.
+This section lists these restrictions.
+
+Git access::
+Git access is only possible via HTTPS, SSH is not supported.
+Supporting SSH would require to expose a TCP service which inclines the use of a `LoadBalancer` type service.
+While not impossible, it complicates the configuration by a lot.
+
+Forgejo Actions::
+https://forgejo.org/docs/latest/admin/actions/[Forgejo Actions^] are fully supported, but the https://forgejo.org/docs/latest/admin/runner-installation/[Actions runner^] need to be provided by the user right now.
+We plan to add a managed runner in the future as well.
+
+Exposed configuration options::
+Many features of Forgejo are configured in the `app.ini` file and not via the web interface.
+We expose https://forgejo.org/docs/latest/admin/config-cheat-sheet/[configuration options^] through the <<Deployment>> configuration.
+
+== Deployment
+
+Deployment and configuration of Forgejo happens with the official https://code.forgejo.org/forgejo-helm/forgejo-helm[upstream Helm Chart^] and the https://github.com/crossplane-contrib/provider-helm[Crossplane Provider for Helm].
+In the Crossplane CompositeResourceDefinition (XRD) we expose all required parameters.
+
+We differentiate between the AppCat service and Codey, exposing a different XRD depending on the service.
+
+=== AppCat Service
+
+The AppCat Service exposes many configuration options.
+This also implies that the user has to take care of several configuration options themselves, like configuring a suitable SMTP server.
+
+[source,yaml]
+----
+apiVersion: vshn.appcat.vshn.io/v1
+kind: VSHNForgejo
+metadata:
+  name: my-forgejo-prod
+spec:
+  parameters:
+    service:
+      majorVersion: "9"
+      fqdn: poc.mydomain.com <1>
+      adminEmail: admin@example.com
+      forgejoSettings:
+        config: <2>
+          APP_NAME: "My Code Forge"
+          mailer:
+            ENABLED: "true"
+            PROTOCOL: smtps
+            SMTP_ADDR: mail.example.com
+            SMTP_PORT: "465"
+            USER: forgejo
+        additionalConfigFromEnvs:
+        - name: FORGEJO__MAILER__PASSWD
+          valueFrom:
+            secretKeyRef:
+              name: my-passwords
+              key: MAILER_PASSWD
+    backup: 
+      schedule: "30 23 * * *"
+      retention: 12
+    extraSecrets:
+    - name: my-passwords
+  writeConnectionSecretToRef:
+    name: forgejo-creds
+----
+<1> The FQDN is passed to the Helm values on several places, for example `.ingress.*`, `.gitea.config.server.DOMAIN` and others.
+<2> This is passed to the Helm chart at `.gitea`. Some values will be overwritten, some values will be added. To be figured out which exactly we allow.
+
+Injected configuration values:
+
+* `.gitea.admin`: Handled by the Composition and exposed to the connection secret.
+
+See <<_forgejo_by_vshn, default Helm values>>.
+
+=== Codey
+
+Codey only offers few configuration options, compared to the AppCat version.
+It also has pre-defined plans which set the compute and storage requests and limits accordingly.
+
+[source,yaml]
+----
+apiVersion: vshn.appcat.vshn.io/v1
+kind: Codey
+metadata:
+  name: my-codey-prod
+spec:
+  parameters:
+    service:
+      majorVersion: "9"
+      adminEmail: admin@example.com
+    size: 
+      plan: mini <1>
+  writeConnectionSecretToRef:
+    name: codey-creds
+----
+<1> Plans from https://www.codey.ch/#Beginner[Codey Website^]. See also <<Kubernetes Resource Configuration>>.
+
+Notes:
+
+* The FQDN is automatically set to `.metadata.name`.app.codey.ch
+* We use a default configuration for all Codey instances, for example we use Mailgun to send E-Mail
+
+See <<_codey_3, default Helm values>>.
+
+== Forgejo Configuration
+
+In this section the Forgejo configuration decisions are documented.
+
+=== Database
+
+There are several options for the database, most prominently PostgreSQL and SQLite.
+
+To begin with, we're using SQLite as the database backend, with the WAL mode.
+
+Once this is not enough anymore, we'll explore the options to use PostgreSQL as the backend and potentially migrate instances there should it be required.
+Migration to a different database can be done with the https://forgejo.org/docs/latest/admin/command-line/#dump[`forgejo dump`] command.
+
+Links:
+
+* https://forgejo.org/docs/latest/admin/recommendations/#databasedb_type[Recommended Settings and Tips: Database^]
+
+=== Storage
+
+We use local storage for everything, therefore a PVC is mounted to `/data`.
+
+While we could also use object storage for most of the data, it complicates a lot.
+For example backup would become an additional burden, as well as storage space monitoring also won't be that easy anymore.
+And it's not possible to store Git repositories on object storage, this way we'd have multiple storage locations.
+
+Links:
+
+* https://forgejo.org/docs/latest/admin/storage/[Admin documentation: Storage^]
+
+=== Cache
+
+There are several options for caching, most prominently Redis and `twoqueue`.
+
+To begin with, we're using the `twoqueue` mechanisms with the recommended configuration for the `HOST` parameter:
+
+----
+{"size":100, "recent_ratio":0.25, "ghost_ratio":0.5} 
+----
+
+Once instances are growing, and we see issues with caching performance we'll switch to Redis by using https://products.vshn.ch/appcat/redis.html[Redis by VSHN^].
+We're forced to use TLS to connect to this managed Redis instance, which will impose some complexities making Forgejo aware of the CA certificate used to sign the TLS certificate.
+
+Links:
+
+* https://forgejo.org/docs/latest/admin/config-cheat-sheet/#cache-cache[Configuration Cheat Sheet: Cache^]
+* https://forgejo.org/docs/latest/admin/recommendations/#cacheadapter[Recommended Settings and Tips: Cache^]
+
+=== Queue
+
+There are several options for queuing, most prominently Redis and https://github.com/google/leveldb[LevelDB^].
+
+To begin with, we're using the `level` mechanisms.
+
+As with <<Cache>>, we intend to use Redis once it's necessary to do so.
+
+Links:
+
+* https://forgejo.org/docs/latest/admin/config-cheat-sheet/#queue-queue-and-queue[Configuration Cheat Sheet: Queue^]
+
+== Backup and Restore
+
+Two mechanisms are used for Backup:
+
+File-based data::
+K8up regularly stores the content of `/data` in the backup destination.
+Restoring happens with K8up mechanisms to get the files back into the `/data` directory.
+
+Database::
+A sidecar container running https://litestream.io/guides/kubernetes/[Litestream^] takes care of making sure the database is always safe.
+Injection of the sidecar happens via https://github.com/crossplane/crossplane/blob/main/design/one-pager-helm-provider.md#post-rendering-patches[Post Rendering Patches^] in `provider-helm`.
+The database is automatically restored in the `initContainer` by Litestream should it be missing in the container.
+
+== Metrics and Monitoring
+
+We enable the `/metrics` endpoint and scrape metrics accordingly.
+By using the provide https://codeberg.org/forgejo/forgejo/src/branch/forgejo/contrib/gitea-monitoring-mixin[Monitoring Mixin^] we get Grafana dashboards.
+
+Alerting is done on the availability of the service.
+
+== E-Mail
+
+Forgejo needs to send E-Mails and optionally can also receive E-Mails for issue handling.
+
+Sending::
+Codey uses Mailgun to send E-Mails with noreply@codey.ch as sender address.
+The AppCat version exposes the configuration parameters to configure the own SMTP service.
+
+Receiving::
+This is a manual configuration and only supported in the AppCat version.
+
+Links:
+
+* https://forgejo.org/docs/latest/admin/email-setup/[Email setup^]
+* https://forgejo.org/docs/latest/admin/incoming-email/[Incoming Email^]
+
+== Kubernetes Resource Configuration
+
+We set appropriate Kubernetes resources, depending on the service type.
+
+=== AppCat Service
+
+TODO
+
+=== Codey
+
+[cols=",,,",options="header"]
+|===
+|Plan
+|Requests
+|Limits
+|Storage
+
+|Mini
+|Memory: XX, CPU: XX
+|Memory: XX, CPU: XX
+|10 GiB
+
+|Small
+|Memory: XX, CPU: XX
+|Memory: XX, CPU: XX
+|50 GiB
+
+|Medium
+|Memory: XX, CPU: XX
+|Memory: XX, CPU: XX
+|200 GiB
+
+|Large
+|Memory: XX, CPU: XX
+|Memory: XX, CPU: XX
+|500 GiB
+
+|===
+
+== Links
+
+* https://code.forgejo.org/forgejo-helm/forgejo-helm[Official Helm Chart^]
+* https://forgejo.org/docs/latest/[Forgejo Documentation^]
+* https://code.forgejo.org/infrastructure/k8s-cluster[Forgejo project infrastructure^]
+
+== Helm Values
+
+Following are the default Helm values.
+
+=== Forgejo by VSHN
+
+WARNING: WIP
+
+[source,yaml]
+----
+include::attachment$example-forgejo-helm-values.yaml[]
+----
+
+Download: xref:attachment$example-forgejo-helm-values.yaml[example-forgejo-helm-values.yaml]
+
+=== Codey
+
+WARNING: WIP
+
+[source,yaml]
+----
+include::attachment$example-forgejo-helm-values-codey.yaml[]
+----
+
+Download: xref:attachment$example-forgejo-helm-values-codey.yaml[example-forgejo-helm-values-codey.yaml]
