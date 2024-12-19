@@ -2,6 +2,12 @@
 
 This page discusses the technical details for our two products https://products.vshn.ch/appcat/forgejo.html[Forgejo by VSHN^] and https://products.vshn.ch/codey.html[Codey^]: Fully managed, dedicated https://forgejo.org/[Forgejo^] instances.
 
+Codey is a product name for a very specific configuration and product offering of Forgejo by VSHN.
+Codey won't be available on the regular in-cluster VSHN AppCat offering, only Forgejo by VSHN will.
+A instance of Codey has to be ordered via the Codey website and is running on pre-defined "black-box" OpenShift OKE service clusters to which the customer doesn't have access to.
+
+The offering of Codey combines compute resources, storage and the managed service into a pre-defined package.
+
 Main differences between Forgejo by VSHN (the AppCat service) and Codey:
 
 [cols=",,",options="header"]
