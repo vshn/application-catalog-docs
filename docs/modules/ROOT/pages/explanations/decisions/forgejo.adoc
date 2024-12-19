@@ -32,7 +32,7 @@ This also means there is no HA available.
 
 == Restrictions of Forgejo Features
 
-Du to technical limitations, we cannot support all possible features of Forgejo.
+Due to technical limitations, we cannot support all possible features of Forgejo.
 This section lists these restrictions.
 
 Git access::
