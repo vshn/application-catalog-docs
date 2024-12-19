@@ -1,0 +1,33 @@
+= Web Portal
+
+== Introduction
+
+For many crucial features of the VSHN Application Marketplace we need a webportal so that the end-user can order services.
+
+This is, for example, an essential part of the xref:app-catalog:ROOT:reference/exoscale-osbapi.adoc[integration into the Exoscale Marketplace^].
+
+Essentially, it will be a web frontend for the xref:app-catalog:ROOT:reference/arch-control-plane.adoc[] which is derived from the https://kb.vshn.ch/appuio-cloud/references/architecture/control-api.html[APPUiO Control API^].
+
+The plan is to reuse the https://github.com/appuio/cloud-portal[APPUiO Portal^], advance it into the VSHN Portal and integrate all the features needed for the VSHN Application Markteplace.
+
+High-level work that needs to be done:
+
+. Redesign the current APPUiO Portal into the VSHN Portal (visuals, strings, naming)
+. Refine the user experience in terms of menu structure and initial onboarding
+. Integrate necessary features for the VSHN Application Marketplace
+
+== Details
+
+tbd
+
+== Unsorted notes
+
+* Rework navigation so that “meta” stuff like organization, teams and billing is grouped
+* Make organization context a first-class feature
+* Marketplace listing has to look good and get all the information from the “serviceoffering” tied to the organization
+** Have an anonymous view for the Marketplace?
+** Where to get service logos from? Base64 encoded in service offering?
+* Prominently show organization origin (logo? colors?)
+* On service creation and configuration, have the fields from the XRD/CRD dynamically rendered, according to the API spec
+* Move the APPUiO features under its own menu entry and use the new APPUiO logo
+* Design it similarly to the new vshn.ch website by WPBeginner

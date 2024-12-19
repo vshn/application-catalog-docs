@@ -3,6 +3,8 @@
 ** xref:app-catalog:ROOT:explanations/why_exists.adoc[Why does it exist?]
 ** xref:app-catalog:ROOT:explanations/app_catalog.adoc[Concept]
 ** xref:app-catalog:ROOT:reference/glossary.adoc[]
+** xref:app-catalog:ROOT:reference/webportal.adoc[Web Portal]
+
 * Architecture
 ** xref:app-catalog:ROOT:reference/arch-control-plane.adoc[]
 ** AppCat Usage Reporting
@@ -22,7 +24,6 @@
 **** xref:app-catalog:ROOT:reference/quality-requirements/reliability/automatic-updates.adoc[Automatic Updates]
 **** xref:app-catalog:ROOT:reference/quality-requirements/reliability/mandatory-updates.adoc[Mandatory Updates]
 **** xref:app-catalog:ROOT:reference/quality-requirements/reliability/backup-interval.adoc[Minimum Backup Interval]
-
 
 *** Usability
 **** xref:app-catalog:ROOT:reference/quality-requirements/usability/actionable-alerts.adoc[Actionable Alerts]
