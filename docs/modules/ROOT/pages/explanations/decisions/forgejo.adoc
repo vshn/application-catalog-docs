@@ -303,3 +303,44 @@ include::attachment$example-forgejo-helm-values-codey.yaml[]
 ----
 
 Download: xref:attachment$example-forgejo-helm-values-codey.yaml[example-forgejo-helm-values-codey.yaml]
+
+=== Common
+
+Common Helm values, applicable to both deployment methods.
+
+[source,yaml]
+----
+global:
+  compatibility:
+    openshift:
+      adaptSecurityContext: force
+
+ingress:
+  enabled: true
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-production
+  tls:
+    - hosts:
+        - myforgejo.example.com
+      secretName: ingress-cert
+  hosts:
+    - host: myforgejo.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+
+redis-cluster:
+  enabled: false
+redis:
+  enabled: false
+postgresql:
+  enabled: false
+postgresql-ha:
+  enabled: false
+
+persistence:
+  enabled: true
+
+strategy:
+  type: "Recreate"
+----

@@ -1,49 +1,45 @@
-global:
-  compatibility:
-    openshift:
-      adaptSecurityContext: force
-
-ingress:
-  enabled: true
-  annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-production
-  tls:
-    - hosts:
-        - poc.codey.ch
-      secretName: ingress-cert
-  hosts:
-    - host: poc.codey.ch
-      paths:
-        - path: /
-          pathType: Prefix
-
-redis-cluster:
-  enabled: false
-redis:
-  enabled: false
-postgresql:
-  enabled: false
-postgresql-ha:
-  enabled: false
-
-persistence:
-  enabled: true
-
-strategy:
-  type: "Recreate"
-
 gitea:
   admin:
     username: "TheAdminUser"
     password: "AGoodPassword"
     email: "root@admin.ch"
+  additionalConfigFromEnvs:
+    - name: FORGEJO__DATABASE__USER
+      valueFrom:
+        secretKeyRef:
+          name: postgres-creds
+          key: POSTGRESQL_USER
+    - name: FORGEJO__DATABASE__PASSWD
+      valueFrom:
+        secretKeyRef:
+          name: postgres-creds
+          key: POSTGRESQL_PASSWORD
+    - name: FORGEJO__DATABASE__NAME
+      valueFrom:
+        secretKeyRef:
+          name: postgres-creds
+          key: POSTGRESQL_DB
+    - name: POSTGRESQL_HOST
+      valueFrom:
+        secretKeyRef:
+          name: postgres-creds
+          key: POSTGRESQL_HOST
+    - name: POSTGRESQL_PORT
+      valueFrom:
+        secretKeyRef:
+          name: postgres-creds
+          key: POSTGRESQL_PORT
+    - name: FORGEJO__DATABASE__HOST
+      value: "$(POSTGRESQL_HOST):$(POSTGRESQL_PORT)"
   config:
-    APP_NAME: "Codey PoC"
+    database:
+      DB_TYPE: postgres
+      SSL_MODE: require
     log:
       LEVEL: "info"
     server:
-      ROOT_URL: https://poc.codey.ch
-      DOMAIN: poc.codey.ch
+      ROOT_URL: https://myforgejo.example.com
+      DOMAIN: myforgejo.example.com
       DISABLE_SSH: true
       LFS_START_SERVER: true
       OFFLINE_MODE: true
@@ -63,10 +59,6 @@ gitea:
       ENABLED: true
     mailer:
       ENABLED: false
-    database:
-      PATH: /data/gitea.db
-      DB_TYPE: sqlite3
-      SQLITE_JOURNAL_MODE: wal
     session:
       PROVIDER: db
     cache:
