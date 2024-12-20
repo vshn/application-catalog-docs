@@ -284,7 +284,7 @@ Following are the default Helm values.
 
 === Forgejo by VSHN
 
-WARNING: WIP
+WARNING: WIP. Currently Redis connections don't work yet, because `failed: remote error: tls: certificate required`.
 
 [source,yaml]
 ----
