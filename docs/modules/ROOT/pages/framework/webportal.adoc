@@ -85,10 +85,12 @@ Details will need to be refined.
 
 === Support
 
-NOTE: This comes later.
+In a first iteration we'll have a support form which sends an E-Mail to the support address.
+The exact design of the form is to be defined.
 
-This part will integrate the support flows, potentially via Jira.
-To beginn with we could just integrate a contact form which sends an E-Mail.
+The page also includes the help links to documentation.
+
+Later we'll integrate the Jira flow we currently have in control.vshn.net.
 
 === Workspace
 
