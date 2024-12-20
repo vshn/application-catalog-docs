@@ -205,12 +205,13 @@ Restoring happens with K8up mechanisms to get the files back into the `/data` di
 
 Database::
 A sidecar container running https://litestream.io/guides/kubernetes/[Litestream^] takes care of making sure the database is always safe.
-Injection of the sidecar happens via https://github.com/crossplane/crossplane/blob/main/design/one-pager-helm-provider.md#post-rendering-patches[Post Rendering Patches^] in `provider-helm`.
-The database is automatically restored in the `initContainer` by Litestream should it be missing in the container.
+Injection of the sidecar happens via https://github.com/crossplane/crossplane/blob/main/design/one-pager-helm-provider.md#post-rendering-patches[Post Rendering Patches^] in `provider-helm` or directly with the Helm Chart once it supports it (see https://code.forgejo.org/forgejo-helm/forgejo-helm/issues/1016[Issue #1016^]).
 
 == Metrics and Monitoring
 
 We enable the `/metrics` endpoint and scrape metrics accordingly.
+See xref:attachment$example-forgejo-metrics.txt[example-forgejo-metrics.txt] for a list of available metrics.
+
 By using the provided https://codeberg.org/forgejo/forgejo/src/branch/forgejo/contrib/gitea-monitoring-mixin[Monitoring Mixin^] we get Grafana dashboards.
 
 Alerting is done on the availability of the service.
@@ -219,12 +220,13 @@ Alerting is done on the availability of the service.
 
 Forgejo needs to send E-Mails and optionally can also receive E-Mails for issue handling.
 
-Sending::
+Sending via SMTP::
 Codey uses Mailgun to send E-Mails with noreply@codey.ch as sender address.
-The AppCat version exposes the configuration parameters to configure the own SMTP service.
+Forgejo by VSHN version exposes the configuration parameters to configure the SMTP service.
 
-Receiving::
-This is a manual configuration and only supported in the AppCat version.
+Receiving via IMAP::
+E-Mail receiving works by regularly getting E-Mails from an IMAP mailbox.
+This is a manual configuration and only supported in Forgejo by VSHN version.
 
 Refs:
 

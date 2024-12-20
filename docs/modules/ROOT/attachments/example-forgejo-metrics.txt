@@ -1,0 +1,194 @@
+# HELP gitea_accesses Number of Accesses
+# TYPE gitea_accesses gauge
+gitea_accesses 0
+# HELP gitea_attachments Number of Attachments
+# TYPE gitea_attachments gauge
+gitea_attachments 0
+# HELP gitea_build_info Build information
+# TYPE gitea_build_info gauge
+gitea_build_info{goarch="amd64",goos="linux",goversion="go1.23.4",version="9.0.3+gitea-1.22.0"} 1
+# HELP gitea_comments Number of Comments
+# TYPE gitea_comments gauge
+gitea_comments 1
+# HELP gitea_follows Number of Follows
+# TYPE gitea_follows gauge
+gitea_follows 0
+# HELP gitea_hooktasks Number of HookTasks
+# TYPE gitea_hooktasks gauge
+gitea_hooktasks 0
+# HELP gitea_issues Number of Issues
+# TYPE gitea_issues gauge
+gitea_issues 1
+# HELP gitea_issues_closed Number of closed Issues
+# TYPE gitea_issues_closed gauge
+gitea_issues_closed 0
+# HELP gitea_issues_open Number of open Issues
+# TYPE gitea_issues_open gauge
+gitea_issues_open 1
+# HELP gitea_labels Number of Labels
+# TYPE gitea_labels gauge
+gitea_labels 0
+# HELP gitea_loginsources Number of LoginSources
+# TYPE gitea_loginsources gauge
+gitea_loginsources 0
+# HELP gitea_milestones Number of Milestones
+# TYPE gitea_milestones gauge
+gitea_milestones 0
+# HELP gitea_mirrors Number of Mirrors
+# TYPE gitea_mirrors gauge
+gitea_mirrors 0
+# HELP gitea_oauths Number of Oauths
+# TYPE gitea_oauths gauge
+gitea_oauths 0
+# HELP gitea_organizations Number of Organizations
+# TYPE gitea_organizations gauge
+gitea_organizations 0
+# HELP gitea_projects Number of projects
+# TYPE gitea_projects gauge
+gitea_projects 1
+# HELP gitea_projects_boards Number of project columns
+# TYPE gitea_projects_boards gauge
+gitea_projects_boards 4
+# HELP gitea_publickeys Number of PublicKeys
+# TYPE gitea_publickeys gauge
+gitea_publickeys 0
+# HELP gitea_releases Number of Releases
+# TYPE gitea_releases gauge
+gitea_releases 0
+# HELP gitea_repositories Number of Repositories
+# TYPE gitea_repositories gauge
+gitea_repositories 1
+# HELP gitea_stars Number of Stars
+# TYPE gitea_stars gauge
+gitea_stars 0
+# HELP gitea_teams Number of Teams
+# TYPE gitea_teams gauge
+gitea_teams 0
+# HELP gitea_updatetasks Number of UpdateTasks
+# TYPE gitea_updatetasks gauge
+gitea_updatetasks 0
+# HELP gitea_users Number of Users
+# TYPE gitea_users gauge
+gitea_users 1
+# HELP gitea_watches Number of Watches
+# TYPE gitea_watches gauge
+gitea_watches 1
+# HELP gitea_webhooks Number of Webhooks
+# TYPE gitea_webhooks gauge
+gitea_webhooks 0
+# HELP go_gc_duration_seconds A summary of the pause duration of garbage collection cycles.
+# TYPE go_gc_duration_seconds summary
+go_gc_duration_seconds{quantile="0"} 5.1899e-05
+go_gc_duration_seconds{quantile="0.25"} 7.7199e-05
+go_gc_duration_seconds{quantile="0.5"} 9.5639e-05
+go_gc_duration_seconds{quantile="0.75"} 0.000135768
+go_gc_duration_seconds{quantile="1"} 0.002599209
+go_gc_duration_seconds_sum 0.11381601
+go_gc_duration_seconds_count 704
+# HELP go_goroutines Number of goroutines that currently exist.
+# TYPE go_goroutines gauge
+go_goroutines 62
+# HELP go_info Information about the Go environment.
+# TYPE go_info gauge
+go_info{version="go1.23.4"} 1
+# HELP go_memstats_alloc_bytes Number of bytes allocated and still in use.
+# TYPE go_memstats_alloc_bytes gauge
+go_memstats_alloc_bytes 7.6440136e+07
+# HELP go_memstats_alloc_bytes_total Total number of bytes allocated, even if freed.
+# TYPE go_memstats_alloc_bytes_total counter
+go_memstats_alloc_bytes_total 9.66289224e+08
+# HELP go_memstats_buck_hash_sys_bytes Number of bytes used by the profiling bucket hash table.
+# TYPE go_memstats_buck_hash_sys_bytes gauge
+go_memstats_buck_hash_sys_bytes 1.678687e+06
+# HELP go_memstats_frees_total Total number of frees.
+# TYPE go_memstats_frees_total counter
+go_memstats_frees_total 1.269615e+07
+# HELP go_memstats_gc_sys_bytes Number of bytes used for garbage collection system metadata.
+# TYPE go_memstats_gc_sys_bytes gauge
+go_memstats_gc_sys_bytes 5.13664e+06
+# HELP go_memstats_heap_alloc_bytes Number of heap bytes allocated and still in use.
+# TYPE go_memstats_heap_alloc_bytes gauge
+go_memstats_heap_alloc_bytes 7.6440136e+07
+# HELP go_memstats_heap_idle_bytes Number of heap bytes waiting to be used.
+# TYPE go_memstats_heap_idle_bytes gauge
+go_memstats_heap_idle_bytes 4.5203456e+07
+# HELP go_memstats_heap_inuse_bytes Number of heap bytes that are in use.
+# TYPE go_memstats_heap_inuse_bytes gauge
+go_memstats_heap_inuse_bytes 9.5895552e+07
+# HELP go_memstats_heap_objects Number of allocated objects.
+# TYPE go_memstats_heap_objects gauge
+go_memstats_heap_objects 465541
+# HELP go_memstats_heap_released_bytes Number of heap bytes released to OS.
+# TYPE go_memstats_heap_released_bytes gauge
+go_memstats_heap_released_bytes 3.6274176e+07
+# HELP go_memstats_heap_sys_bytes Number of heap bytes obtained from system.
+# TYPE go_memstats_heap_sys_bytes gauge
+go_memstats_heap_sys_bytes 1.41099008e+08
+# HELP go_memstats_last_gc_time_seconds Number of seconds since 1970 of last garbage collection.
+# TYPE go_memstats_last_gc_time_seconds gauge
+go_memstats_last_gc_time_seconds 1.7346882499053276e+09
+# HELP go_memstats_lookups_total Total number of pointer lookups.
+# TYPE go_memstats_lookups_total counter
+go_memstats_lookups_total 0
+# HELP go_memstats_mallocs_total Total number of mallocs.
+# TYPE go_memstats_mallocs_total counter
+go_memstats_mallocs_total 1.3161691e+07
+# HELP go_memstats_mcache_inuse_bytes Number of bytes in use by mcache structures.
+# TYPE go_memstats_mcache_inuse_bytes gauge
+go_memstats_mcache_inuse_bytes 7200
+# HELP go_memstats_mcache_sys_bytes Number of bytes used for mcache structures obtained from system.
+# TYPE go_memstats_mcache_sys_bytes gauge
+go_memstats_mcache_sys_bytes 15600
+# HELP go_memstats_mspan_inuse_bytes Number of bytes in use by mspan structures.
+# TYPE go_memstats_mspan_inuse_bytes gauge
+go_memstats_mspan_inuse_bytes 1.08288e+06
+# HELP go_memstats_mspan_sys_bytes Number of bytes used for mspan structures obtained from system.
+# TYPE go_memstats_mspan_sys_bytes gauge
+go_memstats_mspan_sys_bytes 1.58304e+06
+# HELP go_memstats_next_gc_bytes Number of heap bytes when next garbage collection will take place.
+# TYPE go_memstats_next_gc_bytes gauge
+go_memstats_next_gc_bytes 1.51548344e+08
+# HELP go_memstats_other_sys_bytes Number of bytes used for other system allocations.
+# TYPE go_memstats_other_sys_bytes gauge
+go_memstats_other_sys_bytes 1.280537e+06
+# HELP go_memstats_stack_inuse_bytes Number of bytes in use by the stack allocator.
+# TYPE go_memstats_stack_inuse_bytes gauge
+go_memstats_stack_inuse_bytes 1.507328e+06
+# HELP go_memstats_stack_sys_bytes Number of bytes obtained from system for stack allocator.
+# TYPE go_memstats_stack_sys_bytes gauge
+go_memstats_stack_sys_bytes 1.507328e+06
+# HELP go_memstats_sys_bytes Number of bytes obtained from system.
+# TYPE go_memstats_sys_bytes gauge
+go_memstats_sys_bytes 1.5230084e+08
+# HELP go_threads Number of OS threads created.
+# TYPE go_threads gauge
+go_threads 15
+# HELP process_cpu_seconds_total Total user and system CPU time spent in seconds.
+# TYPE process_cpu_seconds_total counter
+process_cpu_seconds_total 178.42
+# HELP process_max_fds Maximum number of open file descriptors.
+# TYPE process_max_fds gauge
+process_max_fds 1.048576e+06
+# HELP process_open_fds Number of open file descriptors.
+# TYPE process_open_fds gauge
+process_open_fds 20
+# HELP process_resident_memory_bytes Resident memory size in bytes.
+# TYPE process_resident_memory_bytes gauge
+process_resident_memory_bytes 2.31133184e+08
+# HELP process_start_time_seconds Start time of the process since unix epoch in seconds.
+# TYPE process_start_time_seconds gauge
+process_start_time_seconds 1.73460489835e+09
+# HELP process_virtual_memory_bytes Virtual memory size in bytes.
+# TYPE process_virtual_memory_bytes gauge
+process_virtual_memory_bytes 1.50358016e+09
+# HELP process_virtual_memory_max_bytes Maximum amount of virtual memory available in bytes.
+# TYPE process_virtual_memory_max_bytes gauge
+process_virtual_memory_max_bytes 1.8446744073709552e+19
+# HELP promhttp_metric_handler_requests_in_flight Current number of scrapes being served.
+# TYPE promhttp_metric_handler_requests_in_flight gauge
+promhttp_metric_handler_requests_in_flight 1
+# HELP promhttp_metric_handler_requests_total Total number of scrapes by HTTP status code.
+# TYPE promhttp_metric_handler_requests_total counter
+promhttp_metric_handler_requests_total{code="200"} 3
+promhttp_metric_handler_requests_total{code="500"} 0
+promhttp_metric_handler_requests_total{code="503"} 0
