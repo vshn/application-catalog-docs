@@ -16,18 +16,80 @@ High-level work that needs to be done:
 . Refine the user experience in terms of menu structure and initial onboarding
 . Integrate necessary features for the VSHN Application Marketplace
 
-== Details
+== Meta
 
-tbd
+=== Navigation
 
-== Unsorted notes
+The navigation will be split in several parts:
 
-* Rework navigation so that “meta” stuff like organization, teams and billing is grouped
-* Make organization context a first-class feature
-* Marketplace listing has to look good and get all the information from the “serviceoffering” tied to the organization
-** Have an anonymous view for the Marketplace?
-** Where to get service logos from? Base64 encoded in service offering?
-* Prominently show organization origin (logo? colors?)
-* On service creation and configuration, have the fields from the XRD/CRD dynamically rendered, according to the API spec
-* Move the APPUiO features under its own menu entry and use the new APPUiO logo
-* Design it similarly to the new vshn.ch website by WPBeginner
+Top Level::
+The main navigation, consisting of the most important aspects of the portal:
+* <<APPUiO>>
+** Zones
+** Status ^
+** Documentation ^
+* <<Marketplace>>
+* <<Managed OpenShift>> (later)
+* <<Support>> (later)
+* <<Workspace>>
+** Organizations
+** Teams
+** Billing
+** Invitations
+
+User::
+* Settings
+* Account
+* Sign out
+
+Secondary::
+* Help
+* Feedback
+
+=== Design
+
+The design needs to be changed so that it is VSHN branded, according to the https://handbook.vshn.ch/brand_guide.html[Brand Guide^].
+
+=== Organization Context
+
+The Organization is a main concept and must be presented prominently.
+The user must choose in which Organization context the portal works and can switch between them, should access be available to multiple Organization.
+
+It must be prominently clear in which Organization context the user currently is.
+Depending on the Organization Origin, we display the logo of the origin right besides the Organization name.
+
+== Functionality
+
+=== Marketplace
+
+The Marketplace displays a list of available services in the Organizations context and allow to provision them.
+
+TODOs and notes:
+
+* This sections will need a clear definition how it should look like and behave.
+* Fields for the service configuration must be dynamically generated from the API spec of the XRD / XRD
+* The marketplace listing must be visually attractive and include service logos
+
+=== APPUiO
+
+Under APPUiO we'll list the available Zones and link to the https://status.appuio.cloud/[APPUiO Status Page^].
+When navigating to this section, we prominently show the APPUiO logo and - depending on the design - change some colors to the APPUiO style.
+It should be clear that APPUiO is a product of VSHN with its own identity.
+
+=== Managed OpenShift
+
+NOTE: This comes later.
+
+We integrate Project Syn here with the "Tenant" and "Cluster" entities.
+Details will need to be refined.
+
+=== Support
+
+NOTE: This comes later.
+
+This part will integrate the support flows, potentially via Jira.
+To beginn with we could just integrate a contact form which sends an E-Mail.
+
+=== Workspace
+
+Here we combine the meta topics which allow managing functionality shared between multiple products.
