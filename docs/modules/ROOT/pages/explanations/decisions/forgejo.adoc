@@ -4,7 +4,7 @@ This page discusses the technical details for our two products https://products.
 
 Codey is a product name for a very specific configuration and product offering of Forgejo by VSHN.
 Codey won't be available on the regular in-cluster VSHN AppCat offering, only Forgejo by VSHN will.
-A instance of Codey has to be ordered via the Codey website and is running on pre-defined "black-box" OpenShift OKE service clusters to which the customer doesn't have access to.
+An instance of Codey has to be ordered via the Codey website and is running on pre-defined "black-box" OpenShift OKE service clusters to which the customer doesn't have access to.
 
 The offering of Codey combines compute resources, storage and the managed service into a pre-defined package.
 
@@ -20,11 +20,11 @@ h|Compute and Storage
 |not included
 |included
 
-h|Resource restrictions
+h|Resource Restrictions
 |depending on underlying infrastructure
 |constraint be the product plan
 
-h|Instance location
+h|Instance Location
 |depends on the underlying cluster
 |pre-defined by Codey
 
@@ -56,14 +56,14 @@ We expose https://forgejo.org/docs/latest/admin/config-cheat-sheet/[configuratio
 
 == Deployment
 
-Deployment and configuration of Forgejo happens with the official https://code.forgejo.org/forgejo-helm/forgejo-helm[upstream Helm Chart^] and the https://github.com/crossplane-contrib/provider-helm[Crossplane Provider for Helm].
-In the Crossplane CompositeResourceDefinition (XRD) we expose all required parameters.
+Deployment and configuration of Forgejo happens with the official https://code.forgejo.org/forgejo-helm/forgejo-helm[upstream Helm Chart^] and the https://github.com/crossplane-contrib/provider-helm[Crossplane Provider for Helm^].
+In the Crossplane Composite Resource Definition (XRD) we expose all required parameters.
 
-We differentiate between the AppCat service and Codey, exposing a different XRD depending on the service.
+We differentiate between Forgejo by VSHN and Codey, exposing a different XRD depending on the service.
 
-=== AppCat Service
+=== Forgejo by VSHN
 
-The AppCat Service exposes many configuration options.
+For Forgejo by VSHN we expose many configuration options.
 This also implies that the user has to take care of several configuration options themselves, like configuring a suitable SMTP server.
 
 [source,yaml]
@@ -77,9 +77,9 @@ spec:
     service:
       majorVersion: "9"
       fqdn: poc.mydomain.com <1>
-      adminEmail: admin@example.com
+      adminEmail: admin@example.com <2>
       forgejoSettings:
-        config: <2>
+        config: <3>
           APP_NAME: "My Code Forge"
           mailer:
             ENABLED: "true"
@@ -102,13 +102,14 @@ spec:
     name: forgejo-creds
 ----
 <1> The FQDN is passed to the Helm values on several places, for example `.ingress.*`, `.gitea.config.server.DOMAIN` and others.
-<2> This is passed to the Helm chart at `.gitea`. Some values will be overwritten, some values will be added. To be figured out which exactly we allow.
+<2> Used for the Helm Chart value `.gitea.admin.email`
+<3> This is passed to the Helm Chart at `.gitea`. Some values will be overwritten, some values will be added. To be figured out which exactly we allow.
 
 Injected configuration values:
 
-* `.gitea.admin`: Handled by the Composition and exposed to the connection secret.
+* `.gitea.admin`: Handled by the Composition and exposed in the connection secret.
 
-See <<_forgejo_by_vshn, default Helm values>>.
+See <<_forgejo_by_vshn_2, default Helm values>>.
 
 === Codey
 
@@ -125,13 +126,14 @@ spec:
   parameters:
     service:
       majorVersion: "9"
-      adminEmail: admin@example.com
+      adminEmail: admin@example.com <1>
     size: 
-      plan: mini <1>
+      plan: mini <2>
   writeConnectionSecretToRef:
     name: codey-creds
 ----
-<1> Plans from https://www.codey.ch/#Beginner[Codey Website^]. See also <<Kubernetes Resource Configuration>>.
+<1> Used for the Helm Chart value `.gitea.admin.email`
+<2> Plans from https://www.codey.ch/#Beginner[Codey Website^]. See also <<Kubernetes Resource Configuration>>.
 
 Notes:
 
@@ -153,9 +155,7 @@ To begin with, we're using SQLite as the database backend, with the WAL mode.
 Once this is not enough anymore, we'll explore the options to use PostgreSQL as the backend and potentially migrate instances there should it be required.
 Migration to a different database can be done with the https://forgejo.org/docs/latest/admin/command-line/#dump[`forgejo dump`] command.
 
-Links:
-
-* https://forgejo.org/docs/latest/admin/recommendations/#databasedb_type[Recommended Settings and Tips: Database^]
+Ref: https://forgejo.org/docs/latest/admin/recommendations/#databasedb_type[Recommended Settings and Tips: Database^]
 
 === Storage
 
@@ -165,13 +165,11 @@ While we could also use object storage for most of the data, it complicates a lo
 For example backup would become an additional burden, as well as storage space monitoring also won't be that easy anymore.
 And it's not possible to store Git repositories on object storage, this way we'd have multiple storage locations.
 
-Links:
-
-* https://forgejo.org/docs/latest/admin/storage/[Admin documentation: Storage^]
+Ref: https://forgejo.org/docs/latest/admin/storage/[Admin documentation: Storage^]
 
 === Cache
 
-There are several options for caching, most prominently Redis and `twoqueue`.
+There are several options for caching, most prominently Redis and TwoQueue.
 
 To begin with, we're using the `twoqueue` mechanisms with the recommended configuration for the `HOST` parameter:
 
@@ -182,7 +180,7 @@ To begin with, we're using the `twoqueue` mechanisms with the recommended config
 Once instances are growing, and we see issues with caching performance we'll switch to Redis by using https://products.vshn.ch/appcat/redis.html[Redis by VSHN^].
 We're forced to use TLS to connect to this managed Redis instance, which will impose some complexities making Forgejo aware of the CA certificate used to sign the TLS certificate.
 
-Links:
+Refs:
 
 * https://forgejo.org/docs/latest/admin/config-cheat-sheet/#cache-cache[Configuration Cheat Sheet: Cache^]
 * https://forgejo.org/docs/latest/admin/recommendations/#cacheadapter[Recommended Settings and Tips: Cache^]
@@ -195,9 +193,7 @@ To begin with, we're using the `level` mechanisms.
 
 As with <<Cache>>, we intend to use Redis once it's necessary to do so.
 
-Links:
-
-* https://forgejo.org/docs/latest/admin/config-cheat-sheet/#queue-queue-and-queue[Configuration Cheat Sheet: Queue^]
+Ref: https://forgejo.org/docs/latest/admin/config-cheat-sheet/#queue-queue-and-queue[Configuration Cheat Sheet: Queue^]
 
 == Backup and Restore
 
@@ -215,7 +211,7 @@ The database is automatically restored in the `initContainer` by Litestream shou
 == Metrics and Monitoring
 
 We enable the `/metrics` endpoint and scrape metrics accordingly.
-By using the provide https://codeberg.org/forgejo/forgejo/src/branch/forgejo/contrib/gitea-monitoring-mixin[Monitoring Mixin^] we get Grafana dashboards.
+By using the provided https://codeberg.org/forgejo/forgejo/src/branch/forgejo/contrib/gitea-monitoring-mixin[Monitoring Mixin^] we get Grafana dashboards.
 
 Alerting is done on the availability of the service.
 
@@ -230,7 +226,7 @@ The AppCat version exposes the configuration parameters to configure the own SMT
 Receiving::
 This is a manual configuration and only supported in the AppCat version.
 
-Links:
+Refs:
 
 * https://forgejo.org/docs/latest/admin/email-setup/[Email setup^]
 * https://forgejo.org/docs/latest/admin/incoming-email/[Incoming Email^]
