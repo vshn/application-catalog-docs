@@ -1,0 +1,14 @@
+[.meta-info-table,cols="2*"]
+|===
+|Service Name
+|{svc_name}
+
+|Owner
+|{svc_owner}
+
+|Deployment Tech
+|{svc_deploytech}
+
+|Status
+|[.{svc_status} .status-macro]#{svc_status}#
+|===

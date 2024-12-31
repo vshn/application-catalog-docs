@@ -1,0 +1,18 @@
+= Service: PostgreSQL
+:svc_name:       PostgreSQL by VSHN
+:svc_owner:      Schedar
+:svc_deploytech: Operator (Stackgres)
+:svc_status:     production
+
+include::partial$service-meta.adoc[]
+
+TODO:
+
+* Service Template - each service must have a page
+* Link to product docs
+* Link to end-user docs
+* Link to service source
+
+== Related ADDRs
+
+* xref:addr/0002.adoc[]
