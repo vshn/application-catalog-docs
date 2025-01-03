@@ -1,4 +1,4 @@
-[.meta-info-table,cols="2*"]
+[.meta-info-table,cols="1h,2"]
 |===
 |Service Name
 |{svc_name}
@@ -11,4 +11,13 @@
 
 |Status
 |[.{svc_status} .status-macro]#{svc_status}#
+
+|End-User Documentation
+|https://docs.appcat.ch/vshn-managed/postgresql/index.html[docs.appcat.ch^] - https://github.com/vshn/appcat-user-docs/tree/master/docs/modules/ROOT/pages/vshn-managed/postgresql[source^]
+
+|Product Documentation
+|https://products.vshn.ch/appcat/postgresql.html[products.vshn.ch^] - https://git.vshn.net/vshn/docs/products/-/blob/master/docs/modules/ROOT/pages/appcat/postgresql.adoc[source^]
+
+|Code
+|https://github.com/vshn/appcat[github.com/vshn/appcat^]
 |===

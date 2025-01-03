@@ -1,4 +1,4 @@
-= ADR 0001 - Architecture Design or Decision Records
+= ADR 0001 - Architecture Decision Records
 :adr_author:    Tobias Brunner
 :adr_owner:     Schedar
 :adr_reviewers: TBD
@@ -10,9 +10,22 @@ include::partial$adr-meta.adoc[]
 [NOTE]
 .Summary
 ====
-This page describes what ADRs are ...
+Architecture Decision Records (ADR) are a way to document decisions, ideas, architecture and other important aspects of the engineering process.
 ====
 
-== Introduction
+== Problem
 
-blubb
+ADRs follow a certain structure, to make it easier to write them and to have a concise way of documenting things.
+
+== Relevant requirements
+
+== Relevant decisions
+
+== Proposals
+
+== Decision
+
+We use the existing structure from https://kb.vshn.ch/corp-tech/documents/document-decisions.html[VSHN Corporate Technology / How to read and document decisions].
+
+
+== Rationale

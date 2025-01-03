@@ -1,0 +1,10 @@
+= ADR Index
+:navtitle: ADRs
+
+[cols="1,2,1,1,1,1"]
+|===
+|Number |Title |Author |Owner |Status |Date
+
+|xref:adr/0001.adoc[0001] |ADR 0001 - Architecture Decision Records |Tobias Brunner |Schedar |draft |2025-01-01
+|xref:adr/0002.adoc[0002] |ADR 0002 - PostgreSQL stuff |Tobias Brunner |Schedar |draft |2025-01-01
+|===

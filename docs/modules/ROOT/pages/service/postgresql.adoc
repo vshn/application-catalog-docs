@@ -6,12 +6,9 @@
 
 include::partial$service-meta.adoc[]
 
-TODO:
+== Architecture
 
-* Service Template - each service must have a page
-* Link to product docs
-* Link to end-user docs
-* Link to service source
+Brief introduction on the architecture of the service, to get an understanding how it is working.
 
 == Related ADRs
 
