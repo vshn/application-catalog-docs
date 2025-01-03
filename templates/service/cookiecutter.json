@@ -1,0 +1,19 @@
+{
+    "service_name": "MyService",
+    "service_name_lowercase": "{{ cookiecutter.service_name.lower() }}",
+    "service_name_full": "{{ cookiecutter.service_name }} by VSHN",
+    "service_owner": [
+        "Schedar",
+        "Aldebaran",
+        "Nunki",
+        "Vega"
+    ],
+    "service_deploytech": [
+        "Helm",
+        "Operator"
+    ],
+    "service_status": [
+        "production",
+        "development"
+    ]
+}
