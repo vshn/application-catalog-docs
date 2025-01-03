@@ -1,0 +1,18 @@
+= ADR 0001 - Architecture Design or Decision Records
+:adr_author:    Tobias Brunner
+:adr_owner:     Schedar
+:adr_reviewers: TBD
+:adr_date:      2025-01-01
+:adr_status:    draft
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+This page describes what ADRs are ...
+====
+
+== Introduction
+
+blubb

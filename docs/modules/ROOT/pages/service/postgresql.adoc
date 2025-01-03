@@ -13,6 +13,6 @@ TODO:
 * Link to end-user docs
 * Link to service source
 
-== Related ADDRs
+== Related ADRs
 
-* xref:addr/0002.adoc[]
+* xref:adr/0002.adoc[]

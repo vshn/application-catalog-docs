@@ -1,0 +1,17 @@
+[.meta-info-table,cols="2*"]
+|===
+|Author
+|{adr_author}
+
+|Owner
+|{adr_owner}
+
+|Reviewers
+|{adr_reviewers}
+
+|Date
+|{adr_date}
+
+|Status
+|[.{adr_status} .status-macro]#{adr_status}#
+|===

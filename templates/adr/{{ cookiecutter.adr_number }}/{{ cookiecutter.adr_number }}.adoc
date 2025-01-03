@@ -1,0 +1,18 @@
+= ADR {{ cookiecutter.adr_number }} - {{ cookiecutter.adr_title }}
+:adr_author:    {{ cookiecutter.full_name }}
+:adr_owner:     {{ cookiecutter.adr_owner }}
+:adr_reviewers: {{ cookiecutter.adr_reviewers }}
+:adr_date:      {{ cookiecutter.adr_date }}
+:adr_status:    {{ cookiecutter.adr_status }}
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+TODO
+====
+
+== Introduction
+
+blubb
