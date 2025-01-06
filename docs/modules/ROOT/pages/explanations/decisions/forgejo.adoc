@@ -125,8 +125,8 @@ Think of `Codey` being the template for a `XVSHNForgejo` Composite Resource.
 .Claim
 [source,yaml]
 ----
-apiVersion: vshn.appcat.vshn.io/v1
-kind: Codey
+apiVersion: codey.io/v1
+kind: Instance
 metadata:
   name: my-codey-prod
 spec:
@@ -263,15 +263,14 @@ Ref: https://forgejo.org/docs/latest/admin/config-cheat-sheet/#queue-queue-and-q
 
 == Backup and Restore
 
-Two mechanisms are used for Backup:
+We use https://forgejo.org/docs/latest/admin/command-line/#dump[`forgejo dump`] as a https://docs.k8up.io/k8up/2.11/how-tos/application-aware-backups.html[backup command^] for K8up.
+This command includes dumps of everything.
 
-File-based data::
-K8up regularly stores the content of `/data` in the backup destination.
-Restoring happens with K8up mechanisms to get the files back into the `/data` directory.
+The backup scheduled is configured to run daily in the early morning.
 
-Database::
-We'll use https://forgejo.org/docs/latest/admin/command-line/#dump[`forgejo dump`] as a https://docs.k8up.io/k8up/2.11/how-tos/application-aware-backups.html[backup command^] for K8up.
 Restoring is currently a manual process, there is no `forgejo restore` command available.
+
+Ref: https://docs.gitea.com/administration/backup-and-restore[Backup and Restore^] (Forgejo is based on Gitea and the Forgejo docs do not have a specific page, the page in the Gitea documentation also applies to Forgejo.)
 
 == Metrics and Monitoring
 
