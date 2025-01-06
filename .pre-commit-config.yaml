@@ -1,0 +1,8 @@
+repos:
+  - repo: local
+    hooks:
+      - id: adr-index
+        name: Generate ADR Index
+        entry: hack/generate-adr-index.py
+        language: python
+        files: ^docs/modules/ROOT/pages/adr/
