@@ -11,7 +11,9 @@
 ** xref:app-catalog:ROOT:reference/service-maturity.adoc[]
 ** xref:app-catalog:ROOT:reference/framework-requirements.adoc[]
 ** xref:app-catalog:ROOT:reference/slareports.adoc[]
-** xref:app-catalog:ROOT:reference/control-plane-architecture.adoc[]
+** Separate Control Plane from Service Clusters
+*** xref:app-catalog:ROOT:reference/control-plane-pitfalls.adoc[]
+*** xref:app-catalog:ROOT:reference/sli-prober-architecture.adoc[]
 ** xref:app-catalog:ROOT:reference/ci-cd.adoc[]
 ** xref:app-catalog:ROOT:reference/quality-requirements.adoc[Quality Requirements]
 *** xref:app-catalog:ROOT:reference/quality-requirements/maintainability/readiness-standards.adoc[Maintainability]
@@ -69,6 +71,7 @@
 ** xref:app-catalog:ROOT:explanations/decisions/user-management.adoc[]
 ** xref:app-catalog:ROOT:explanations/decisions/comp-function-error-handling.adoc[]
 ** xref:app-catalog:ROOT:explanations/decisions/release_process.adoc[]
+** xref:app-catalog:ROOT:explanations/decisions/forgejo.adoc[Forgejo]
 ** Archive
 *** xref:app-catalog:ROOT:explanations/decisions/archive/converged-service-impl.adoc[Converged Service Provisioning Implementation]
 
