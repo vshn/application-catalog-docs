@@ -18,6 +18,7 @@
         "implemented",
         "obsolete"
     ],
+    "adr_tags": "tag1,tag2",
     "__prompts__": {
         "adr_number": "Number of the ADR (choose the next free)",
         "full_name": "Your Name",
@@ -33,6 +34,7 @@
             "rejected": "Rejected - designs won’t be implemented.",
             "implemented": "Implemented - designs which were accepted and are implemented.",
             "obsolete": "Obsolete - designs are kept for historical reasons, but don’t reflect the current or impending state of the codebase or project."
-        }
+        },
+        "adr_tags": "Comma separated list of tags - all lowercase"
     }
 }

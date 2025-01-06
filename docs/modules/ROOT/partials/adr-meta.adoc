@@ -1,4 +1,4 @@
-[.meta-info-table,cols="2*"]
+[.meta-info-table,cols="1h,2"]
 |===
 |Author
 |{adr_author}
@@ -9,9 +9,15 @@
 |Reviewers
 |{adr_reviewers}
 
-|Date
+|Date Created
 |{adr_date}
+
+|Date Updated
+|{adr_upd_date}
 
 |Status
 |[.{adr_status} .status-macro]#{adr_status}#
+
+|Tags
+|{adr_tags}
 |===

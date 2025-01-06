@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-
-import os
 import re
 import sys
 import argparse
 from pathlib import Path
+
+EXCLUDED_FILES = ("index.adoc", "working-with.adoc")
 
 
 def validate_adr_status(status):
@@ -42,29 +42,27 @@ def extract_variables(file_path):
 
 def generate_index(adr_dir, output_file):
     adr_files = sorted(
-        [f for f in Path(adr_dir).glob("*.adoc") if f.name != "index.adoc"]
+        [f for f in Path(adr_dir).glob("*.adoc") if f.name not in EXCLUDED_FILES]
     )
 
     content = """= ADR Index
 :navtitle: ADRs
 
-[cols="1,2,1,1,1,1"]
+[cols="3,1,1,1"]
 |===
-|Number |Title |Author |Owner |Status |Date
+|Title |Status |Date |Updated
 
 """
 
     for adr_file in adr_files:
         vars = extract_variables(adr_file)
+        filename = Path(adr_file).stem
         if vars:
-            number = adr_file.stem
-            title = vars.get("title", "Untitled")
-            author = vars.get("adr_author", "")
-            owner = vars.get("adr_owner", "")
             status = vars.get("adr_status", "")
             date = vars.get("adr_date", "")
+            updated = vars.get("adr_upd_date", "")
 
-            content += f"|xref:adr/{number}.adoc[{number}] |{title} |{author} |{owner} |{status} |{date}\n"
+            content += f"|xref:adr/{filename}.adoc[] |{status} |{date} |{updated}\n"
 
     content += "|===\n"
 
@@ -74,7 +72,7 @@ def generate_index(adr_dir, output_file):
 
 def validate_adrs(adr_dir):
     adr_files = sorted(
-        [f for f in Path(adr_dir).glob("*.adoc") if f.name != "index.adoc"]
+        [f for f in Path(adr_dir).glob("*.adoc") if f.name not in EXCLUDED_FILES]
     )
     has_errors = False
 

@@ -1,0 +1,74 @@
+= ADR 0001 - Architecture Decision Records
+:adr_author:    Tobias Brunner
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2025-01-01
+:adr_upd_date:  2025-01-06
+:adr_status:    draft
+:adr_tags:      processes
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+Architecture Decision Records (ADR) are our way to document decisions, ideas, architecture and other important aspects of the engineering process.
+It helps us to understand the "why".
+====
+
+== Context
+
+Throughout the lifetime of any given engineering task, lots of decisions have to be made.
+Some of them are quick and easy with a neglectable impact on the whole system, some of them have a broader impact.
+Most of the time, "future us" doesn't know anymore _why_ something is done in a particular way.
+Also, it might not be clear by just reading the code, other influences of a decision are not available in the code.
+
+== Decision
+
+We will write ADRs to document our decisions on the architecture, processes and tools.
+
+An ADR is a AsciiDoc file in the folder `docs/modules/ROOT/pages/adr/NNNN-slugified-title.adoc`.
+
+ADRs will be numbered sequentially and monotonically. Numbers will not be reused.
+
+If a decision is reversed, we will keep the old one around, but mark it as superseded. It's still relevant to know that it was the decision, but is no longer the decision.
+
+An existing ADR can be updated with new knowledge which has to be marked appropriately, for example with an annotation `Update: 2025-01-06`.
+A new ADR must be created for significant changes.
+
+We will use a format with just a few parts, so each document is easy to digest.
+If, for any reason, the format can be adjusted for a particular ADR.
+
+Status::
+* Draft: ADR still being worked on - no decision has been taken yet
+* Accepted: The decision is accepted
+* Implemented: ADRs which were accepted and are implemented.
+* Rejected: The ADR has been rejected. It's still here for history reasons and to understand why it has been rejected.
+* Obsolete: ADRs kept for historical reasons, but don't reflect the current or impending state of the codebase or project.
+
+Title::
+ADRs have names that are short noun phrases. For example, "ADR 0001: Architecture Decision Records" or "ADR 0042: StackGres for Managed PostgreSQL service"
+
+Context::
+This section describes the forces at play, including technological, political, social, and project local. These forces are probably in tension, and should be called out as such. The language in this section is value-neutral. It is simply describing facts.
+
+Decision::
+This section describes our response to these forces. It is stated in full sentences, with active voice. "We will ..."
+
+Consequences::
+This section describes the resulting context, after applying the decision. All consequences should be listed here, not just the "positive" ones. A particular decision may have positive, negative, and neutral consequences, but all of them affect the team and project in the future.
+
+The whole document should short and concise.
+We will write each ADR as if it is a conversation with a future VSHNeer.
+This requires good writing style, with full sentences organized into paragraphs. Bullets are acceptable only for visual style, not as an excuse for writing sentence fragments.
+
+== Consequences
+
+ADRs will help current and future VSHNeers understand the "why".
+
+Initially, writing ADRs will feel like additional work or a burden. Over time, it will prove its value.
+
+Keeping ADRs up-to-date (status, updated date) is a manual effort which might lead into outdated information.
+
+The motivation behind previous decisions is visible for every VSHNeer, present and future.
+Nobody is left scratching their heads to understand, "What were they thinking?" and the time to change old decisions will be clear from changes in the project's context.

@@ -1,0 +1,15 @@
+= Working with ADRs
+
+As decided in xref:adr/0001-architecture-decision-records.adoc[], we use ADRs.
+This page helps to work with ADRs.
+
+TODO
+
+== Related Links
+
+* https://adr.github.io/[Homepage of the ADR GitHub Organization^]
+* https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions.html[Michael Nygard - Documenting Architecture Decisions^]
+* https://mbuege.com/2022/11/14/architecture-decision-records/[Matthias Büge - Architecture Decision Records^]
+* https://18f.gsa.gov/2021/07/06/architecture_decision_records_helpful_now_invaluable_later/[18F - Architecture Decision Records: Helpful now, invaluable later^]
+* https://github.com/joelparkerhenderson/architecture-decision-record[GitHub joelparkerhenderson/architecture-decision-record^]
+* https://www.heise.de/hintergrund/Gut-dokumentiert-Architecture-Decision-Records-4664988.html?seite=all[Heise - Gut dokumentiert: Architecture Decision Records^]

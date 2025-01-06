@@ -3,7 +3,9 @@
 :adr_owner:     {{ cookiecutter.adr_owner }}
 :adr_reviewers: {{ cookiecutter.adr_reviewers }}
 :adr_date:      {{ cookiecutter.adr_date }}
+:adr_upd_date:  
 :adr_status:    {{ cookiecutter.adr_status }}
+:adr_tags:      {{ cookiecutter.adr_tags }}
 
 include::partial$adr-meta.adoc[]
 
