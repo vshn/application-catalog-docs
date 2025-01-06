@@ -19,5 +19,5 @@
 |https://products.vshn.ch/appcat/postgresql.html[products.vshn.ch^] - https://git.vshn.net/vshn/docs/products/-/blob/master/docs/modules/ROOT/pages/appcat/postgresql.adoc[source^]
 
 |Code
-|https://github.com/vshn/appcat[github.com/vshn/appcat^]
+|https://github.com/vshn/appcat[[github.com/vshn/appcat](https://github.com/vshn/appcat/tree/master/pkg/comp-functions/functions/vshnpostgres)^]
 |===
