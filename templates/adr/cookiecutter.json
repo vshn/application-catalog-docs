@@ -26,6 +26,7 @@
         "adr_reviewers": "Name of reviewers",
         "adr_owner": "Team who owns the ADR",
         "adr_date": "Start date when the ADR was written",
+        "adr_upd_date": "Date when the ADR was updated (on creation, same as creation date)",
         "adr_status": {
             "__prompt__": "State of the ADR",
             "draft": "Draft - ADR still being worked on - no decision has been taken yet.",

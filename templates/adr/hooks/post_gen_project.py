@@ -28,3 +28,7 @@ except IOError as e:
 
 # After copying the files we can remove the source directory
 shutil.rmtree(current_directory)
+
+print(
+    f"====> New ADR document has been created: {destination_directory}/{adr_number}.adoc"
+)
