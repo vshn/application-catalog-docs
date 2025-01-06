@@ -6,4 +6,5 @@
 |Title |Status |Date |Updated
 
 |xref:adr/0001-architecture-decision-records.adoc[] |draft |2025-01-01 |2025-01-06
+|xref:adr/0002-service-documentation.adoc[] |draft |2025-01-06 |2025-01-06
 |===

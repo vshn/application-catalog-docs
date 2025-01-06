@@ -12,8 +12,7 @@ include::partial$adr-meta.adoc[]
 [NOTE]
 .Summary
 ====
-Architecture Decision Records (ADR) are our way to document decisions, ideas, architecture and other important aspects of the engineering process.
-It helps us to understand the "why".
+Architecture Decision Records (ADR) are our way to document decisions, ideas, architecture, processes, tools and other important aspects of the engineering process. It helps us to understand the "why".
 ====
 
 == Context
@@ -25,7 +24,7 @@ Also, it might not be clear by just reading the code, other influences of a deci
 
 == Decision
 
-We will write ADRs to document our decisions on the architecture, processes and tools.
+We will write ADRs to document our decisions on the architecture, processes, ideas and tools.
 
 An ADR is a AsciiDoc file in the folder `docs/modules/ROOT/pages/adr/NNNN-slugified-title.adoc`.
 
@@ -40,8 +39,8 @@ We will use a format with just a few parts, so each document is easy to digest.
 If, for any reason, the format can be adjusted for a particular ADR.
 
 Status::
-* Draft: ADR still being worked on - no decision has been taken yet
-* Accepted: The decision is accepted
+* Draft: ADR still being worked on - no decision has been taken yet.
+* Accepted: The decision is accepted.
 * Implemented: ADRs which were accepted and are implemented.
 * Rejected: The ADR has been rejected. It's still here for history reasons and to understand why it has been rejected.
 * Obsolete: ADRs kept for historical reasons, but don't reflect the current or impending state of the codebase or project.

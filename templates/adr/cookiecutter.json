@@ -10,8 +10,8 @@
         "Vega"
     ],
     "adr_date": "{% now 'utc', '%Y-%m-%d' %}",
+    "adr_upd_date": "{% now 'utc', '%Y-%m-%d' %}",
     "adr_status": [
-        "speculative",
         "draft",
         "accepted",
         "rejected",
@@ -28,12 +28,11 @@
         "adr_date": "Start date when the ADR was written",
         "adr_status": {
             "__prompt__": "State of the ADR",
-            "draft": "Draft - designs strive toward acceptance. Designs may exist in draft for some time as we experiment and learn, but their ultimate goal is to become an accepted design.",
-            "speculative": "Speculative - designs explore an idea without yet explicitly proposing a change be made.",
-            "accepted": "Accepted - designs will be implemented.",
-            "rejected": "Rejected - designs won’t be implemented.",
-            "implemented": "Implemented - designs which were accepted and are implemented.",
-            "obsolete": "Obsolete - designs are kept for historical reasons, but don’t reflect the current or impending state of the codebase or project."
+            "draft": "Draft - ADR still being worked on - no decision has been taken yet.",
+            "accepted": "Accepted - The decision is accepted.",
+            "rejected": "Rejected - ADRs which were accepted and are implemented.",
+            "implemented": "Implemented - The ADR has been rejected. It's still here for history reasons and to understand why it has been rejected.",
+            "obsolete": "Obsolete - ADRs kept for historical reasons, but don't reflect the current or impending state of the codebase or project."
         },
         "adr_tags": "Comma separated list of tags - all lowercase"
     }

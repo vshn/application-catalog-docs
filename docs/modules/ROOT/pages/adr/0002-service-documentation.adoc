@@ -1,0 +1,27 @@
+= ADR 0002 - Service Documentation
+:adr_author:    Tobias Brunner
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2025-01-06
+:adr_upd_date:  2025-01-06
+:adr_status:    draft
+:adr_tags:      processes
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+TODO
+====
+
+
+== Context
+
+
+
+== Decision
+
+
+
+== Consequences

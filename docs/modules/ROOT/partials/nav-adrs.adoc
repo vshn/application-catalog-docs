@@ -1,1 +1,2 @@
 ** xref:adr/0001-architecture-decision-records.adoc[]
+** xref:adr/0002-service-documentation.adoc[]

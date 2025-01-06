@@ -12,4 +12,4 @@ Brief introduction on the architecture of the service, to get an understanding h
 
 == Related ADRs
 
-* xref:adr/0002.adoc[]
+* TODO
