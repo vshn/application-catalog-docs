@@ -1,4 +1,20 @@
-= VSHN Managed PostgreSQL
+= ADR 0005 - Automated PostgreSQL Service Upgrades
+:adr_author:    Simon Beck
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2023-05-23
+:adr_upd_date:  2023-05-04
+:adr_status:    implemented
+:adr_tags:      postgresql,service,maintenance
+:page-aliases:  explanations/decisions/postgres-upgrades.adoc
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+We will do automatic minor upgrade and manual major upgrades and inform 3 months after EOL and then force upgrade the instance.
+====
 
 == Problem
 

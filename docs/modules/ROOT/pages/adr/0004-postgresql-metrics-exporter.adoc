@@ -1,4 +1,20 @@
-= PostgreSQL by VSHN Availability check
+= ADR 0004 - PostgreSQL Metrics Exporter
+:adr_author:    Łukasz Widera
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2023-02-21
+:adr_upd_date:  2023-03-07
+:adr_status:    implemented
+:adr_tags:      postgresql,service,monitoring,metrics
+:page-aliases:  explanations/decisions/postgres-monitoring.adoc
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+We're using a custom exporter to export metrics about PostgreSQL.
+====
 
 == Problem
 

@@ -42,10 +42,6 @@
 *** xref:app-catalog:ROOT:runbooks/exoscale/restore_dbaas.adoc[]
 
 * Decisions
-** PostgreSQL by VSHN
-*** xref:app-catalog:ROOT:explanations/decisions/postgresql.adoc[Operator evaluation]
-*** xref:app-catalog:ROOT:explanations/decisions/postgres-monitoring.adoc[Availability Check]
-*** xref:app-catalog:ROOT:explanations/decisions/postgres-upgrades.adoc[Upgrade Policy]
 ** Redis by VSHN
 *** xref:app-catalog:ROOT:explanations/decisions/redis.adoc[Chart evaluation]
 *** xref:app-catalog:ROOT:explanations/decisions/redis-upgrades.adoc[Upgrade Policy]
@@ -137,9 +133,7 @@
 
 * Runbooks
 ** PostgreSQL By VSHN
-*** xref:app-catalog:ROOT:how-tos/appcat/vshn/postgres/PostgreSQLConnectionsCritical.adoc[]
 ** xref:app-catalog:ROOT:how-tos/appcat/appuio-quotas.adoc[]
-** xref:app-catalog:ROOT:how-tos/appcat/vshn/postgres/manual-restore.adoc[]
 ** xref:app-catalog:ROOT:how-tos/appcat/AppCatBackupJobError.adoc[]
 ** xref:app-catalog:ROOT:how-tos/appcat/GuaranteedUptimeTarget.adoc[]
 ** High Available Alerts

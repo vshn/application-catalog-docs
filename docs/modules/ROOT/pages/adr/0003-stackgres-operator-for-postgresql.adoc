@@ -1,4 +1,21 @@
-= VSHN Managed PostgreSQL
+= ADR 0003 - StackGres Operator for PostgreSQL
+:adr_author:    Simon Beck
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2022-11-15
+:adr_upd_date:  2023-11-01
+:adr_status:    implemented
+:adr_tags:      postgresql,service
+:page-aliases:  explanations/decisions/postgresql.adoc
+
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+We use StackGres as the underlying operator to provide the product PostgreSQL by VSHN.
+====
 
 == Problem
 

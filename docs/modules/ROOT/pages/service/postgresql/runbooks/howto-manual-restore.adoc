@@ -1,4 +1,5 @@
-= Restore VSHN PostgreSQL Database in APPUiO Cloud
+= Restore PostgreSQL by VSHN Database
+:page-aliases: how-tos/appcat/vshn/postgres/manual-restore.adoc
 
 During emergencies, we need a reliable and a precise solution to restore PostgreSQL databases with Stackgres.
 This will help reduce significantly the downtime of databases thus resulting in short outage for the customer.

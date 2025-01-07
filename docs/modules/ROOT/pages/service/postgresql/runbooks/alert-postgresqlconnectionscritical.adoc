@@ -1,4 +1,6 @@
 = Alert rule: PostgreSQLConnectionsCritical
+:navtitle: PostgreSQLConnectionsCritical
+:page-aliases: how-tos/appcat/vshn/postgres/PostgreSQLConnectionsCritical.adoc
 
 == icon:glasses[] Overview
 
