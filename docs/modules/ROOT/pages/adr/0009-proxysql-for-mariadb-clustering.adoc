@@ -1,4 +1,19 @@
-= VSHN Managed MariaDB HA Proxy solutions
+= ADR 0009 - ProxySQL for MariaDB Clustering
+:adr_author:    Nicolas Bigler
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2024-10-17
+:adr_upd_date:  2024-10-17
+:adr_status:    implemented
+:adr_tags:      mariadb,ha,cluster
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+We use ProxySQL for MariaDB Clustering.
+====
 
 == Problem
 

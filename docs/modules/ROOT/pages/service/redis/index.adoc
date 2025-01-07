@@ -6,7 +6,7 @@
 :svc_doc_enduser_src: https://github.com/vshn/appcat-user-docs/tree/master/docs/modules/ROOT/pages/vshn-managed/redis
 :svc_doc_product: https://products.vshn.ch/appcat/redis.html
 :svc_doc_product_src: https://git.vshn.net/vshn/docs/products/-/blob/master/docs/modules/ROOT/pages/appcat/redis.adoc
-:svc_code: https://github.com/vshn/appcat/tree/master/pkg/comp-functions/functions/FUNCTIONNAME
+:svc_code: https://github.com/vshn/appcat/tree/master/pkg/comp-functions/functions/vshnredis
 
 include::partial$service-meta.adoc[]
 

@@ -5,3 +5,5 @@
 ** xref:adr/0005-automated-postgresql-service-upgrades.adoc[]
 ** xref:adr/0006-bitnami-helm-chart-for-redis.adoc[]
 ** xref:adr/0007-automated-redis-service-upgrades.adoc[]
+** xref:adr/0008-bitnami-helm-chart-for-mariadb.adoc[]
+** xref:adr/0009-proxysql-for-mariadb-clustering.adoc[]

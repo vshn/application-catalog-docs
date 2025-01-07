@@ -1,4 +1,19 @@
-= VSHN Managed MariaDB
+= ADR 0008 - Bitnami Helm Chart for MariaDB
+:adr_author:    Simon Beck
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2022-12-27
+:adr_upd_date:  2023-10-31
+:adr_status:    implemented
+:adr_tags:      service,mariadb,helm
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+We use the Redis Bitnami Helm Chart.
+====
 
 == Problem
 

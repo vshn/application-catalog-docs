@@ -33,4 +33,12 @@
 
 `redis,upgrades,maintenance`
 |implemented |2023-07-11 |2023-07-11
+|xref:adr/0008-bitnami-helm-chart-for-mariadb.adoc[]
+
+`service,mariadb,helm`
+|implemented |2022-12-27 |2023-10-31
+|xref:adr/0009-proxysql-for-mariadb-clustering.adoc[]
+
+`mariadb,ha,cluster`
+|implemented |2024-10-17 |2024-10-17
 |===
