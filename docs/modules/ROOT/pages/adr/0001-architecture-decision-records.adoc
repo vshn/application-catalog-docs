@@ -61,6 +61,8 @@ The whole document should short and concise.
 We will write each ADR as if it is a conversation with a future VSHNeer.
 This requires good writing style, with full sentences organized into paragraphs. Bullets are acceptable only for visual style, not as an excuse for writing sentence fragments.
 
+Further usage documentation is in xref:adr/working-with.adoc[].
+
 == Consequences
 
 ADRs will help current and future VSHNeers understand the "why".

@@ -3,13 +3,26 @@
 As decided in xref:adr/0001-architecture-decision-records.adoc[], we use ADRs.
 This page helps to work with ADRs.
 
-TODO
+== Creating a new ADR
+
+TIP: You need https://cookiecutter.readthedocs.io/[Cookiecutter^] to use the provided templates and it's highly recommended to have https://pre-commit.com/[pre-commit^] ready and the Git hooks installed with `pre-commit install`.
+
+. Run `cookiecutter templates` in the root directory of the cloned https://github.com/vshn/application-catalog-docs[documentation repository^]
+. Fill in the missing pieces (ADR number should automatically be the next free)
+. Edit the ADR in the created file
+
+== ADR Index
+
+The ADR index at `docs/modules/ROOT/pages/adr/index.adoc` is automatically generated in a Git https://pre-commit.com/[pre-commit^] hook, which calls `hack/adr-tool.py generate`.
 
 == Related Links
 
+We're not the only ones using ADRs, here's a collection of interesting readings:
+
 * https://adr.github.io/[Homepage of the ADR GitHub Organization^]
 * https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions.html[Michael Nygard - Documenting Architecture Decisions^]
-* https://mbuege.com/2022/11/14/architecture-decision-records/[Matthias Büge - Architecture Decision Records^]
+* https://mbuege.com/2022/11/14/architecture-decision-records/[Matthias Büge - Architecture Decision Records^] [DE]
 * https://18f.gsa.gov/2021/07/06/architecture_decision_records_helpful_now_invaluable_later/[18F - Architecture Decision Records: Helpful now, invaluable later^]
 * https://github.com/joelparkerhenderson/architecture-decision-record[GitHub joelparkerhenderson/architecture-decision-record^]
-* https://www.heise.de/hintergrund/Gut-dokumentiert-Architecture-Decision-Records-4664988.html?seite=all[Heise - Gut dokumentiert: Architecture Decision Records^]
+* https://www.heise.de/hintergrund/Gut-dokumentiert-Architecture-Decision-Records-4664988.html?seite=all[Heise - Gut dokumentiert: Architecture Decision Record^] [DE]
+* https://rfd.shared.oxide.computer/rfd/0001[Oxide Computer - RFD 1 Requests for Discussion]
