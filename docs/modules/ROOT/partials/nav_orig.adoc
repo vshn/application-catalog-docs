@@ -33,9 +33,6 @@
 *** xref:app-catalog:ROOT:runbooks/exoscale/restore_dbaas.adoc[]
 
 * Decisions
-** ObjectStorage by VSHN
-*** xref:app-catalog:ROOT:explanations/decisions/local-objectstorage-provider.adoc[Provider Evaluation]
-*** xref:app-catalog:ROOT:explanations/decisions/local-objectstorage-sli.adoc[SLI]
 ** xref:app-catalog:ROOT:explanations/decisions/nextcloud.adoc[Nextcloud by VSHN]
 ** xref:app-catalog:ROOT:explanations/decisions/mongodb.adoc[MongoDB by VSHN]
 ** xref:app-catalog:ROOT:explanations/decisions/secret-pki-mgmt.adoc[Secret and PKI Management by VSHN]

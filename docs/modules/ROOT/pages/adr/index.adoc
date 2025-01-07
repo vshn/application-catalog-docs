@@ -41,4 +41,12 @@
 
 `mariadb,ha,cluster`
 |implemented |2024-10-17 |2024-10-17
+|xref:adr/0010-minio-for-local-object-storage.adoc[]
+
+`minio,service,objectstorage`
+|implemented |2023-10-23 |2023-10-23
+|xref:adr/0011-monitor-object-bucket-with-probe.adoc[]
+
+`minio,monitoring,sli`
+|implemented |2023-10-23 |2023-10-23
 |===

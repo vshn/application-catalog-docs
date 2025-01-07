@@ -1,4 +1,19 @@
-= VSHN Managed Object Storage
+= ADR 0010 - MinIO for Local Object Storage
+:adr_author:    Gabriel Saratura
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2023-10-23
+:adr_upd_date:  2023-10-23
+:adr_status:    implemented
+:adr_tags:      minio,service,objectstorage
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+We use MinIO to provide local object storage.
+====
 
 == Problem
 

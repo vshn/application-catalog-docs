@@ -1,0 +1,20 @@
+= Service: MinIO
+:svc_name: MinIO
+:svc_owner: Schedar
+:svc_deploytech: Helm
+:svc_doc_enduser: https://docs.appcat.ch/
+:svc_doc_enduser_src: https://github.com/vshn/appcat-user-docs/
+:svc_doc_product: https://products.vshn.ch/appcat/minio.html
+:svc_doc_product_src: https://git.vshn.net/vshn/docs/products/-/blob/master/docs/modules/ROOT/pages/appcat/minio.adoc
+:svc_code: https://github.com/vshn/appcat/tree/master/pkg/comp-functions/functions/vshnminio
+
+include::partial$service-meta.adoc[]
+
+== Architecture
+
+TODO: Brief introduction on the architecture of the service, to get an understanding how it is working.
+
+== Related adrs
+
+* xref:adr/0010-minio-for-local-object-storage.adoc[]
+* xref:adr/0011-monitor-object-bucket-with-probe.adoc[]
