@@ -1,8 +1,12 @@
 = Service: PostgreSQL
-:svc_name:       PostgreSQL by VSHN
-:svc_owner:      Schedar
+:svc_name: PostgreSQL by VSHN
+:svc_owner: Schedar
 :svc_deploytech: Operator (Stackgres)
-:svc_status:     production
+:svc_doc_enduser: https://docs.appcat.ch/vshn-managed/postgresql/index.html
+:svc_doc_enduser_src: https://github.com/vshn/appcat-user-docs/tree/master/docs/modules/ROOT/pages/vshn-managed/postgresql
+:svc_doc_product: https://products.vshn.ch/appcat/postgresql.html
+:svc_doc_product_src: https://git.vshn.net/vshn/docs/products/-/blob/master/docs/modules/ROOT/pages/appcat/postgresql.adoc
+:svc_code: https://github.com/vshn/appcat/tree/master/pkg/comp-functions/functions/vshnpostgres
 
 include::partial$service-meta.adoc[]
 

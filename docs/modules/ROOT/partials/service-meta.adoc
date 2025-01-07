@@ -9,15 +9,12 @@
 |Deployment Tech
 |{svc_deploytech}
 
-|Status
-|[.{svc_status} .status-macro]#{svc_status}#
-
 |End-User Documentation
-|https://docs.appcat.ch/vshn-managed/postgresql/index.html[docs.appcat.ch^] - https://github.com/vshn/appcat-user-docs/tree/master/docs/modules/ROOT/pages/vshn-managed/postgresql[source^]
+|{svc_doc_enduser}[docs^] - {svc_doc_enduser_src}[source^]
 
 |Product Documentation
-|https://products.vshn.ch/appcat/postgresql.html[products.vshn.ch^] - https://git.vshn.net/vshn/docs/products/-/blob/master/docs/modules/ROOT/pages/appcat/postgresql.adoc[source^]
+|{svc_doc_product}[docs^] - {svc_doc_product_src}[source^]
 
 |Code
-|https://github.com/vshn/appcat[[github.com/vshn/appcat](https://github.com/vshn/appcat/tree/master/pkg/comp-functions/functions/vshnpostgres)^]
+|{svc_code}[git repo^]
 |===
