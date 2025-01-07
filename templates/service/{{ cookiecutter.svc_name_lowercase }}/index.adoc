@@ -1,0 +1,19 @@
+= Service: {{ cookiecutter.svc_name }}
+:svc_name: {{ cookiecutter.svc_name }}
+:svc_owner: {{ cookiecutter.svc_owner }}
+:svc_deploytech: {{ cookiecutter.svc_deploytech }}
+:svc_doc_enduser: {{ cookiecutter.svc_doc_enduser }}
+:svc_doc_enduser_src: {{ cookiecutter.svc_doc_enduser_src }}
+:svc_doc_product: {{ cookiecutter.svc_doc_product }}
+:svc_doc_product_src: {{ cookiecutter.svc_doc_product_src }}
+:svc_code: {{ cookiecutter.svc_code }}
+
+include::partial$service-meta.adoc[]
+
+== Architecture
+
+TODO: Brief introduction on the architecture of the service, to get an understanding how it is working.
+
+== Related adrs
+
+* xref:adr/000X.adoc[]

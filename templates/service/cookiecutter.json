@@ -1,19 +1,32 @@
 {
-    "service_name": "MyService",
-    "service_name_lowercase": "{{ cookiecutter.service_name.lower() }}",
-    "service_name_full": "{{ cookiecutter.service_name }} by VSHN",
-    "service_owner": [
+    "svc_name": "MyService",
+    "svc_name_lowercase": "{{ cookiecutter.svc_name.lower() }}",
+    "svc_name_full": "{{ cookiecutter.svc_name }} by VSHN",
+    "svc_owner": [
         "Schedar",
         "Aldebaran",
         "Nunki",
         "Vega"
     ],
-    "service_deploytech": [
+    "svc_deploytech": [
         "Helm",
         "Operator"
     ],
-    "service_status": [
-        "production",
-        "development"
-    ]
+    "svc_doc_enduser": "https://docs.appcat.ch/vshn-managed/{{ cookiecutter.svc_name.lower() }}/index.html",
+    "svc_doc_enduser_src": "https://github.com/vshn/appcat-user-docs/tree/master/docs/modules/ROOT/pages/vshn-managed/{{ cookiecutter.svc_name.lower() }}",
+    "svc_doc_product": "https://products.vshn.ch/appcat/{{ cookiecutter.svc_name.lower() }}.html",
+    "svc_doc_product_src": "https://git.vshn.net/vshn/docs/products/-/blob/master/docs/modules/ROOT/pages/appcat/{{ cookiecutter.svc_name.lower() }}.adoc",
+    "svc_code": "https://github.com/vshn/appcat/tree/master/pkg/comp-functions/functions/FUNCTIONNAME",
+    "__prompts__": {
+        "svc_name": "Name of the service (correct spelling!)",
+        "svc_name_lowercase": "Lowercase name of the service",
+        "svc_name_full": "Full name of the product",
+        "svc_owner": "Team who owns the service",
+        "svc_deploytech": "Main technology used for the service",
+        "svc_doc_enduser": "URL to the End User documentation",
+        "svc_doc_enduser_src": "URL to the End User documentation Git repository",
+        "svc_doc_product": "URL to the product documentation",
+        "svc_doc_product_src": "URL to the product documentation Git repository",
+        "svc_code": "URL to the Git repository which implements the service (e.g. Composition Function)"
+    }
 }
