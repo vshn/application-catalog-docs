@@ -61,8 +61,9 @@ def generate_index(adr_dir, output_file):
             status = vars.get("adr_status", "")
             date = vars.get("adr_date", "")
             updated = vars.get("adr_upd_date", "")
+            tags = vars.get("adr_tags", "")
 
-            content += f"|xref:adr/{filename}.adoc[] |{status} |{date} |{updated}\n"
+            content += f"|xref:adr/{filename}.adoc[]\n\n`{tags}`\n|{status} |{date} |{updated}\n"
 
     content += "|===\n"
 
