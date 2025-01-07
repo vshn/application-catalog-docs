@@ -1,8 +1,3 @@
-* xref:index.adoc[Home]
-** xref:app-catalog:ROOT:explanations/what_is.adoc[What is it?]
-** xref:app-catalog:ROOT:explanations/why_exists.adoc[Why does it exist?]
-** xref:app-catalog:ROOT:explanations/app_catalog.adoc[Concept]
-** xref:app-catalog:ROOT:reference/glossary.adoc[]
 * Architecture
 ** xref:app-catalog:ROOT:reference/arch-control-plane.adoc[]
 ** AppCat Usage Reporting
@@ -30,10 +25,6 @@
 **** xref:app-catalog:ROOT:reference/quality-requirements/usability/api-validation.adoc[Service Instance API Validation]
 **** xref:app-catalog:ROOT:reference/quality-requirements/usability/provisioning-time.adoc[Automated Provisioning of a Service]
 **** xref:app-catalog:ROOT:reference/quality-requirements/usability/logs.adoc[Service Instance Logs]
-
-** Archive
-*** xref:app-catalog:ROOT:reference/billing-appuio.adoc[Billing on APPUiO Cloud]
-*** xref:app-catalog:ROOT:reference/billing-naming.adoc[]
 
 * Exoscale
 ** xref:app-catalog:ROOT:how-tos/exoscale_dbaas/price-api.adoc[Exoscale Price API]
