@@ -1,0 +1,20 @@
+= Service: Redis
+:svc_name: Redis
+:svc_owner: Schedar
+:svc_deploytech: Helm
+:svc_doc_enduser: https://docs.appcat.ch/vshn-managed/redis/index.html
+:svc_doc_enduser_src: https://github.com/vshn/appcat-user-docs/tree/master/docs/modules/ROOT/pages/vshn-managed/redis
+:svc_doc_product: https://products.vshn.ch/appcat/redis.html
+:svc_doc_product_src: https://git.vshn.net/vshn/docs/products/-/blob/master/docs/modules/ROOT/pages/appcat/redis.adoc
+:svc_code: https://github.com/vshn/appcat/tree/master/pkg/comp-functions/functions/FUNCTIONNAME
+
+include::partial$service-meta.adoc[]
+
+== Architecture
+
+TODO: Brief introduction on the architecture of the service, to get an understanding how it is working.
+
+== Related adrs
+
+* xref:adr/0006-bitnami-helm-chart-for-redis.adoc[]
+* xref:adr/0007-automated-redis-service-upgrades.adoc[]

@@ -10,4 +10,6 @@
 |xref:adr/0003-stackgres-operator-for-postgresql.adoc[] |implemented |2022-11-15 |2023-11-01
 |xref:adr/0004-postgresql-metrics-exporter.adoc[] |implemented |2023-02-21 |2023-03-07
 |xref:adr/0005-automated-postgresql-service-upgrades.adoc[] |implemented |2023-05-23 |2023-05-04
+|xref:adr/0006-bitnami-helm-chart-for-redis.adoc[] |implemented |2022-12-27 |2023-01-04
+|xref:adr/0007-automated-redis-service-upgrades.adoc[] |implemented |2023-07-11 |2023-07-11
 |===

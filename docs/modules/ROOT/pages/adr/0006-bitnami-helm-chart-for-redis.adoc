@@ -1,4 +1,20 @@
-= VSHN Managed Redis
+= ADR 0006 - Bitnami Helm Chart for Redis
+:adr_author:    Simon Beck
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2022-12-27
+:adr_upd_date:  2023-01-04
+:adr_status:    implemented
+:adr_tags:      redis,service
+:page-aliases:  explanations/decisions/redis.adoc
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+We use the Redis Bitnami Helm Chart and deploy it with the Crossplane Provider Kubernetes.
+====
 
 == Problem
 

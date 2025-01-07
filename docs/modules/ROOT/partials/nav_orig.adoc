@@ -33,9 +33,6 @@
 *** xref:app-catalog:ROOT:runbooks/exoscale/restore_dbaas.adoc[]
 
 * Decisions
-** Redis by VSHN
-*** xref:app-catalog:ROOT:explanations/decisions/redis.adoc[Chart evaluation]
-*** xref:app-catalog:ROOT:explanations/decisions/redis-upgrades.adoc[Upgrade Policy]
 ** MariaDB By VSHN
 *** xref:app-catalog:ROOT:explanations/decisions/mariadb.adoc[Chart/Operator evaluation]
 *** xref:app-catalog:ROOT:explanations/decisions/mariadb-proxy.adoc[Proxy for HA setups]

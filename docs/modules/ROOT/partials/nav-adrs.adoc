@@ -3,3 +3,5 @@
 ** xref:adr/0003-stackgres-operator-for-postgresql.adoc[]
 ** xref:adr/0004-postgresql-metrics-exporter.adoc[]
 ** xref:adr/0005-automated-postgresql-service-upgrades.adoc[]
+** xref:adr/0006-bitnami-helm-chart-for-redis.adoc[]
+** xref:adr/0007-automated-redis-service-upgrades.adoc[]

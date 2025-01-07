@@ -1,4 +1,20 @@
-= VSHN Managed Redis Upgrade Policy
+= ADR 0007 - Automated Redis Service Upgrades
+:adr_author:    Fabian Fischer
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2023-07-11
+:adr_upd_date:  2023-07-11
+:adr_status:    implemented
+:adr_tags:      redis,upgrades,maintenance
+:page-aliases:  explanations/decisions/redis-upgrades.adoc
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+Both minor and major updates are done manually by the service user.
+====
 
 == Problem
 
