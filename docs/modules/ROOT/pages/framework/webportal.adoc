@@ -70,6 +70,8 @@ TODOs and notes:
 * Fields for the service configuration must be dynamically generated from the API spec of the XRD / XRD
 * The marketplace listing must be visually attractive and include service logos
 
+image::vamp-portal-mockup.drawio.svg[]
+
 === APPUiO
 
 Under APPUiO we'll list the available Zones and link to the https://status.appuio.cloud/[APPUiO Status Page^].
