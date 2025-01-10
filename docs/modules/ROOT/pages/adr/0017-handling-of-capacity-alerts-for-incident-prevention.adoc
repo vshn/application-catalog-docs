@@ -1,4 +1,20 @@
-= Handling of Capacity Alerts for Incident Prevention
+= ADR 0017 - Handling of Capacity Alerts for Incident Prevention
+:adr_author:    Fabian Fischer
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2023-02-24
+:adr_upd_date:  2023-03-02
+:adr_status:    implemented
+:adr_tags:      framework,service,alerting
+:page-aliases:  explanations/decisions/capacity-alerting.adoc
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+We implement both exposing the user-workload monitoring and automated e-mail alerts through Mailgun.
+====
 
 == Problem
 
