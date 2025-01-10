@@ -53,4 +53,8 @@
 
 `framework,service`
 |implemented |2022-03-24 |2022-12-05
+|xref:adr/0013-use-logging-facilities-of-platform.adoc[]
+
+`framework,service,logging`
+|implemented |2023-03-14 |2023-03-14
 |===

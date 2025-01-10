@@ -1,4 +1,20 @@
-= Handling Logs for Converged Services
+= ADR 0013 - Use Logging Facilities of Platform
+:adr_author:    Fabian Fischer
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2023-03-14
+:adr_upd_date:  2023-03-14
+:adr_status:    implemented
+:adr_tags:      framework,service,logging
+:page-aliases:  explanations/decisions/logging.adoc
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+We use the logging solution of the platform to give users access to service logs.
+====
 
 == Problem
 
