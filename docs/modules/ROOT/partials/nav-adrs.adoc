@@ -21,3 +21,4 @@
 ** xref:adr/0021-composition-function-error-handling.adoc[]
 ** xref:adr/0022-replace-api-server-by-custom-resources.adoc[]
 ** xref:adr/0023-releasee-process-for-appcat-components.adoc[]
+** xref:adr/0024-product-choice-for-secret-management.adoc[]

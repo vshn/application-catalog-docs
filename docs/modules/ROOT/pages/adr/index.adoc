@@ -97,4 +97,8 @@
 
 `framework,process,cicd`
 |implemented |2024-07-25 |2024-07-25
+|xref:adr/0024-product-choice-for-secret-management.adoc[]
+
+`service,product`
+|draft |2024-05-27 |2024-05-27
 |===
