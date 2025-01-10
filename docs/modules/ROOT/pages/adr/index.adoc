@@ -89,4 +89,8 @@
 
 `framework,crossplane`
 |implemented |2024-06-10 |2024-06-14
+|xref:adr/0022-replace-api-server-by-custom-resources.adoc[]
+
+`framework,apiserver`
+|accepted |2023-11-02 |2023-11-02
 |===

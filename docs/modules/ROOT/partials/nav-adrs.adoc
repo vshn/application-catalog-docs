@@ -19,3 +19,4 @@
 ** xref:adr/0019-deletion-protection-with-validating-webhook.adoc[]
 ** xref:adr/0020-user-management-in-service-instances.adoc[]
 ** xref:adr/0021-composition-function-error-handling.adoc[]
+** xref:adr/0022-replace-api-server-by-custom-resources.adoc[]

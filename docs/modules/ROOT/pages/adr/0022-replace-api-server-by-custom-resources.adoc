@@ -1,4 +1,20 @@
-= API Server Replacement
+= ADR 0022 - Replace API Server by Custom Resources
+:adr_author:    Simon Beck
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2023-11-02
+:adr_upd_date:  2023-11-02
+:adr_status:    accepted
+:adr_tags:      framework,apiserver
+:page-aliases:  explanations/decisions/apiserver.adoc
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+Over time we strive to replace the API server with custom resources and a reconcile loop (controller).
+====
 
 == Problems
 

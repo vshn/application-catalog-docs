@@ -36,7 +36,6 @@
 ** xref:app-catalog:ROOT:explanations/decisions/nextcloud.adoc[Nextcloud by VSHN]
 ** xref:app-catalog:ROOT:explanations/decisions/mongodb.adoc[MongoDB by VSHN]
 ** xref:app-catalog:ROOT:explanations/decisions/secret-pki-mgmt.adoc[Secret and PKI Management by VSHN]
-** xref:app-catalog:ROOT:explanations/decisions/apiserver.adoc[API Server Replacement]
 ** xref:app-catalog:ROOT:explanations/decisions/release_process.adoc[]
 ** Archive
 *** xref:app-catalog:ROOT:explanations/decisions/archive/converged-service-impl.adoc[Converged Service Provisioning Implementation]
