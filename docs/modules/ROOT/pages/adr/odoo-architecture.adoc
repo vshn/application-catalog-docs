@@ -20,6 +20,10 @@ Odoo uses the Open Service Broker API to enable access to a service on the VSHN 
 
 [mermaid,archosb,png]
 ....
+---
+config:
+  fontFamily: serif
+---
 flowchart TB
     webshop["Mint / Uri Cloud"]
     eu("End-User (Service buyer)")
@@ -36,6 +40,10 @@ flowchart TB
 
 [mermaid,flowosb,png]
 ....
+---
+config:
+  fontFamily: serif
+---
 sequenceDiagram
     autonumber
     actor EU as End-User<br/>(Service buyer)
@@ -76,6 +84,10 @@ Cons::
 
 [mermaid,archk8s,png]
 ....
+---
+config:
+  fontFamily: serif
+---
 flowchart TB
     webshop["Mint / Uri Cloud"]
     eu("End-User (Service buyer)")
@@ -89,6 +101,10 @@ flowchart TB
 
 [mermaid,flowk8s,png]
 ....
+---
+config:
+  fontFamily: serif
+---
 sequenceDiagram
     autonumber
     actor EU as End-User<br/>(Service buyer)
