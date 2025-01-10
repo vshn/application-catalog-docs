@@ -57,4 +57,12 @@
 
 `framework,service,logging`
 |implemented |2023-03-14 |2023-03-14
+|xref:adr/0014-commodore-component-to-deploy-compositions-and-xrds.adoc[]
+
+`framework,commodore,crossplane`
+|implemented |2022-08-05 |2022-12-09
+|xref:adr/0015-metrics-and-monitoring-of-services.adoc[]
+
+`framework,monitoring,metrics`
+|implemented |2023-07-06 |2023-09-26
 |===

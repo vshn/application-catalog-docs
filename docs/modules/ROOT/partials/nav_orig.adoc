@@ -39,7 +39,6 @@
 ** xref:app-catalog:ROOT:explanations/decisions/capacity-alerting.adoc[Converged Service Capacity Alerting]
 ** xref:app-catalog:ROOT:explanations/decisions/api-design.adoc[API Design]
 ** xref:app-catalog:ROOT:explanations/decisions/sla-reports.adoc[SLA Reports]
-** xref:app-catalog:ROOT:explanations/decisions/generic-metrics.adoc[]
 ** xref:app-catalog:ROOT:explanations/decisions/apiserver.adoc[API Server Replacement]
 ** xref:app-catalog:ROOT:explanations/decisions/deletion-protection.adoc[]
 ** xref:app-catalog:ROOT:explanations/decisions/user-management.adoc[]

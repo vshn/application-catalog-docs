@@ -1,6 +1,22 @@
-= Monitoring and Metrics for Converged VSHN Services
+= ADR 0015 - Metrics and Monitoring of Services
+:adr_author:    Simon Beck
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2023-07-06
+:adr_upd_date:  2023-09-26
+:adr_status:    implemented
+:adr_tags:      framework,monitoring,metrics
+:page-aliases:  explanations/decisions/generic-metrics.adoc
 
-Based on our decision for link:/app-catalog/explanations/decisions/postgres-monitoring.html[PostgreSQL] we will be using the https://github.com/vshn/appcat/tree/master/pkg/sliexporter[same SLI exporter] to monitor for the SLIs.
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+This page describes how we collect metrics.
+====
+
+Based on our decision for xref:explanations/decisions/postgres-monitoring.adoc[PostgreSQL] we will be using the https://github.com/vshn/appcat/tree/master/pkg/sliexporter[same SLI exporter^] to monitor for the SLIs.
 
 The exporter will be extended with all necessary logic to check for SLIs of other services as well.
 To check databases the SLI exporter will perform a trivial query.
