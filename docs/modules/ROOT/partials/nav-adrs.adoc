@@ -22,3 +22,4 @@
 ** xref:adr/0022-replace-api-server-by-custom-resources.adoc[]
 ** xref:adr/0023-releasee-process-for-appcat-components.adoc[]
 ** xref:adr/0024-product-choice-for-secret-management.adoc[]
+** xref:adr/0025-nextcloud-deployment-with-helm-chart.adoc[]

@@ -101,4 +101,8 @@
 
 `service,product`
 |draft |2024-05-27 |2024-05-27
+|xref:adr/0025-nextcloud-deployment-with-helm-chart.adoc[]
+
+`service,nextcloud,helm`
+|implemented |2024-06-12 |2024-07-02
 |===
