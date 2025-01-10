@@ -65,4 +65,8 @@
 
 `framework,monitoring,metrics`
 |implemented |2023-07-06 |2023-09-26
+|xref:adr/0016-service-api-design.adoc[]
+
+`framework,api,service`
+|draft |2022-08-23 |2022-12-05
 |===

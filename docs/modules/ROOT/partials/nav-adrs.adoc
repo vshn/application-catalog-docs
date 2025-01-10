@@ -13,3 +13,4 @@
 ** xref:adr/0013-use-logging-facilities-of-platform.adoc[]
 ** xref:adr/0014-commodore-component-to-deploy-compositions-and-xrds.adoc[]
 ** xref:adr/0015-metrics-and-monitoring-of-services.adoc[]
+** xref:adr/0016-service-api-design.adoc[]

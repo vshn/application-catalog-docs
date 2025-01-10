@@ -1,4 +1,20 @@
-= Decision on API Design
+= ADR 0016 - Service API Design
+:adr_author:    Simon Beck
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2022-08-23
+:adr_upd_date:  2022-12-05
+:adr_status:    draft
+:adr_tags:      framework,api,service
+:page-aliases:  explanations/decisions/api-design.adoc
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+We use separate XRDs with convention to design a service API.
+====
 
 [NOTE]
 This decision page is currently still a WIP.
