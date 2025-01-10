@@ -81,4 +81,8 @@
 
 `framework,service`
 |implemented |2024-03-14 |2024-03-18
+|xref:adr/0020-user-management-in-service-instances.adoc[]
+
+`framework,service`
+|implemented |2024--05-16 |2024--05-17
 |===

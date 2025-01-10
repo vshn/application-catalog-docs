@@ -1,4 +1,20 @@
-= Simple User management for single tenant services
+= ADR 0020 - User Management in Service Instances
+:adr_author:    Simon Beck
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2024--05-16
+:adr_upd_date:  2024--05-17
+:adr_status:    implemented
+:adr_tags:      framework,service
+:page-aliases:  explanations/decisions/user-management.adoc
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+We enhance claims to manage users of a service instance.
+====
 
 == Problem
 

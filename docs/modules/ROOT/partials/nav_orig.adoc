@@ -37,7 +37,6 @@
 ** xref:app-catalog:ROOT:explanations/decisions/mongodb.adoc[MongoDB by VSHN]
 ** xref:app-catalog:ROOT:explanations/decisions/secret-pki-mgmt.adoc[Secret and PKI Management by VSHN]
 ** xref:app-catalog:ROOT:explanations/decisions/apiserver.adoc[API Server Replacement]
-** xref:app-catalog:ROOT:explanations/decisions/user-management.adoc[]
 ** xref:app-catalog:ROOT:explanations/decisions/comp-function-error-handling.adoc[]
 ** xref:app-catalog:ROOT:explanations/decisions/release_process.adoc[]
 ** Archive
