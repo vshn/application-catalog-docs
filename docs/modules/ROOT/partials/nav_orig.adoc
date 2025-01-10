@@ -37,7 +37,6 @@
 ** xref:app-catalog:ROOT:explanations/decisions/mongodb.adoc[MongoDB by VSHN]
 ** xref:app-catalog:ROOT:explanations/decisions/secret-pki-mgmt.adoc[Secret and PKI Management by VSHN]
 ** xref:app-catalog:ROOT:explanations/decisions/capacity-alerting.adoc[Converged Service Capacity Alerting]
-** xref:app-catalog:ROOT:explanations/decisions/composition-deployments.adoc[Composition Deployments]
 ** xref:app-catalog:ROOT:explanations/decisions/api-design.adoc[API Design]
 ** xref:app-catalog:ROOT:explanations/decisions/sla-reports.adoc[SLA Reports]
 ** xref:app-catalog:ROOT:explanations/decisions/generic-metrics.adoc[]

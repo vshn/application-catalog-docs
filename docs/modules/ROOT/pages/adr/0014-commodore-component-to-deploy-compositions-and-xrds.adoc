@@ -1,4 +1,20 @@
-= Decision How to Deploy Compositions and XRDs
+= ADR 0014 - Commodore Component to Deploy Compositions and XRDs
+:adr_author:    Simon Beck
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2022-08-05
+:adr_upd_date:  2022-12-09
+:adr_status:    implemented
+:adr_tags:      framework,commodore,crossplane
+:page-aliases:  explanations/decisions/composition-deployments.adoc
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+We use Commodore Components without Packages to deploy Compositions and XRDs to clusters.
+====
 
 == Problem
 

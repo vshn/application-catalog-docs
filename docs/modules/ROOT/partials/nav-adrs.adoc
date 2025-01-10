@@ -11,3 +11,4 @@
 ** xref:adr/0011-monitor-object-bucket-with-probe.adoc[]
 ** xref:adr/0012-converged-service-in-managed-namespace.adoc[]
 ** xref:adr/0013-use-logging-facilities-of-platform.adoc[]
+** xref:adr/0014-commodore-component-to-deploy-compositions-and-xrds.adoc[]
