@@ -109,4 +109,8 @@
 
 `service,mongodb,product`
 |draft |2024-08-06 |2024-09-05
+|xref:adr/0027-keycloak-deployment-with-helm-chart.adoc[]
+
+`service,keycloak,helm`
+|implemented |2023-10-19 |2023-10-19
 |===

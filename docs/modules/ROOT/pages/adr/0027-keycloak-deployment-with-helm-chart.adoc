@@ -1,4 +1,20 @@
-= VSHN Managed Keycloak
+= ADR 0027 - Keycloak Deployment with Helm Chart
+:adr_author:    Nicolas Bigler
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2023-10-19
+:adr_upd_date:  2023-10-19
+:adr_status:    implemented
+:adr_tags:      service,keycloak,helm
+:page-aliases:  explanations/decisions/keycloak.adoc
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+We use the Codecentric Helm Chart to deploy Keycloak.
+====
 
 == Problem
 
@@ -83,3 +99,4 @@ We lack the expertise to contribute to this projects.
 As we already have experience deploying services with Helm Charts and we have been using the Codecentric Helm Chart for years, we are confident that this is the best solution for us.
 
 Furthermore we don't need to write a custom provider as we can use the `+provider-helm+` provider to instantiate the Helm Chart.
+
