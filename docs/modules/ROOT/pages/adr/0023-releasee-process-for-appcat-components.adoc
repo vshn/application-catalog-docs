@@ -1,4 +1,20 @@
-= Decision on AppCat release process
+= ADR 0023 - Releasee Process for AppCat Components
+:adr_author:    Gabriel Saratura
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2024-07-25
+:adr_upd_date:  2024-07-25
+:adr_status:    implemented
+:adr_tags:      framework,process,cicd
+:page-aliases:  explanations/decisions/release_process.adoc
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+We use Commodore Component releases to release AppCat components.
+====
 
 This page will describe the current AppCat release process, the problem we face and possible solutions.
 

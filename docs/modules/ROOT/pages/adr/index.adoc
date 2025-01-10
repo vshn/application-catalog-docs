@@ -93,4 +93,8 @@
 
 `framework,apiserver`
 |accepted |2023-11-02 |2023-11-02
+|xref:adr/0023-releasee-process-for-appcat-components.adoc[]
+
+`framework,process,cicd`
+|implemented |2024-07-25 |2024-07-25
 |===
