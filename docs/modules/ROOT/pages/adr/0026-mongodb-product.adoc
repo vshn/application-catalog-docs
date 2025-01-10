@@ -1,4 +1,20 @@
-= MongoDB
+= ADR 0026 - Deploy MongoDB with Operator
+:adr_author:    Simon Beck
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2024-08-06
+:adr_upd_date:  2024-09-05
+:adr_status:    draft
+:adr_tags:      service,mongodb,product
+:page-aliases:  explanations/decisions/mongodb.adoc
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+We use the MongoDB Enterprise Operator to deploy MongoDB.
+====
 
 == Problem
 

@@ -33,7 +33,6 @@
 *** xref:app-catalog:ROOT:runbooks/exoscale/restore_dbaas.adoc[]
 
 * Decisions
-** xref:app-catalog:ROOT:explanations/decisions/mongodb.adoc[MongoDB by VSHN]
 ** Archive
 *** xref:app-catalog:ROOT:explanations/decisions/archive/converged-service-impl.adoc[Converged Service Provisioning Implementation]
 

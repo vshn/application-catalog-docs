@@ -105,4 +105,8 @@
 
 `service,nextcloud,helm`
 |implemented |2024-06-12 |2024-07-02
+|xref:adr/0026-mongodb-product.adoc[]
+
+`service,mongodb,product`
+|draft |2024-08-06 |2024-09-05
 |===
