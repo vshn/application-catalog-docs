@@ -1,4 +1,20 @@
-= Decision on SLA Reports
+= ADR 0018 - SLA Reports Handling
+:adr_author:    Gabriel Saratura
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2023-05-08
+:adr_upd_date:  2023-05-09
+:adr_status:    implemented
+:adr_tags:      framework,sla,reports
+:page-aliases:  explanations/decisions/sla-reports.adoc
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+We use a custom tool to create SLA reports.
+====
 
 == Problem
 

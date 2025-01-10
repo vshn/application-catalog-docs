@@ -1,4 +1,20 @@
-= Deletion Protection
+= ADR 0019 - Deletion Protection with Validating Webhook
+:adr_author:    Simon Beck
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2024-03-14
+:adr_upd_date:  2024-03-18
+:adr_status:    implemented
+:adr_tags:      framework,service
+:page-aliases:  explanations/decisions/deletion-protection.adoc
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+We use a custom validation webhook to implement deletion protection for service instances.
+====
 
 == Problem
 
