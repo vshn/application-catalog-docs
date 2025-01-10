@@ -41,7 +41,6 @@
 ** xref:app-catalog:ROOT:explanations/decisions/composition-deployments.adoc[Composition Deployments]
 ** xref:app-catalog:ROOT:explanations/decisions/api-design.adoc[API Design]
 ** xref:app-catalog:ROOT:explanations/decisions/sla-reports.adoc[SLA Reports]
-** xref:app-catalog:ROOT:explanations/decisions/converged-service-loc.adoc[Converged Service Provisioning Location]
 ** xref:app-catalog:ROOT:explanations/decisions/generic-metrics.adoc[]
 ** xref:app-catalog:ROOT:explanations/decisions/apiserver.adoc[API Server Replacement]
 ** xref:app-catalog:ROOT:explanations/decisions/deletion-protection.adoc[]

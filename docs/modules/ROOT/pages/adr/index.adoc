@@ -49,4 +49,8 @@
 
 `minio,monitoring,sli`
 |implemented |2023-10-23 |2023-10-23
+|xref:adr/0012-converged-service-in-managed-namespace.adoc[]
+
+`framework,service`
+|implemented |2022-03-24 |2022-12-05
 |===

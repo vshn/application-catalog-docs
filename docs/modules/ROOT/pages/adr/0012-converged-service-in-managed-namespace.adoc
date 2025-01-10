@@ -1,4 +1,20 @@
-= Converged Service Provisioning Location
+= ADR 0012 - Converged Service in Managed Namespace
+:adr_author:    Christian Cremer
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2022-03-24
+:adr_upd_date:  2022-12-05
+:adr_status:    implemented
+:adr_tags:      framework,service
+:page-aliases:  explanations/decisions/converged-service-loc.adoc
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+Service instances are running in their own managed namespace.
+====
 
 == Problem
 

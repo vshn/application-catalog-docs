@@ -9,3 +9,4 @@
 ** xref:adr/0009-proxysql-for-mariadb-clustering.adoc[]
 ** xref:adr/0010-minio-for-local-object-storage.adoc[]
 ** xref:adr/0011-monitor-object-bucket-with-probe.adoc[]
+** xref:adr/0012-converged-service-in-managed-namespace.adoc[]
