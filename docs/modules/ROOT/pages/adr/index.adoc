@@ -85,4 +85,8 @@
 
 `framework,service`
 |implemented |2024--05-16 |2024--05-17
+|xref:adr/0021-composition-function-error-handling.adoc[]
+
+`framework,crossplane`
+|implemented |2024-06-10 |2024-06-14
 |===

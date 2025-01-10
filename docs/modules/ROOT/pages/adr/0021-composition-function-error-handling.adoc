@@ -1,4 +1,20 @@
-= Composition Function Error Handling
+= ADR 0021 - Composition Function Error Handling
+:adr_author:    Gabriel Saratura
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2024-06-10
+:adr_upd_date:  2024-06-14
+:adr_status:    implemented
+:adr_tags:      framework,crossplane
+:page-aliases:  explanations/decisions/comp-function-error-handling.adoc
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+We manage errors in Composition Functions.
+====
 
 In March 2024 we had a severe outage of VSHN PostgreSQL instances.
 This was due to several unfortunate events including our poor handling of errors in composition functions.
