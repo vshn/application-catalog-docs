@@ -32,10 +32,6 @@
 ** Runbooks
 *** xref:app-catalog:ROOT:runbooks/exoscale/restore_dbaas.adoc[]
 
-* Decisions
-** Archive
-*** xref:app-catalog:ROOT:explanations/decisions/archive/converged-service-impl.adoc[Converged Service Provisioning Implementation]
-
 * SPKS
 ** xref:redis.adoc[Redis]
 *** xref:app-catalog:ROOT:explanations/redis.adoc[Redis Service Details]

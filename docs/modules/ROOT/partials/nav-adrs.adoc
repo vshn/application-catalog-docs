@@ -26,3 +26,4 @@
 ** xref:adr/0026-mongodb-product.adoc[]
 ** xref:adr/0027-keycloak-deployment-with-helm-chart.adoc[]
 ** xref:adr/0028-sli-prober-for-object-storage.adoc[]
+** xref:adr/0029-converged-service-provisioning-implementation.adoc[]

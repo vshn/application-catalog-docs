@@ -1,6 +1,17 @@
-= Converged Service Provisioning Implementation
+= ADR 0029 - Converged Service Provisioning Implementation
+:adr_author:    Christian Cremer
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2022-03-24
+:adr_upd_date:  2022-11-25
+:adr_status:    obsolete
+:adr_tags:      framework
+:page-aliases:  explanations/decisions/archive/converged-service-impl.adoc
+
+include::partial$adr-meta.adoc[]
 
 [NOTE]
+.Summary
 ====
 This page is obsolete.
 The discussions about the approach have been moved to xref:explanations/decisions/postgresql.adoc[the VSHN Managed PostgreSQL] page.

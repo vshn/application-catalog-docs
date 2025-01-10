@@ -117,4 +117,8 @@
 
 `service,monitoring,sli`
 |implemented |2023-10-23 |2023-10-23
+|xref:adr/0029-converged-service-provisioning-implementation.adoc[]
+
+`framework`
+|obsolete |2022-03-24 |2022-11-25
 |===
