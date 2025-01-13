@@ -15,6 +15,9 @@
 
 * xref:service/minio/index.adoc[]
 
+* xref:service/forgejo-codey/index.adoc[]
+** xref:service/forgejo-codey/architecture.adoc[]
+
 * xref:service/exoscale-dbaas/index.adoc[]
 ** xref:service/exoscale-dbaas/price-api.adoc[]
 ** Runbooks

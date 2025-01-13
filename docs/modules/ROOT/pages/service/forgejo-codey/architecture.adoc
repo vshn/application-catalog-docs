@@ -1,4 +1,6 @@
-= Forgejo / Codey
+= Forgejo / Codey Architecture
+:page-aliases: explanations/decisions/forgejo.adoc
+:navtitle: Architecture
 
 This page discusses the technical details for our two products https://products.vshn.ch/appcat/forgejo.html[Forgejo by VSHN^] and https://products.vshn.ch/codey.html[Codey^]: Fully managed, dedicated https://forgejo.org/[Forgejo^] instances.
 
