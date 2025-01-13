@@ -1,0 +1,14 @@
+= How to Find the Cluster for a Database Instance
+:page-aliases: how-tos/mariadbgalera/find_cluster_for_instance.adoc
+
+To find the service cluster on which a database instance was created:
+
+.Control Cluster
+[source,shell]
+----
+# Get the cluster instance UID
+CLUSTER_INSTANCE_ID=$(kubectl get compositemariadbdatabaseinstance $INSTANCE_ID -ojsonpath='{.spec.parameters.parent_reference}')
+
+# Get the cluster instance
+kubectl get compositemariadbinstance ${CLUSTER_INSTANCE_ID}
+----

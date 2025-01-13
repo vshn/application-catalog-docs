@@ -1,0 +1,61 @@
+= Redis Service Details
+:page-aliases: explanations/redis.adoc
+
+== Deployment
+
+Redis is deployed using Crossplane with the Helm Provider, making use of the https://github.com/bitnami/charts/tree/master/bitnami/redis[Redis Helm Chart by Bitnami].
+
+== Configuration
+
+The used Helm Chart provides values for production use.
+
+.Adjustments to Default Values
+[source,yaml]
+----
+cluster:
+  enabled: true
+  slaveCount: 3
+ 
+sentinel:
+  enabled: true
+  usePassword: true
+  downAfterMilliseconds: 3000
+  failoverTimeout: 10000
+  staticID: true
+   
+networkPolicy:
+  enabled: true
+ 
+existingSecret: redis-password-secret
+ 
+persistence:
+  existingClaim: my-redis-pvc
+ 
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    selector:
+      prometheus: kube-prometheus
+  prometheusRule:
+    enabled: true
+    rules:
+      - alert: ...
+      - alert: ...
+----
+
+== Service Access
+
+See xref:explanations/redis_fake_sentinel.adoc[Redis Fake Sentinel] for more details.
+
+== Known Issues
+
+=== Cluster Resizing
+
+Shrinking of the cluster isn't always possible and may break the cluster.
+
+* Resizing by increasing the number of slaves works without any problems.
+* Resizing by decreasing the number of slaves works if the pod which is the master won't be removed.
+** redis-node-0 (slave), redis-node-1(slave), redis-node-2 (master), redis-node-3 (slave) → decreasing slaveCount from 4 to 3 works as it will remove redis-node-3 which is a slave.
+** redis-node-0 (slave), redis-node-1(slave), redis-node-2 (master) → decreasing slaveCount from 3 to 2 doesn't work as it will remove redis-node-2 which is the master.
+** Mentioned https://github.com/bitnami/charts/pull/4239#issuecomment-726676003[here] in the same PR as the first problem.

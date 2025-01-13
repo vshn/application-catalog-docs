@@ -1,0 +1,28 @@
+= Crossplane Service Broker Overview
+:page-aliases: how-tos/crossplane_service_broker/overview.adoc
+
+// tag::main[]
+
+The setup around a _Crossplane Service Broker_ consists of three main components:
+
+- The _Service Catalog_ is the entry-point for users who want to instantiate new services.
+  Its interface is a well-defined REST-API which provides an overview over all available and all instantiated services.
+  It connects to one (or many) _Crossplane Service Brokers_, which provide this information back to the _Service Catalog_.
+  (The _Service Catalog_ may also connect to other kinds of Service Brokers in order to provide more services.)
++
+WARNING: The Service Catalog has been deprecated.
+
+- A https://github.com/vshn/crossplane-service-broker[_Crossplane Service Broker_] that knows which services it offers and what already instantiated services it's responsible for.
+  When a user wants to instantiate a certain service (via the _Service Catalog_), the _Crossplane Service Broker_ creates the respective _Crossplane custom resources_ in the Kubernetes cluster in which it runs.
+- https://crossplane.io/[_Crossplane_] will then react on those _Crossplane custom resources_ and from then on manage the lifecycle of the actual service instance, for example _Redis_.
+
+[NOTE]
+======
+The _Service Catalog_ and the _Crossplane Service Broker_ don't necessarily have to run on the same Kubernetes cluster.
+For example, a _Service Catalog_ can be installed on the Kubernetes cluster of a customer, while the _Crossplane Service Broker_ might be running on a central and dedicated cluster.
+
+Additionally, services managed by _Crossplane_ may be provisioned outside of the cluster on which _Crossplane_ is installed on.
+For example, _Crossplane_ supports instantiating cloud resources from providers such as Google Cloud, Azure or AWS.
+Naturally, such resources don't run on the cluster on which _Crossplane_ is installed.
+======
+// end::main[]

@@ -1,0 +1,12 @@
+= Alert rule: MySQLGaleraClusterEvenNodes
+:page-aliases: runbooks/mariadbgalera/MySQLGaleraClusterEvenNodes.adoc
+
+== icon:glasses[] Overview
+
+Checks if the Galera cluster has an even number of Pods configured.
+If it's an even number, this alert will be triggered.
+
+== icon:bug[] Steps for Debugging
+
+Galera Clusters should never have an even number of nodes configured.
+Change the number of nodes to an odd number.

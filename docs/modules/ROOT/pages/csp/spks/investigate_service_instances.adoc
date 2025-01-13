@@ -1,0 +1,170 @@
+= How to Investigate a Service
+:page-aliases: how-tos/crossplane/investigate_service_instances.adoc
+
+This page shows how a service instance can be investigated. It provides several steps and inputs how to analyze issues, it's generic for all services.
+
+Each code block indicates if the commands need to be run on the control cluster or on the respective service cluster.
+
+== Find a Specific Service Instance
+
+To find the instance based on the UUID and show information for it.
+
+.Control Cluster
+[source,shell]
+----
+# List all instances
+kubectl get compositeredisinstances,compositemariadbinstance,compositemariadbdatabaseinstance | grep $INSTANCE_ID
+ 
+# List all Redis instances
+kubectl get compositeredisinstances.syn.tools --sort-by .metadata.creationTimestamp
+ 
+# List all MariaDB Cluster instances
+kubectl get compositemariadbinstances.syn.tools --sort-by .metadata.creationTimestamp
+ 
+# List all MariaDB Database instances
+kubectl get compositemariadbdatabaseinstances.syn.tools --sort-by .metadata.creationTimestamp
+ 
+# Show a single instance
+kubectl describe compositeredisinstances.syn.tools $INSTANCE_ID
+----
+
+The following labels contain metadata about an instance:
+
+* `service.syn.tools/cluster` - on which cluster this instance should be deployed
+* `service.syn.tools/name` - Name of the service ("redis-k8s")
+* `service.syn.tools/id` - UID of the service (Redis = 8d4b8039-6bcc-4f68-98f0-0e8efa5ab0e2)
+* `service.syn.tools/instance` - UID of this instance (same as `.metadata.name`)
+* `service.syn.tools/plan` - Name of the plan
+* `service.syn.tools/sla` - SLA (`standard` or `premium`)
+* `crossplane.io/composite` - UID of the plan (name of the composition)
+* `service.syn.tools/parent` - UID of the parent service, if applicable (only for MariaDB Database instances)
+
+The "Composition Ref" references the composition (plan) that was used with this instance.
+
+The "Resource Refs" references the various K8s resources that were created for this instance (defined in the composition).
+
+== Instance not Ready
+
+If an instance isn't in a ready state and the marketplace shows it as "Installing" or similar, it means that some of the resources that were created for this instance aren't ready. To figure out why, go through all referenced resources and see if they provide further info.
+
+.Control Cluster
+[source,shell]
+----
+kubectl describe compositeredisinstances.syn.tools $INSTANCE_ID | grep "Resource Refs" --after-context=-1
+----
+
+The resources usually have the same name (prefix) (UID) as the instance. So for example to describe all Helm Release resources for an instance:
+
+.Control Cluster
+[source,shell]
+----
+kubectl describe release $INSTANCE_ID
+----
+
+Namespaced resources are created in the "spks-crossplane" namespace on the control cluster. For example to see all secrets which were created for all instances:
+
+.Control Cluster
+[source,shell]
+----
+kubectl -n spks-crossplane get secrets --sort-by .metadata.creationTimestamp --show-labels
+----
+
+== Show Instance on Service Cluster
+
+To show an actual instance on a service cluster you need to first find out on which cluster this instance got deployed:
+
+.Control Cluster
+[source,shell]
+----
+kubectl get compositeredisinstances,compositemariadbinstance,compositemariadbdatabaseinstance | grep $INSTANCE_ID
+----
+
+This shows you the cluster name in the 4th column.
+
+On the service cluster there will be a namespace with the instance's UID:
+
+.Service Cluster
+[source,shell]
+----
+kubectl -n $INSTANCE_ID get pods
+----
+
+== Deleted Instances
+
+When an instance is deleted (deprovisioned) the composite object and all its referenced resources will be deleted on the control cluster. This will uninstall the Helm release on the respective service cluster which will remove all resources from the instance's namespace.
+
+Since the namespace itself and the PVCs aren't created directly by the Helm chart, they're left in place. This enables restoring of a deleted service, by instantiating the service again with the same UID.
+
+When a service is being deprovisioned, its namespace will be marked with a label `service.syn.tools/deleted=true` and an annotation `service.syn.tools/deletionTimestamp` indicating the deletion timestamp. Periodically all marked namespaces need to be deleted:
+
+.Service Cluster
+[source,shell]
+----
+# Show marked namespaces
+kubectl get ns -L service.syn.tools/deleted
+ 
+# Delete marked namespaces
+kubectl delete ns -l service.syn.tools/deleted=true --dry-run=client
+
+# Force deletion
+kubectl delete ns -l service.syn.tools/deleted=true
+----
+
+== Access Data in PVCs
+
+To access the data in a PVC, there's two scenarios:
+
+. The pod which has the PVC mounted is up and running.
+. The pod isn't running.
+
+For the scenario where the pod is still running, you can connect to it and see the PVC:
+
+.Service Cluster
+[source,shell]
+----
+# To access a running MariaDB pod
+kubectl -n $INSTANCE_ID exec -it mariadb-0 -c mariadb-galera -- bash -c 'cd /bitnami/mariadb/data/; exec bash'
+ 
+# To access a running Redis pod
+kubectl -n $INSTANCE_ID exec -it redis-node-0 -c redis -- bash -c 'cd /bitnami/redis/data/; exec bash'
+----
+
+For the scenario where the pod isn't running anymore (crashing, scaled down), you have to start a new pod which mounts the PVC in question:
+
+.Service Cluster
+[source,shell]
+----
+# Name of the PVC
+PVC_NAME=data-mariadb-0
+ 
+kubectl -n $INSTANCE_ID run -i -t --attach --rm volpod --restart=Never --image=none --overrides='
+{
+    "apiVersion": "v1",
+    "kind": "Pod",
+    "metadata": {
+        "name": "volpod"
+    },
+    "spec": {
+        "containers": [{
+            "command": [
+                "/bin/bash"
+            ],
+            "image": "remote-docker.artifactory.swisscom.com/bitnami/minideb",
+            "name": "volpod",
+            "tty": true,
+            "stdin": true,
+            "volumeMounts": [{
+                "mountPath": "/mnt",
+                "name": "data"
+            }]
+        }],
+        "restartPolicy": "Never",
+        "volumes": [{
+            "name": "data",
+            "persistentVolumeClaim": {
+                "claimName": "'${PVC_NAME}'"
+            }
+        }]
+    }
+}'
+----

@@ -1,0 +1,28 @@
+= Fix wrong/invalid leader after rollout/update
+:page-aliases: how-tos/redis/no_active_leader.adoc
+
+In certain situations it might happen, that the sentinels have the master set to an ip address that doesn't exist anymore (if all pods have been restarted and the IPs changed). The most common thing that happens in this scenario is, that two of the pods are crash looping and one pod is running as a `slave` and has the master set to an IP address that doesn't exist anymore.
+
+In the logs it might look like this:
+
+[source,shell]
+----
+sentinel Could not connect to Redis at 10.0.0.20:26379: Connection refused # where 10.0.0.20 isn't assigned to any of the redis pods
+----
+
+To resolve this situation, you need to get the IP address of the remaining running Redis Pod, start a `redis-cli` command and promote this pod to master.
+
+[source,shell]
+----
+kubectl get pod -o wide # copy IP address of fully running pod for the step below <NEW_IP_ADDRESS>
+
+kubectl exec redis-node-0 -c sentinel -it -- bash
+redis-cli -a $(< $REDIS_PASSWORD_FILE) -p 6379
+
+REPLICAOF NO ONE
+exit
+
+redis-cli -a $(< $REDIS_PASSWORD_FILE) -p 26379
+SENTINEL REMOVE mymaster
+SENTINEL MONITOR mymaster <NEW_IP_ADDRESS> 6379 1
+----

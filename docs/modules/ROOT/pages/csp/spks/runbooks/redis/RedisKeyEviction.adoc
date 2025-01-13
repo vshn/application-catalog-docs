@@ -1,0 +1,30 @@
+= Alert rule: RedisKeyEviction
+:page-aliases: runbooks/redis/RedisKeyEviction.adoc
+
+== icon:glasses[] Overview
+
+Redis can be configured to automatically purge keys as necessary.
+If so configured, Redis will only use a maximum amount of memory, and if it nears the limit, remove keys per some criteria.
+If there are evicted keys this alert will be triggered.
+
+== icon:bug[] Steps for Debugging
+
+Check if there are any evicted (removed) keys.
+The info command displays how many keys were evicted.
+If it was configured on purpose and the key should get evicted, it may be necessary to turn this alert off.
+
+[source,shell]
+----
+user@computer:~$ kubectl exec redis-node-0 sentinel -it -- sh
+$ redis-cli -p 26379 -a foobarbaz12
+127.0.0.1:26379> info
+# Server
+redis_version:6.0.8
+redis_git_sha1:00000000
+[...]
+ 
+# Stats
+[...]
+evicted_keys:0
+[...]
+----

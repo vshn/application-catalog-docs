@@ -1,0 +1,70 @@
+= Alert rule: RedisReplicationBroken
+:page-aliases: runbooks/redis/RedisReplicationBroken.adoc
+
+== icon:glasses[] Overview
+
+This will check if the replication between a Redis master and Redis slave is broken for more than 5 minutes and therefore no data replication could be done.
+
+== icon:bug[] Steps for Debugging
+
+Check the replication state between of the Redis slaves and masters.
+
+=== Check Replication
+
+Check the replication information for every replication.
+
+[source,shell]
+----
+user@computer:~$ kubectl exec redis-node-0 sentinel -it -- sh
+$ redis-cli -p 26379 -a foobarbaz12
+127.0.0.1:26379> sentinel replicas mymaster
+1)  1) "name"
+    2) "10.42.0.174:6379"
+    3) "ip"
+    4) "10.42.0.174"
+    5) "port"
+    6) "6379"
+    7) "runid"
+    8) "e05942c6de614d084f8b4359bc779540c735d1a5"
+    9) "flags"
+   10) "slave"
+[...]
+----
+
+=== Check Redis Logs for Replication
+
+[source,shell]
+----
+user@computer:~$ kubectl logs redis-node-0 redis
+redis 14:34:31.86 INFO  ==> ** Starting Redis **
+1:C 14 Dec 2020 14:34:31.870 # oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+1:C 14 Dec 2020 14:34:31.870 # Redis version=6.0.9, bits=64, commit=00000000, modified=0, pid=1, just started
+1:C 14 Dec 2020 14:34:31.870 # Configuration loaded
+1:M 14 Dec 2020 14:34:31.873 * Running mode=standalone, port=6379.
+1:M 14 Dec 2020 14:34:31.873 # Server initialized
+1:M 14 Dec 2020 14:34:31.873 * Reading RDB preamble from AOF file...
+1:M 14 Dec 2020 14:34:31.873 * Loading RDB produced by version 6.0.9
+1:M 14 Dec 2020 14:34:31.873 * RDB age 2099713 seconds
+1:M 14 Dec 2020 14:34:31.873 * RDB memory usage when created 1.79 Mb
+1:M 14 Dec 2020 14:34:31.873 * RDB has an AOF tail
+1:M 14 Dec 2020 14:34:31.873 * Reading the remaining AOF tail...
+1:M 14 Dec 2020 14:34:31.873 * DB loaded from append only file: 0.000 seconds
+1:M 14 Dec 2020 14:34:31.873 * Ready to accept connections
+1:M 14 Dec 2020 14:34:46.744 * Replica 10.42.0.173:6379 asks for synchronization
+1:M 14 Dec 2020 14:34:46.744 * Full resync requested by replica 10.42.0.173:6379
+1:M 14 Dec 2020 14:34:46.745 * Replication backlog created, my new replication IDs are '0850ebf3d23aeccff7063cea3bb196c6f4e5030e' and '0000000000000000000000000000000000000000'
+1:M 14 Dec 2020 14:34:46.745 * Starting BGSAVE for SYNC with target: disk
+1:M 14 Dec 2020 14:34:46.745 * Background saving started by pid 35
+35:C 14 Dec 2020 14:34:46.749 * DB saved on disk
+35:C 14 Dec 2020 14:34:46.749 * RDB: 0 MB of memory used by copy-on-write
+1:M 14 Dec 2020 14:34:46.845 * Background saving terminated with success
+1:M 14 Dec 2020 14:34:46.846 * Synchronization with replica 10.42.0.173:6379 succeeded
+1:M 14 Dec 2020 14:35:00.587 * Replica 10.42.0.174:6379 asks for synchronization
+1:M 14 Dec 2020 14:35:00.587 * Full resync requested by replica 10.42.0.174:6379
+1:M 14 Dec 2020 14:35:00.587 * Starting BGSAVE for SYNC with target: disk
+1:M 14 Dec 2020 14:35:00.588 * Background saving started by pid 45
+45:C 14 Dec 2020 14:35:00.596 * DB saved on disk
+45:C 14 Dec 2020 14:35:00.596 * RDB: 0 MB of memory used by copy-on-write
+1:M 14 Dec 2020 14:35:00.691 * Background saving terminated with success
+1:M 14 Dec 2020 14:35:00.691 * Synchronization with replica 10.42.0.174:6379 succeeded
+----

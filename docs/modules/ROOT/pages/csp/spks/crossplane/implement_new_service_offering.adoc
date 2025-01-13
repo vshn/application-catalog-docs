@@ -1,0 +1,325 @@
+= How to Implement a new Service Offering
+:page-aliases: how-tos/crossplane/implement_new_service_offering.adoc
+
+This page describes the steps which are necessary to implement a new service offering based on Crossplane and the https://github.com/vshn/crossplane-service-broker[crossplane-service-broker].
+
+We use the fictional `Foo` service in the following examples and a fictional Helm chart `foo-chart`.
+
+
+== Create Crossplane Resources
+
+The main work to implement a new service offering is creating the required Crossplane resources.
+This includes a _CompositeResourceDefinition_ (XRD) and one _Composition_ per offered plan.
+
+See the xref:explanations/crossplane_service_broker.adoc[Crossplane Service Broker explanation] on how these resources map to the open service broker concepts.
+
+See the https://docs.crossplane.io/latest/concepts/compositions[Crossplane documentation] on more general information regarding Crossplane and its different resources.
+
+=== CompositeResourceDefinition (XRD)
+The XRD resource defines a new service offering.
+You can use a name of your choosing, the Crossplane best practice defines a naming scheme of `Composite<NAME>Instance`.
+
+==== Metadata
+Make sure the following labels are set (see xref:explanations/crossplane_service_broker.adoc#metadata[metadata]):
+
+* `service.syn.tools/id`: Generate a new UUID
+* `service.syn.tools/name`: Name of the new service offering
+
+To add further metadata you can use the following annotations:
+
+* `service.syn.tools/description`: Description for the new service offering
+* `service.syn.tools/metadata`: JSON object with further https://github.com/openservicebrokerapi/servicebroker/blob/master/spec.md#service-offering-object[metadata]
+
+==== Connection Details
+Define which information an application needs in order to be able to connect and use this service offering by using the `.spec.connectionSecretKeys` list.
+Usually this includes an endpoint (IP address or hostname), a port as well as credentials (username/password).
+
+==== Printer Columns
+Defining https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#additional-printer-columns[printer columns] can help in troubleshooting by showing relevant information.
+Configure printer columns for the `Plan` and `Cluster`.
+
+==== Example
+[source,yaml]
+----
+kind: CompositeResourceDefinition
+metadata:
+  name: compositefooinstances.syn.tools
+  labels:
+    service.syn.tools/id: 6ca63cdb-0cfa-4c5e-b080-72f22ff5f3e6 # uuidgen | tr '[:upper:]' '[:lower:]'
+    service.syn.tools/name: foo-k8s
+    service.syn.tools/updatable: 'true'
+  annotations:
+    service.syn.tools/description: Foo high performance database for big data machine learning.
+    service.syn.tools/metadata: |
+      {
+        "displayName": "Foo DB on K8s",
+        "version": "1.3.37"
+      }
+    service.syn.tools/tags: |
+      ["foo", "ml", "bigdata", "bar"]
+spec:
+  connectionSecretKeys:
+    - endpoint
+    - port
+    - username
+    - password
+  group: syn.tools
+  names:
+    kind: CompositeFooInstance
+    plural: compositefooinstances
+  versions:
+    - name: v1
+      referenceable: true
+      served: true
+      additionalPrinterColumns:
+        - jsonPath: .metadata.labels['service\.syn\.tools/plan']
+          name: Plan
+          type: string
+        - jsonPath: .metadata.labels['service\.syn\.tools/cluster']
+          name: Cluster
+          type: string
+----
+
+=== Compositions
+The Compositions define the "building blocks" how the service offering is being provisioned.
+See the https://docs.crossplane.io/latest/concepts/compositions[Crossplane documentation] for further information how they work and play together with XRDs and XRs.
+
+Each offered plan of a service is defined in a Composition.
+
+==== Metadata
+The name of a composition must be its UUID.
+Make sure the following labels are set (see xref:explanations/crossplane_service_broker.adoc#metadata[metadata]):
+
+* `service.syn.tools/plan`: Name of the plan
+* `service.syn.tools/cluster`: Name of the cluster this plan should be provisioned
+* `service.syn.tools/id`: UUID of the service this plan belongs to
+* `service.syn.tools/name`: Name of the service this plan belongs to
+* `service.syn.tools/updatable`: If the service instances can be updated
+
+To add further metadata you can use the following annotations:
+
+* `service.syn.tools/description`: Description for this plan
+* `service.syn.tools/metadata`: JSON object with further https://github.com/openservicebrokerapi/servicebroker/blob/master/spec.md#service-plan-object[metadata]
+
+==== Resources
+A Composition defines a list of K8s resources which should be created for each instance of this plan.
+These resources together build the provisioned instance and usually consist of `Release` resources which the https://github.com/crossplane-contrib/provider-helm[provider-helm] then installs accordingly.
+
+Patches can be used to further parametrize the resources and use information on the XR as input for further templating.
+
+==== Example
+[source,yaml]
+----
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: 43905323-ed5f-466a-9d7f-ddc16cb74864 # uuidgen | tr '[:upper:]' '[:lower:]'
+  labels:
+    service.syn.tools/cluster: prod-cluster-01
+    service.syn.tools/id: 6ca63cdb-0cfa-4c5e-b080-72f22ff5f3e6 # This is the ID from 'compositefooinstances.syn.tools' above
+    service.syn.tools/name: foo-k8s
+    service.syn.tools/plan: small
+    service.syn.tools/updatable: "true"
+  annotations:
+    service.syn.tools/description: Foo instance small size
+    service.syn.tools/metadata: |
+      {
+        "displayName": "Small",
+        "memory": "1Gi",
+        "storageCapacity": "8Gi"
+      }
+spec:
+  compositeTypeRef:
+    apiVersion: syn.tools/v1
+    kind: CompositeFooInstance
+  writeConnectionSecretsToNamespace: crossplane-system # Namespace to collect all connection secrets
+  resources:
+    - connectionDetails:
+        - fromConnectionSecretKey: endpoint
+        - fromConnectionSecretKey: port
+        - fromConnectionSecretKey: username
+        - fromConnectionSecretKey: password
+      base:
+        apiVersion: helm.crossplane.io/v1beta1
+        kind: Release
+        spec:
+          # Read back information from provisioned K8s resources in the target namespace
+          connectionDetails:
+            - apiVersion: v1
+              kind: Service
+              name: foo-master
+              fieldPath: status.loadBalancer.ingress[0].ip
+              toConnectionSecretKey: endpoint
+            - apiVersion: v1
+              kind: Service
+              name: foo-master
+              fieldPath: spec.ports[0].port
+              toConnectionSecretKey: port
+            - apiVersion: v1
+              kind: Secret
+              name: foo-admin
+              fieldPath: data.username
+              toConnectionSecretKey: username
+            - apiVersion: v1
+              kind: Secret
+              name: foo-admin
+              fieldPath: data.password
+              toConnectionSecretKey: password
+          writeConnectionSecretToRef:
+            namespace: crossplane-system
+          forProvider:
+            chart:
+              name: foo-chart
+              repository: https://charts.example.com
+              version: 1.3.37
+            values:
+              fullnameOverride: foo
+              service:
+                type: LoadBalancer
+              resources:
+                requests:
+                  cpu: 1000m
+                  memory: 1Gi
+                limits:
+                  cpu: 2000m
+                  memory: 1Gi
+          rollbackLimit: 3
+      patches:
+        - fromFieldPath: metadata.labels
+        - fromFieldPath: metadata.annotations
+        - fromFieldPath: metadata.labels[crossplane.io/composite]
+          toFieldPath: spec.forProvider.namespace
+        - fromFieldPath: metadata.labels[service.syn.tools/cluster]
+          toFieldPath: spec.providerConfigRef.name
+        - fromFieldPath: metadata.labels[crossplane.io/composite]
+          toFieldPath: spec.writeConnectionSecretToRef.name
+          transforms:
+            - string:
+                fmt: "%s-foo"
+              type: string
+        - fromFieldPath: metadata.labels[crossplane.io/composite]
+          toFieldPath: spec.connectionDetails[0].namespace
+        - fromFieldPath: metadata.labels[crossplane.io/composite]
+          toFieldPath: spec.connectionDetails[1].namespace
+        - fromFieldPath: metadata.labels[crossplane.io/composite]
+          toFieldPath: spec.connectionDetails[2].namespace
+        - fromFieldPath: metadata.labels[crossplane.io/composite]
+          toFieldPath: spec.connectionDetails[3].namespace
+----
+
+=== Commodore Component
+
+To simplify the creation of these Crossplane resources the https://git.vshn.net/swisscompks/component-spks-crossplane[spks-crossplane component] exists.
+It will generate the required resources based on the configured input in the configuration hierarchy.
+
+This approach especially helps in defining multiple plans in order to keep the config more DRY and maintainable.
+
+==== Example
+This example setup will generate the same Crossplane resources as showcased in the previous examples.
+[source,yaml]
+----
+parameters:
+  spks_crossplane:
+    serviceDefinitions:
+      foo-k8s:
+        uuid: 6ca63cdb-0cfa-4c5e-b080-72f22ff5f3e6
+        description: Foo high performance database for big data machine learning.
+        metadata:
+          displayName: Foo DB on K8s
+          version: 1.3.37
+        tags:
+          - foo
+          - ml
+          - bigdata
+          - bar
+        updatable: "true"
+        xrd: CompositeFooInstance
+        connectionSecretKeys:
+          - endpoint
+          - port
+          - username
+          - password
+        versions:
+          - name: v1
+            served: true
+            referenceable: true
+            additionalPrinterColumns:
+              - jsonPath: .metadata.labels['service\.syn\.tools/plan']
+                name: Plan
+                type: string
+              - jsonPath: .metadata.labels['service\.syn\.tools/cluster']
+                name: Cluster
+                type: string
+        baseComposition:
+          writeConnectionSecretsToNamespace: crossplane-system
+          resources:
+            01_foo-helm-chart:
+              connectionDetails:
+                - fromConnectionSecretKey: endpoint
+                - fromConnectionSecretKey: port
+                - fromConnectionSecretKey: username
+                - fromConnectionSecretKey: password
+              base:
+                apiVersion: helm.crossplane.io/v1beta1
+                kind: Release
+              # See example above for further details
+              ...
+        plans:
+          small:
+            uuid: 43905323-ed5f-466a-9d7f-ddc16cb74864
+            description: Foo instance small size
+            cluster: prod-cluster-01
+            metadata:
+              displayName: Small
+              memory: 1Gi
+              storageCapacity: 8Gi
+            resources:
+              01_foo-helm-chart:
+                base:
+                  spec:
+                    forProvider:
+                      values:
+                        configmap: |
+                          maxmemory 768mb
+                        resources:
+                          requests:
+                            cpu: 1000m
+                            memory: 1Gi
+                          limits:
+                            cpu: 2000m
+                            memory: 1Gi
+          medium:
+            uuid: 4e4045a3-7099-4645-a3a4-50f3df10a7a5
+            description: Foo instance medium size
+            cluster: prod-cluster-02
+            metadata:
+              displayName: Medium
+              memory: 2Gi
+              storageCapacity: 16Gi
+            resources:
+              01_foo-helm-chart:
+                base:
+                  spec:
+                    forProvider:
+                      values:
+                        configmap: |
+                          maxmemory 1512mb
+                        resources:
+                          requests:
+                            cpu: 1000m
+                            memory: 2Gi
+                          limits:
+                            cpu: 2000m
+                            memory: 2Gi
+----
+
+
+== Update Broker Implementation
+
+Some code changes on the https://github.com/vshn/crossplane-service-broker[crossplane-service-broker] are necessary to introduce a new service offering. To support a new service offering the `ServiceBinder` interface must be implemented and optionally the `ProvisionValidater`.
+
+The simplest example is the https://github.com/vshn/crossplane-service-broker/blob/master/pkg/crossplane/service_redis.go[implementation] for the Redis service as it only implements the `GetBinding()` function.
+
+To make use of the newly implemented interface, the `ServiceBinderFactory()` function https://github.com/vshn/crossplane-service-broker/blob/master/pkg/crossplane/services.go[here] must be updated with the name and constructor of the new service.
+
+The following is an example pull request to implement the Foo service: https://github.com/vshn/crossplane-service-broker/pull/39

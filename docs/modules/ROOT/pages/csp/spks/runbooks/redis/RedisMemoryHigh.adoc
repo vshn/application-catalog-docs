@@ -1,0 +1,10 @@
+= Alert rule: RedisMemoryHigh
+:page-aliases: runbooks/redis/RedisMemoryHigh.adoc
+
+== icon:glasses[] Overview
+
+This alert will be thrown if a Redis Pod doesn't have enough free memory left in the past 5 minutes.
+
+== icon:bug[] Steps for Debugging
+
+Check if this only a temporary issue or consider upgrading to a larger plan. 

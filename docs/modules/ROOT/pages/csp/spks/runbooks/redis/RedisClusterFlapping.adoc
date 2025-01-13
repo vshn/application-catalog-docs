@@ -1,0 +1,12 @@
+= Alert rule: RedisClusterFlapping
+:page-aliases: runbooks/redis/RedisClusterFlapping.adoc
+
+== icon:glasses[] Overview
+
+Checks if there are more than a defined amount of connection changes for connected slaves over 5 minutes.
+If this is the case, this alert will be executed.
+
+== icon:bug[] Steps for Debugging
+
+Check why there are always disconnections and reconnections between master and slaves.
+Check the log files of the Redis Pods to see messages about loosing connections.
