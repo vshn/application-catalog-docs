@@ -15,3 +15,8 @@ repos:
           - generate
         language: python
         files: ^docs/modules/ROOT/pages/adr/
+      - id: navigation
+        name: Validate Navigation
+        entry: hack/check-nav.py
+        language: python
+        files: ^docs/modules/ROOT/pages/
