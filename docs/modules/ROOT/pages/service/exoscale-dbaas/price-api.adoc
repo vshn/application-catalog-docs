@@ -1,4 +1,5 @@
 = Exoscale Price API
+:page-aliases: how-tos/exoscale_dbaas/price-api.adoc
 
 Getting and generating prices for the Exoscale DBaaS offering is currently a very hand-knitted process, not much automation in place.
 Therefore, the documentation here is just some keyword style explanation.

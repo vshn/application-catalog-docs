@@ -1,0 +1,18 @@
+= Service: Exoscale DBaaS
+:svc_name: Exoscale DBaaS
+:svc_owner: Schedar
+:svc_deploytech: Operator
+:svc_doc_enduser: https://docs.appcat.ch/
+:svc_doc_enduser_src: https://github.com/vshn/appcat-user-docs/tree/master/docs/modules/ROOT/pages/exoscale-dbaas
+:svc_doc_product: https://products.vshn.ch/appcat/exoscale_dbaas.html
+:svc_doc_product_src: https://git.vshn.net/vshn/docs/products/edit/master/docs/modules/ROOT/pages/appcat/exoscale_dbaas.adoc
+:svc_code: https://github.com/vshn/appcat/
+
+include::partial$service-meta.adoc[]
+
+== Architecture
+
+TODO: Brief introduction on the architecture of the service, to get an understanding how it is working.
+
+== Related adrs
+

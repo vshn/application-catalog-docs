@@ -26,12 +26,6 @@
 **** xref:app-catalog:ROOT:reference/quality-requirements/usability/provisioning-time.adoc[Automated Provisioning of a Service]
 **** xref:app-catalog:ROOT:reference/quality-requirements/usability/logs.adoc[Service Instance Logs]
 
-* Exoscale
-** xref:app-catalog:ROOT:how-tos/exoscale_dbaas/price-api.adoc[Exoscale Price API]
-** xref:app-catalog:ROOT:reference/exoscale-osbapi.adoc[]
-** Runbooks
-*** xref:app-catalog:ROOT:runbooks/exoscale/restore_dbaas.adoc[]
-
 * SPKS
 ** xref:redis.adoc[Redis]
 *** xref:app-catalog:ROOT:explanations/redis.adoc[Redis Service Details]

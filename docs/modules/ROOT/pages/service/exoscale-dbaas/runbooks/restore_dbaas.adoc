@@ -1,4 +1,5 @@
 = Manually Restore DBaaS Backup
+:page-aliases: runbooks/exoscale/restore_dbaas.adoc
 
 == icon:glasses[] Overview
 
