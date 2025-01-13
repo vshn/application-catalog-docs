@@ -3,8 +3,6 @@
 
 > tbd
 
-See xref:explanations/mariadb_galera.adoc[Explanation -> MariaDB Galera] for a more detailed technical description of the service.
-
 == Plans
 
 Available plans by default:

@@ -1,0 +1,29 @@
+= Service Instance Logs
+:page-aliases: reference/quality-requirements/usability/logs.adoc
+
+Source::
+xref:reference/glossary.adoc#service-user[Service User]
+
+Stimulus::
+Desire to view the logs of a xref:reference/glossary.adoc#service-instance[service instance].
+
+Environment::
+{product} enabled Kubernetes xref:reference/glossary.adoc#converged-cluster[converged cluster]
+
+Artifact::
+`kubectl`
+
+Response::
+All logs of the instance are visible.
+
+Response measure::
+The instance's logs can be viewed via kubectl.
+
+Rationale::
+To give the users more insight with issues they might have by using the instance.
+
+[NOTE]
+====
+Currently only available for Helm-based services.
+Cloud Instances are currently excluded.
+====

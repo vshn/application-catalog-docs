@@ -1,0 +1,37 @@
+= SLI Prober
+:page-aliases: reference/sli-prober-architecture.adoc
+
+The SLI-Prober connects to each instance and will report on its SLI.
+For that it needs to reconcile the composites of each instance, to get the connection details.
+This way we ensure that the prober probes exactly what the customer gets.
+
+To avoid issues with potentially checking thousands of instances with a single prober, we deploy the prober to each service cluster.
+
+In order for the prober to work correctly it needs to reconcile two types of resources:
+
+* The composites
+* `UpgradeJobs`
+
+The composites are reconciled to detect all the actual instances and their connection details.
+They are matched against the local service cluster and if the instnace namespace exists, then it will start to probe the given instance.
+`UpgradeJobs` on the other hand will track the state of maintenance on the service cluster where the prober and thus the instances run.
+
+By default, it assumes that it's running in converged mode
+To enable the split configuration a `KUBECONFIG` environment variable has to be set on the prober pod.
+With that all reconcilers that check the composites will connect to that cluster.
+An exception is the reconciler for the `UpgradeJobs` it will connect to the local cluster in either way.
+It's possible to override the kubeconfig for the `UpgradeJob` reconciler for debug purposes.
+
+[mermaid,diagram,png]
+....
+architecture-beta
+    group cp(cloud)[Control Plane]
+    group sc(cloud)[Service Cluster]
+
+    service sli(server)[SLI Prober] in sc
+    service cr(disk)[Composites] in cp
+    service uj(disk)[UpgradeJobs] in sc
+
+    sli:B --> T:cr
+    sli:L --> R:uj
+....
