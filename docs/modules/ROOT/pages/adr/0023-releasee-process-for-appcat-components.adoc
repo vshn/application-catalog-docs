@@ -1,0 +1,140 @@
+= ADR 0023 - Releasee Process for AppCat Components
+:adr_author:    Gabriel Saratura
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2024-07-25
+:adr_upd_date:  2024-07-25
+:adr_status:    implemented
+:adr_tags:      framework,process,cicd
+:page-aliases:  explanations/decisions/release_process.adoc
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+We use Commodore Component releases to release AppCat components.
+====
+
+This page will describe the current AppCat release process, the problem we face and possible solutions.
+
+== Problem
+
+Our current release process is broken.
+The release process does not consider tags, instead it uses master branch as final commit to release.
+We, engineers, still use tags to create the illusion that the commit associated to the corresponding tag will be deployed.
+Instead, a special GitHub Action creates the release commit on top of the tag by updating the package configuration.
+As a consequence, the master branch is always deployed only after a tag is created.
+There are 2 issues with this approach:
+
+. Our release process becomes confusing and prone to errors whenever an unusual action is done in the `component-appcat` repository.
+The result is a commit, that was not intended being released.
+
+. The https://git.vshn.net/syn/commodore-defaults/-/tree/master/components?ref_type=heads[commodore] release pipeline is obsolete since Renovate works with tags to release a new version of the component.
+This also adds another layer of confusion which makes the whole `appcat` release pipeline a mess.
+
+The reason to why we decided to use package feature from Syn Project in the first place, was to integrate various dependencies into `component-appcat` repository.
+Without packages we were supposed to update various files in multiple repositories during the release process.
+For instance, the crossplane helm chart had to be patched with a comp-function sidecar pod.
+
+== Proposals
+
+Proposal 1::
+Keep package release.
+
+We may try to keep the current package approach with minimal changes in order to fix the problem described above.
+The change implies getting `appcat` package to a new GitHub repository with its own release process.
+This approach will eliminate the problem of master branch being rolled out after a tag.
+The same automation we currently use for package release can be applied to this solution.
+
+Advantages::
+
+* Minimal changes to current implementation;
+* No need to adapt to a new release process.
+
+Disadvantages::
+
+* The package feature is not intended to be used for our current needs;
+* Adds another unnecessary layer of abstraction in our release process;
+* Overly complicated;
+* `commodore-defaults` must be changed from component to package release.
+
+Proposal 2::
+Revert to component release.
+
+This proposal implies removing package feature from `component-appcat` repository
+
+Advantages::
+
+* Easy and straightforward release process;
+* `commodore-defaults` repository becomes relevant to the release process.
+
+Disadvantages::
+
+* We change again the release process paradigm;
+* We need to add the remaining dependencies, such as component crossplane into `component-appcat`.
+
+=== Pipeline Enhancement Proposal
+
+To automate further our release process we can add specific GitHub Actions to each application and/or `component-appcat` repositories.
+
+Enhancement 1::
+Application Release from their repository
+
+. New PR in any application managed by `component-appcat` would trigger:
+* A new PR on `component-appcat` side with the same branch name
+* Create all container images related to this branch
+* Any other operations relevant to the release process that are missing here
+. (Optional) Manual GitHub release action for PR branch in lab cluster from `component-appcat`.
+. Update any branches from both repos, application and/or component after a review or bug.
+. Once both PRs are ready and approved, label the application PR with one of bug/minor/major values.
+. Merge the application PR into master branch and that would trigger:
+* A release process for application based on the label (ex:. label bug - from v2.3.1 to v2.3.2)
+* Create a new commit into `component-appcat` PR branch with the latest application dependencies and golden tests on top of any previous commits.
+* Delete any obsolete branch or any other relevant resources.
+. `component-appcat` PR ready for review:
+* If no engineer changes have been made to the component PR then review it yourself and merge
+* If engineer changes have been made to the component PR then wait for others to review.
+. (Optional) Once `component-appcat` is approved,label the PR with one of bug/minor/major values and merge it and that would trigger:
+* A new release from the label set.
+
++
+WARNING: The above approach will have to be thoroughly tested with edge cases, such as what would happen if 2 applications are being worked on at the same time.
+
+Enhancement 2::
+Application Release from component
+
+. New PR in any application managed by `component-appcat` would trigger:
+* A new PR on `component-appcat` side with the same branch name
+* Create all container images related to this branch
+* Any other operations relevant to the release process that are missing here
+. (Optional) Manual GitHub release action for PR branch in lab cluster from `component-appcat`.
+. Update any branches from both repos, application and/or component after a review or bug.
+. Once both PRs are ready and approved:
+* Merge the application PR.
+* Label the `component-appcat` PR with labels that will help with the release of all applications and component itself:
+** Label for component - bug/minor/major values. `Ex:. minor v2.31.3 -> v2.32.0`
+** Label for specific application - application-bug/minor/major. `Ex:. provider-exoscale-major v2.3 -> v3.0`
+. After merging `component-appcat` a whole GitHub Action process would start that will release applications and the component itself with updated tests.
+
+== Decision
+
+Proposal 2::
+
+We do not want to manage another layer of unneeded abstraction.
+
+Enhancement 1::
+
+Let the automatic release process be implemented in the application repositories instead of the component.
+
+== Rationale
+
+The package feature does not help us achieve a better pipeline process.
+All the dependencies to the package will be removed by incorporating all necessary repositories into `component-appcat` such as component-crossplane.
+Very important result is that there will be no more confusion regarding our release process.
+The repository `commodore-defaults` will be back in our release process mechanism.
+
+Besides the component release process decision we also need to consolidate further our efforts in simplifying `component-appcat` release.
+Since we are using multiple application repositories along with our main `appcat` software there is a need to create even a more seamless development pipeline.
+A variation of enhancement 1 should create a better development environment where parts of repetitive manual actions are automated.
+Having the same automation release logic for each application in their respective repositories will make our development pipeline more clear and straightforward.

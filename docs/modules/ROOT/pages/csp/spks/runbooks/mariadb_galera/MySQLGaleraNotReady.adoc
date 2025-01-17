@@ -1,0 +1,14 @@
+= Alert rule: MySQLGaleraNotReady
+:page-aliases: runbooks/mariadbgalera/MySQLGaleraNotReady.adoc
+
+== icon:glasses[] Overview
+
+This alert triggers, if any of the nodes' `wsrep_ready` is 0.
+
+The global variable https://galeracluster.com/library/documentation/galera-status-variables.html#wsrep-ready[`wsrep_ready`] shows whether the server is ready to accept queries.
+
+== icon:bug[] Steps for Debugging
+
+See xref:how-tos/mariadbgalera/debug.adoc[How to debug MariaDB Galera] on how to determine the cluster status and show the Logs of MariaDB.
+
+If the cluster won't start up on itself again, xref:how-tos/mariadbgalera/bootstrap_cluster.adoc[a manual reset] is necessary.

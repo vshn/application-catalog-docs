@@ -1,0 +1,10 @@
+= Alert rule: MySQLInnoDBLogWaits
+:page-aliases: runbooks/mariadbgalera/MySQLInnoDBLogWaits.adoc
+
+== icon:glasses[] Overview
+
+TODO
+
+== icon:bug[] Steps for Debugging
+
+TODO

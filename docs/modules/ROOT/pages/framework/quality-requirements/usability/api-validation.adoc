@@ -1,0 +1,24 @@
+= Service Instance API Validation
+:page-aliases: reference/quality-requirements/usability/api-validation.adoc
+
+Source::
+xref:reference/glossary.adoc#service-user[Service User]
+
+Stimulus::
+Provision a xref:reference/glossary.adoc#service-instance[service instance] with an invalid API spec.
+
+Environment::
+{product} enabled Kubernetes cluster
+
+Artifact::
+`kubectl` or equivalent tool
+
+Response::
+The provisioning of the service instance fails with an message containing the reason why the provisioning fails.
+
+Response measure::
+The provisioning is aborted.
+
+Rationale::
+Services with excessive resource usage or special configurations aren't commercially reasonable.
+Each service must document and enforce constraints that limit the resources and impact of abnormal conditions so that the user cannot use it out of certain boundaries.

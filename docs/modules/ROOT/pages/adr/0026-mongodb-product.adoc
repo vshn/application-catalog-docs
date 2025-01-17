@@ -1,0 +1,60 @@
+= ADR 0026 - Deploy MongoDB with Operator
+:adr_author:    Simon Beck
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2024-08-06
+:adr_upd_date:  2024-09-05
+:adr_status:    draft
+:adr_tags:      service,mongodb,product
+:page-aliases:  explanations/decisions/mongodb.adoc
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+We use the MongoDB Enterprise Operator to deploy MongoDB.
+====
+
+== Problem
+
+We want to Provide MongoDB via AppCat.
+MongoDB licensing might be an issue.
+This decision looks closely at the licensing and alternative products that can be used as drop-in replacements for MongoDB.
+
+== Proposals
+
+Proposal 1: Use MongoDB Community Edition::
+MongoDB community edition is licensed under the https://github.com/mongodb/mongo/blob/master/LICENSE-Community.txt[SSPL].
+The SSPL dictates that the source code for the tooling that provides the services needs to be available to the public.
+However, it would also need to be licensed under the SSPL.
+
+Proposal 2: Use MongoDB Enterprise Operator::
+MongoDB Enterprise Operator can be used to manage MongoDB instances on Kubernetes.
+There has been preliminary contact with MongoDB about the licensing for the AppCat use.
+The pricing options are internally available.
+There's a https://github.com/mongodb/helm-charts/tree/main/charts/enterprise-operator[helm chart] to deploy it.
+It does need an https://www.mongodb.com/pricing[enterprise license] though.
+Which will require a license key to be present on the K8s clusters.
+
+Proposal 3: Use FerreDB with PostgreSQL::
+https://www.ferretdb.com/[FerretDB] is a Drop-In replacement.
+FerretDB is an adaptor for PostgreSQL which exposes a MongoDB compatible API.
+It uses PostgreSQL as the backend to store data.
+FerretDB itself is stateless and can be deployed as deployments alongside a PostgreSQL instance.
+However, it does not implement everything that https://docs.ferretdb.io/diff/[MondoDB supports].
+So a MongoDB AppCat service based on FerretDB might not be fully compatible with all workloads, which can result in bad UX for the customers.
+
+== Decision
+Proposal 2: Use MongoDB Enterprise Operator.
+
+This is the only viable option to run a MongoDB SaaS on K8s.
+There's no helm based deployment for MongoDB Enterprise Edition.
+The implementation for this service cannot rely on the generalizations we've made for helm based services.
+It will need more custom implementation, like StackGres based PostgreSQL deployments.
+
+Due to the licensing required, this service will not be deployed by default.
+For development purposes community edition could be used.
+
+== Rationale
+Either licensing or compatibility prevents us from using any of the other mentioned solutions.

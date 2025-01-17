@@ -1,0 +1,33 @@
+= Provisioning Time
+:page-aliases: reference/quality-requirements/usability/provisioning-time.adoc
+
+Source::
+xref:reference/glossary.adoc#service-user[Service User]
+
+Stimulus::
+Orders a service via the provided APIs.
+
+Environment::
+{product} enabled Kubernetes xref:reference/glossary.adoc#converged-cluster[converged cluster]
+
+Artifact::
+`kubectl` or equivalent tool
+
+Response::
+Instance ready (status condition)
+
+Response measure::
+Instance ready depending on xref:reference/glossary.adoc#converged-service-architecture[service architecture] in normal conditions:
+- Standalone: within 10 minutes
+- Replicated: within 20 minutes
+- Clustered: within 30 minutes
+
+Rationale::
+The user can work with the instance in an acceptable time frame.
+
+[NOTE]
+====
+- The provided APIs can vary according to the environment.
+- The instance is provisioned asynchronously and its readiness status has to be polled regularly.
+- xref:reference/glossary.adoc#cloud-instance[Cloud instances] are excluded and they take as long as needed.
+====

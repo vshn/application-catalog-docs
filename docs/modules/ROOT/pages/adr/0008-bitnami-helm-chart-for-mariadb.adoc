@@ -1,0 +1,155 @@
+= ADR 0008 - Bitnami Helm Chart for MariaDB
+:adr_author:    Simon Beck
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2022-12-27
+:adr_upd_date:  2023-10-31
+:adr_status:    implemented
+:adr_tags:      service,mariadb,helm
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+We use the Redis Bitnami Helm Chart.
+====
+
+== Problem
+
+We need to provide MariaDB on Kubernetes with the following features:
+
+* Standalone and cluster functionality (Galera)
+* Ability to customize MariaDB settings
+* Included metrics exporter
+* Backup
+* Regular Maintenance
+* Version Upgrades
+
+== Solutions
+
+For MariaDB there are a few operators available, as well as the various Helm charts.
+
+The following section contains the options that have been looked at and chosen among few others that have been discarded for following reasons:
+
+* Lack of support for MariaDB
+* Lack of support for MariaDB Galera Cluster
+
+[cols="1,1,1",options="header"]
+|===
+|Requirement
+|https://github.com/bitnami/charts/tree/master/bitnami/mariadb-galera[Bitnami Helmchart]
+|https://github.com/mariadb-operator/mariadb-operator[mariadb-operator]
+
+|Standalone
+|✅
+|✅
+
+|Galera
+|✅
+|✅ (Multi master, single master)
+
+|Customize MariaDB Settings
+|✅
+|✅
+
+|Metrics
+|✅
+|✅
+
+|Backup
+|❌
+|✅
+
+|Automatic Restore
+|❌
+|✅
+
+|Regular Maintenance
+|❌
+|❌
+
+|Version Upgrades
+|✅
+|✅
+
+|User management
+|❌
+|✅
+
+|Logical Database Management
+|❌
+|✅
+
+|===
+
+Not looked into:
+
+* https://github.com/abalki001/mariadb-operator[abalki001/mariadb-operator^]: Looks abandoned as of August 2023.
+
+
+=== Analysis - mariadb-operator
+
+https://github.com/mariadb-operator/mariadb-operator[mariadb-operator/mariadb-operator^]
+
+As of writing this document a very new Kubernetes operator, which is currently the best what can be found on GitHub.
+It comes with a variety of installation methods and is actively maintained.
+It is also mentioned in MariaDB knowledge base: https://mariadb.com/kb/en/kubernetes-operators-for-mariadb/#mariadb-operator[Kubernetes Operators for MariaDB^].
+It uses MIT license[https://en.wikipedia.org/wiki/MIT_License] which has enough permissions to be used commercially by VSHN.
+There's mostly one contributor to the project which makes it rather high risk of orphanage.
+
+Advantages::
+
+* Written in Go
+* Supports almost everything we need
+* Easy to integrate with VSHN AppCat
+* https://isitmaintained.com/project/mariadb-operator/mariadb-operator[It is maintained as of August 2022^]
+* Advanced Galera support compared to Bitnami
+
+Disadvantages::
+
+* Lack of regular, automated maintenance
+* Maintained by https://repo-tracker.com/r/gh/mariadb-operator/mariadb-operator[a single maintainer] only, if he leaves the project, we would have to fork and maintain it ourselves
+* Restores database to new instance, like Stackgres does in PostgreSQL, which is not ideal for us, but we can work around it
+* We would need to write and maintain a new Project Syn Commodore Component to deploy this operator
+* Potentially more difficult to move the SPKS project to AppCat
+
+=== Analysis - Bitnami Helm Chart
+
+https://github.com/bitnami/charts/tree/master/bitnami/mariadb-galera[Bitnami Helmchart^].
+
+Bitnami Helm Charts are solid, actively maintained, and we already have experience integrating it into our offerings.
+It is not as feature rich as the operator though it has much lower risk of orphanage.
+Backup and automatic restore will require more time to engineer unlike the operator.
+
+Advantages::
+
+* Supports most of our needs
+* Easy to integrate with VSHN AppCat
+* Sufficient Galera support
+* Well tested and widely used by VSHN
+* Faster integration and development as we already know how to work with it
+* Potentially easier to move the SPKS project to AppCat
+
+Disadvantages::
+
+* Lack of regular, automated maintenance
+* No user or user/logical database management.
+* Neither Backup nor automatic restore
+
+== Decision
+
+We use the Bitnami Helm Chart.
+
+== Rationale
+
+The mariadb-operator project seems to be a very good solution with high potential, though has a high risk of being abandoned. Also, we would need to invest much more time to integrate it into our offerings and maintain it.
+
+Bitnami's Helm Chart isn't that feature rich, but it has a lot of more advantages. Using it, we can offer the same quality for our customers, without taking unnecessary risk and with shorter development time. We're also using the Bitnami Helm Chart for our xref:explanations/decisions/redis.adoc#_decision[Redis] offering.
+
+We also agreed to the fact that we should prefer Helm Charts over operators for the following reasons:
+
+* Helm Chart are readily available for most of our services.
+* We have great experience with Helm Charts.
+* We should stick with one solution as much as possible to reduce complexity.
+* Operators may be very much prone to sudden bugs which may be difficult to fix on our own.

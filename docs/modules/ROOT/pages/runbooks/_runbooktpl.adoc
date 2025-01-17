@@ -1,9 +1,0 @@
-= Alert rule: ALERTRULENAME
-
-== icon:glasses[] Overview
-
-INTRO
-
-== icon:bug[] Steps for Debugging
-
-DETAILEDSTEPS

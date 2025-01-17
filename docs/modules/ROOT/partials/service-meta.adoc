@@ -1,0 +1,20 @@
+[.meta-info-table,cols="1h,2"]
+|===
+|Service Name
+|{svc_name}
+
+|Owner
+|{svc_owner}
+
+|Deployment Tech
+|{svc_deploytech}
+
+|End-User Documentation
+|{svc_doc_enduser}[docs^] - {svc_doc_enduser_src}[source^]
+
+|Product Documentation
+|{svc_doc_product}[docs^] - {svc_doc_product_src}[source^]
+
+|Code
+|{svc_code}[git repo^]
+|===

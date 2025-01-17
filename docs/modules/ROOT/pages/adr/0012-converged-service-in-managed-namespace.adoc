@@ -1,0 +1,68 @@
+= ADR 0012 - Converged Service in Managed Namespace
+:adr_author:    Christian Cremer
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2022-03-24
+:adr_upd_date:  2022-12-05
+:adr_status:    implemented
+:adr_tags:      framework,service
+:page-aliases:  explanations/decisions/converged-service-loc.adoc
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+Service instances are running in their own managed namespace.
+====
+
+== Problem
+
+To provision services converged on the same cluster, there are two approaches:
+
+* Run the resources in the same namespace where the claim originates from
+* Provision managed namespaces where the customer doesn't have access to
+
+== Proposal 1: Managed Namespaces
+
+With managed namespace we provision a new namespace for each new instance.
+The customer doesn't have general access to k8s resources in those namespaces.
+The interaction between the customer and the service is limited to the connection details and APIs provided by the service itself.
+
+Advantages::
+
+* Neatly separated services
+* The services feel like cloud services, where usually no access to the underlying VMs/containers is granted
+* Customers can't manipulate the k8s resources and thus less prone to breaking
+* VSHN engineers don't have to touch customer namespaces, no potential to break their own services
+
+Disadvantages::
+
+* Makes implementation more complex
+** log access can't be given easily
+** To use APPUiO's own resource billing need to add the organization label and also do custom RBAC trickery to still prevent access
+* During operation the engineer needs additional steps to find the right namespaces
+
+== Proposal 2: In the Same Namespace
+
+All resources that a customer orders are deployed in the same namespace where the claim resides.
+
+Advantages::
+
+* The customer can do debugging on their own
+* For operations, finding related resources is easier
+
+Disadvantages::
+
+* Resource names could clash, resulting in unexpected behaviors
+* Operations could be accused of breaking other things while trying to fix a broken AppCat service
+* It's easier for customers to break services, resulting in more operations effort
+
+== Decision
+
+Managed namespaces.
+
+=== Rationale
+
+Managed services are supposed to be isolated to some degree.
+It limits the factors that can influence the service, so that stability can be guaranteed.

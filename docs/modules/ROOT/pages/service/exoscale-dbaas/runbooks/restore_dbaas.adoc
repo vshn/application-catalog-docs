@@ -1,0 +1,230 @@
+= Manually Restore DBaaS Backup
+:page-aliases: runbooks/exoscale/restore_dbaas.adoc
+
+== icon:glasses[] Overview
+
+NOTE: You can't restore from a `+hobbyist-2+` instance. You have to scale it up first.
+
+This documentation is for manually restoring a DBaaS instance.
+
+== Get and Configure The Exo CLI
+
+Some features of Exoscale DBaaS can only be done via API or CLI.
+
+The Exo CLI can be installed from this repository: https://github.com/exoscale/cli
+
+For MacOS users it can be installed via brew:
+
+[source,shell]
+----
+brew install exoscale/tap/exoscale-cli
+----
+
+Login to the Exoscale Project where the instance is running:
+[source,shell]
+----
+exo config #Choose configure new account and follow the prompts
+----
+
+== List Existing Instances
+
+[source,shell]
+----
+exo dbaas list
+┼────────────────┼────────────┼────────────┼──────────┼
+│      NAME      │    TYPE    │    PLAN    │   ZONE   │
+┼────────────────┼────────────┼────────────┼──────────┼
+│ e2e-test-kafka │ kafka      │ startup-2  │ ch-dk-2  │
+│ e2e-test-mysql │ mysql      │ hobbyist-2 │ ch-dk-2  │
+│ test1-28z5q    │ opensearch │ startup-4  │ ch-gva-2 │
+┼────────────────┼────────────┼────────────┼──────────┼
+----
+
+== Scale up Instance
+
+[source,shell]
+----
+exo dbaas update -z ch-gva-2 $myinstance --plan startup-4
+----
+
+== Restore Instance
+
+[source,shell]
+----
+# List available Backups
+exo dbaas show $myinstance -z ch-gva-2 --backups
+
+┼─────────────────────────────────────┼───────────────────────────────┼──────────┼
+│                NAME                 │             DATE              │   SIZE   │
+┼─────────────────────────────────────┼───────────────────────────────┼──────────┼
+│ 2021-10-30_20-28_0.00000000.pghoard │ 2021-10-30 20:28:01 +0000 UTC │ 36341760 │
+│ 2021-10-31_20-28_0.00000000.pghoard │ 2021-10-31 20:28:04 +0000 UTC │ 36382720 │
+┼─────────────────────────────────────┼───────────────────────────────┼──────────┼
+
+# Create a fork from backup
+# With point-in-time
+exo dbaas create pg startup-4 fork-test-pg --pg-recovery-backup-time 2021-10-30 23:35 --pg-fork-from $myinstance -z ch-gva-2
+
+# Without point-in-time (restores latest available)
+exo dbaas create pg startup-4 fork-test-pg --pg-fork-from $myinstance -z ch-gva-2
+----
+
+There will be a new instance, which is not AppCat managed!
+To get the data into an AppCat Managed Service again:
+
+* dump the data from the restore
+* restore the dump either into the existing AppCat service, or a new one
+
+=== Dump and Restore PostgreSQL
+
+Requirements:
+
+* psql
+* source db credentials
+* target db credentials
+
+The credentials can be found either in the Exoscale GUI for the instances or if it's an AppCat service in the service's secret.
+
+To dump all databases locally:
+
+[source,shell]
+----
+#!/bin/sh
+
+set -e
+
+sourcehost=...
+sourceport=...
+sourcepassword='...'
+
+for db in $(PGPASSWORD="${sourcepassword}" psql -h "${sourcehost}" -p "${sourceport}" -U avnadmin -d defaultdb -t -c "select datname from pg_database where (not datistemplate) and (datname !='_aiven')" | grep '\S' | awk '{$1=$1};1'); do
+  PGPASSWORD="${sourcepassword}" pg_dump -h "${sourcehost}" -p "${sourceport}" -U avnadmin "${db}" | PGPASSWORD=
+done
+
+----
+
+**This script is very generic, it might be necessary to create the databases with specific settings!**
+
+To migrate directly between the instances:
+
+[source,shell]
+----
+#!/bin/sh
+
+set -e
+
+sourcehost=...
+sourceport=...
+sourcepassword='...'
+
+targethost=...
+targetport=...
+targetpassword='...'
+
+for db in $(PGPASSWORD="${sourcepassword}" psql -h "${sourcehost}" -p "${sourceport}" -U avnadmin -d defaultdb -t -c "select datname from pg_database where (not datistemplate) and (datname !='_aiven')" | grep '\S' | awk '{$1=$1};1'); do
+  PGPASSWORD="${targetpassword}" psql -h "${targethost}" -p "${targetport}" -U avnadmin -d defaultdb -t -c "create database ${db}" || true
+  PGPASSWORD="${sourcepassword}" pg_dump -h "${sourcehost}" -p "${sourceport}" -U avnadmin "${db}" | PGPASSWORD="${targetpassword}" psql -h "${targethost}" -p "${targetport}" -U avnadmin -d "${db}"
+done
+
+----
+
+=== Dump and Restore MySQL
+
+Requirements:
+
+* mysqldump
+* source db credentials
+* target db credentials
+
+The credentials can be found either in the Exoscale GUI for the instances or if it's an AppCat service in the service's secret.
+
+To dump all databases locally:
+
+[source,shell]
+----
+#!/bin/sh
+
+set -e
+
+sourcehost=...
+sourceport=...
+sourcepassword='...'
+
+for db in $(mysql -h "${sourcehost}" -P "${sourceport}" -uavnadmin -p$sourcepassword -Bse "SELECT schema_name FROM information_schema.schemata WHERE schema_name NOT IN ('mysql','information_schema','performance_schema','sys')"); do
+  mysqldump -h "${sourcehost}" -P "${sourceport}" -uavnadmin -p${sourcepassword} --set-gtid-purged=OFF --triggers --routines --events "${db}" > "${db}".sql
+done
+
+----
+
+To migrate directly between the instances:
+
+[source,shell]
+----
+#!/bin/sh
+
+set -e
+
+sourcehost=...
+sourceport=...
+sourcepassword='...'
+
+targethost=...
+targetport=...
+targetpassword='...'
+
+for db in $(mysql -h "${sourcehost}" -P "${sourceport}" -uavnadmin -p$sourcepassword -Bse "SELECT schema_name FROM information_schema.schemata WHERE schema_name NOT IN ('mysql','information_schema','performance_schema','sys')"); do
+  mysql -h "${targethost}" -P "${targetport}" -uavnadmin -p${targetpassword} -Bse "CREATE DATABASE IF NOT EXISTS ${db};"
+  mysqldump -h "${sourcehost}" -P "${sourceport}" -uavnadmin -p${sourcepassword} --set-gtid-purged=OFF --triggers --routines --events "${db}" | mysql -h "${targethost}" -P "${targetport}" -uavnadmin -p${targetpassword} "${db}"
+done
+
+----
+
+=== Dump and Restore Redis
+
+Requirements:
+
+* https://developer.redis.com/riot/riot-file/index.html#_install[riot-file] for dumps
+* https://developer.redis.com/riot/riot-redis/index.html#_install[riot-redis] for direct migration
+* source db credentials
+* target db credentials
+
+The credentials can be found either in the Exoscale GUI for the instances or if it's an AppCat service in the service's secret.
+
+To dump all keys locally:
+
+[source,shell]
+----
+#!/bin/sh
+
+set -e
+
+sourceuri=...
+
+riot-file --uri "${sourceuri}" export export.json
+
+----
+
+To migrate directly between the instances:
+
+[source,shell]
+----
+#!/bin/sh
+
+set -e
+
+sourceuri=...
+targeturi=...
+
+riot-redis --uri "${sourceuri}" replicate --uri "${targeturi}"
+
+----
+
+=== Dump and Restore Kafka
+
+Kafka doesn't seem to have any reliable backup and restore tooling available.
+Even Exoscale/Aiven themselves don't provide backups for this service.
+
+=== Dump and Restore OpenSearch
+
+OpenSearch's backup and restore methods are a bit more involved and need settings to be changed on the instances.
+Please see https://docs.aiven.io/docs/products/opensearch/howto/migrating_elasticsearch_data_to_aiven[Aiven's docs] for information about migrating data between instances.

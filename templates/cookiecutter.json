@@ -1,0 +1,14 @@
+{
+    "templates": {
+        "adr": {
+            "path": "./adr",
+            "title": "ADRs",
+            "description": "Architecture Design or Decision Record"
+        },
+        "service": {
+            "path": "./service",
+            "title": "Service",
+            "description": "Service Documentation"
+        }
+    }
+}

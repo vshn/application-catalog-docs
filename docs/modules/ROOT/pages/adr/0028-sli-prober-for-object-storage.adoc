@@ -1,0 +1,90 @@
+= ADR 0028 - SLI Prober for Object Storage
+:adr_author:    Gabriel Saratura
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2023-10-23
+:adr_upd_date:  2023-10-23
+:adr_status:    implemented
+:adr_tags:      service,monitoring,sli
+:page-aliases:  explanations/decisions/local-objectstorage-sli.adoc
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+We use a Probe to monitor Object Buckets.
+====
+
+== Problem
+
+Every AppCat service instance is being probed by our AppCat SLI Prober.
+Currently, we use our Prober for database instances which we need to make sure that these are accessible all the time.
+Object storage service is not a database service thus it might require a different approach as to how we check on service availability.
+For instance object buckets usually are not highly used like databases and sometimes a customer has hundreds if not thousands instances of S3 buckets with their object storage service.
+So how do we make sure that we expose the SLI metrics efficiently and reliably?
+
+=== Goals
+
+* Expose ObjectStorage SLI metrics efficiently and reliably
+
+=== Non-Goals
+
+* How to implement any solution
+
+== Proposals
+
+=== Check MinioIO Service
+
+We can leverage https://min.io/docs/minio/linux/operations/monitoring/healthcheck-probe.html[prometheus metrics or http check exposed] by MinIO to figure if the service is available thus calculating the SLI.
+This approach does not require the help of our SLI Prober but just a prometheus recording rule.
+It is very efficient as we don't have to probe S3 buckets whatsoever.
+
+==== Concerns
+There is a concern with this approach, while we check if the service is up and running via prometheus we cannot be 100% sure
+whether the S3 buckets customer created are accessible or not.
+This concern is also brought up in the https://min.io/docs/minio/linux/operations/monitoring/healthcheck-probe.html[documentation] itself
+therefore our SLI cannot be reliable.
+
+=== Probe all ObjectBucket
+
+The most straight forward and reliable way to make sure buckets are available is to connect to each ObjectBucket and list its content.
+This can be done in the SLI Prober by using a reconcile on the Custom Resource.
+This approach is the most reliable of all solutions.
+
+==== Concerns
+
+Main concern with this solution is the overhead that we might put on the SLI Prober.
+It's not uncommon to have thousands ObjectBuckets thus potentially halting the SLI Prober to a stop.
+Unfortunately, this event may also affect other services in the SLI Prober itself.
+
+=== Probe one ObjectBucket
+
+The idea behind this solution is to have a SLI bucket per each instance of MinIO.
+The SLI Prober would then probe on this single instance to figure out if all other instances are running or not.
+This solution seems to be a trade-off between the above 2 solutions though it's not perfect.
+It will help us reliably check whether MinIO is running successfully and will put a low strain on the SLI Prober itself.
+
+==== Concerns
+
+One of the main concern with this approach is whether we can guarantee that checking one bucket is equal to checking all buckets.
+In most case this should be the case as MinIO implements https://min.io/docs/minio/linux/operations/concepts/erasure-coding.html#minio-ec-erasure-set[Erasure Coding].
+MinIO guarantees that even if half of the nodes are down the data is still available.
+However, if the are less than 50% nodes available then our test on single bucket is not relevant anymore.
+
+== Decision
+
+Use Probe one ObjectBucket
+
+== Rationale
+
+Checking only MinIO service is not enough to ensure that buckets themselves are available.
+This is clearly https://min.io/docs/minio/linux/operations/monitoring/healthcheck-probe.html[stated] in the MinIO docs.
+There can also be network issues to the buckets which we do not take in consideration with this particular check.
+
+On the other hand, checking all the buckets is very much cumbersome for the SLI Prober.
+As stated earlier it can have a negative impact on other services as well.
+
+The middle ground here is to go with a single object bucket health check.
+MinIO will ensure that all the buckets are available when there are at least more than 50% of the nodes.
+To mitigate this issue we can set simple MinIO alert on the number of nodes available in order to ensure >50% capacity all the time.

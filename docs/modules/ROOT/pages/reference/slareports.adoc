@@ -1,8 +1,0 @@
-= AppCat SLA Reports
-
-Currently, the SLA reports for AppCat are generated on the first day of each month and are stored in an S3 bucket.
-The bucket is provisioned by an AppCat `objectBucket` in the `syn-appcat-slos` namespace on APPUiO Cloud lpg-2.
-
-The bucket contains a folder for each year and month.
-Within those folders are PDFs in the format of $organization.pdf.
-If for some reason there's SLO data for instances that don't have an organizaton set, they are collected in a PDFs called `noOrganizationName.pdf`.

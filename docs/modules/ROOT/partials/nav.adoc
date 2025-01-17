@@ -1,148 +1,121 @@
 * xref:index.adoc[Home]
-** xref:app-catalog:ROOT:explanations/what_is.adoc[What is it?]
-** xref:app-catalog:ROOT:explanations/why_exists.adoc[Why does it exist?]
-** xref:app-catalog:ROOT:explanations/app_catalog.adoc[Concept]
-** xref:app-catalog:ROOT:reference/glossary.adoc[]
-* Architecture
-** xref:app-catalog:ROOT:reference/arch-control-plane.adoc[]
-** AppCat Usage Reporting
-*** xref:app-catalog:ROOT:reference/vshn-usage-reporting.adoc[]
-*** xref:app-catalog:ROOT:reference/cloud-usage-reporting.adoc[]
-** xref:app-catalog:ROOT:reference/service-maturity.adoc[]
-** xref:app-catalog:ROOT:reference/framework-requirements.adoc[]
-** xref:app-catalog:ROOT:reference/slareports.adoc[]
-** Separate Control Plane from Service Clusters
-*** xref:app-catalog:ROOT:reference/control-plane-pitfalls.adoc[]
-*** xref:app-catalog:ROOT:reference/sli-prober-architecture.adoc[]
-** xref:app-catalog:ROOT:reference/ci-cd.adoc[]
-** xref:app-catalog:ROOT:reference/quality-requirements.adoc[Quality Requirements]
-*** xref:app-catalog:ROOT:reference/quality-requirements/maintainability/readiness-standards.adoc[Maintainability]
-*** xref:app-catalog:ROOT:reference/quality-requirements/portability/backup-exports.adoc[Portability]
-*** Reliability
-**** xref:app-catalog:ROOT:reference/quality-requirements/reliability/automatic-updates.adoc[Automatic Updates]
-**** xref:app-catalog:ROOT:reference/quality-requirements/reliability/mandatory-updates.adoc[Mandatory Updates]
-**** xref:app-catalog:ROOT:reference/quality-requirements/reliability/backup-interval.adoc[Minimum Backup Interval]
+** xref:what_is.adoc[]
+** xref:why_exists.adoc[]
+** xref:concept.adoc[]
+** xref:glossary.adoc[]
 
-
-*** Usability
-**** xref:app-catalog:ROOT:reference/quality-requirements/usability/actionable-alerts.adoc[Actionable Alerts]
-**** xref:app-catalog:ROOT:reference/quality-requirements/usability/api-declarative.adoc[Declarative Configuration of Instances]
-**** xref:app-catalog:ROOT:reference/quality-requirements/usability/api-validation.adoc[Service Instance API Validation]
-**** xref:app-catalog:ROOT:reference/quality-requirements/usability/provisioning-time.adoc[Automated Provisioning of a Service]
-**** xref:app-catalog:ROOT:reference/quality-requirements/usability/logs.adoc[Service Instance Logs]
-
-** Archive
-*** xref:app-catalog:ROOT:reference/billing-appuio.adoc[Billing on APPUiO Cloud]
-*** xref:app-catalog:ROOT:reference/billing-naming.adoc[]
-
-* Exoscale
-** xref:app-catalog:ROOT:how-tos/exoscale_dbaas/price-api.adoc[Exoscale Price API]
-** xref:app-catalog:ROOT:reference/exoscale-osbapi.adoc[]
+* xref:service/postgresql/index.adoc[]
 ** Runbooks
-*** xref:app-catalog:ROOT:runbooks/exoscale/restore_dbaas.adoc[]
+*** xref:service/postgresql/runbooks/alert-postgresqlconnectionscritical.adoc[]
+*** xref:service/postgresql/runbooks/howto-manual-restore.adoc[]
 
-* Decisions
-** PostgreSQL by VSHN
-*** xref:app-catalog:ROOT:explanations/decisions/postgresql.adoc[Operator evaluation]
-*** xref:app-catalog:ROOT:explanations/decisions/postgres-monitoring.adoc[Availability Check]
-*** xref:app-catalog:ROOT:explanations/decisions/postgres-upgrades.adoc[Upgrade Policy]
-** Redis by VSHN
-*** xref:app-catalog:ROOT:explanations/decisions/redis.adoc[Chart evaluation]
-*** xref:app-catalog:ROOT:explanations/decisions/redis-upgrades.adoc[Upgrade Policy]
-** MariaDB By VSHN
-*** xref:app-catalog:ROOT:explanations/decisions/mariadb.adoc[Chart/Operator evaluation]
-*** xref:app-catalog:ROOT:explanations/decisions/mariadb-proxy.adoc[Proxy for HA setups]
-** ObjectStorage by VSHN
-*** xref:app-catalog:ROOT:explanations/decisions/local-objectstorage-provider.adoc[Provider Evaluation]
-*** xref:app-catalog:ROOT:explanations/decisions/local-objectstorage-sli.adoc[SLI]
-** xref:app-catalog:ROOT:explanations/decisions/nextcloud.adoc[Nextcloud by VSHN]
-** xref:app-catalog:ROOT:explanations/decisions/mongodb.adoc[MongoDB by VSHN]
-** xref:app-catalog:ROOT:explanations/decisions/secret-pki-mgmt.adoc[Secret and PKI Management by VSHN]
-** xref:app-catalog:ROOT:explanations/decisions/capacity-alerting.adoc[Converged Service Capacity Alerting]
-** xref:app-catalog:ROOT:explanations/decisions/logging.adoc[Converged Service Logging]
-** xref:app-catalog:ROOT:explanations/decisions/crossplane.adoc[Crossplane as Control Plane]
-** xref:app-catalog:ROOT:explanations/decisions/composition-deployments.adoc[Composition Deployments]
-** xref:app-catalog:ROOT:explanations/decisions/api-design.adoc[API Design]
-** xref:app-catalog:ROOT:explanations/decisions/sla-reports.adoc[SLA Reports]
-** xref:app-catalog:ROOT:explanations/decisions/converged-service-loc.adoc[Converged Service Provisioning Location]
-** xref:app-catalog:ROOT:explanations/decisions/generic-metrics.adoc[]
-** xref:app-catalog:ROOT:explanations/decisions/apiserver.adoc[API Server Replacement]
-** xref:app-catalog:ROOT:explanations/decisions/deletion-protection.adoc[]
-** xref:app-catalog:ROOT:explanations/decisions/user-management.adoc[]
-** xref:app-catalog:ROOT:explanations/decisions/comp-function-error-handling.adoc[]
-** xref:app-catalog:ROOT:explanations/decisions/release_process.adoc[]
-** xref:app-catalog:ROOT:explanations/decisions/forgejo.adoc[Forgejo]
-** Archive
-*** xref:app-catalog:ROOT:explanations/decisions/archive/converged-service-impl.adoc[Converged Service Provisioning Implementation]
+* xref:service/redis/index.adoc[]
 
-* SPKS
-** xref:redis.adoc[Redis]
-*** xref:app-catalog:ROOT:explanations/redis.adoc[Redis Service Details]
-*** xref:app-catalog:ROOT:explanations/redis_sentinel_lb_with_haproxy.adoc[Redis Sentinel with HAProxy]
-*** xref:app-catalog:ROOT:explanations/redis_fake_sentinel.adoc[Redis Fake Sentinel]
-*** xref:app-catalog:ROOT:how-tos/redis/debug_sentinel.adoc[Debug Redis Sentinel]
-*** xref:app-catalog:ROOT:how-tos/redis/manual_failover.adoc[Manually Perform a Redis Failover]
-*** xref:app-catalog:ROOT:how-tos/redis/no_active_leader.adoc[Fix wrong/invalide leader after rollout/update]
+* xref:service/mariadb/index.adoc[]
+
+* xref:service/minio/index.adoc[]
+
+* xref:service/forgejo-codey/index.adoc[]
+** xref:service/forgejo-codey/architecture.adoc[]
+
+* xref:service/exoscale-dbaas/index.adoc[]
+** xref:service/exoscale-dbaas/price-api.adoc[]
+** Runbooks
+*** xref:service/exoscale-dbaas/runbooks/restore_dbaas.adoc[]
+
+* CSP: Exoscale
+** xref:csp/exoscale/osbapi.adoc[]
+
+* CSP: APPUiO
+** Runbooks
+*** xref:csp/appuio/runbooks/appuio-quotas.adoc[]
+
+* CSP: SPKS
+** xref:csp/spks/investigate_service_instances.adoc[]
+** xref:csp/spks/redis.adoc[]
+*** xref:csp/spks/redis-details.adoc[]
+*** xref:csp/spks/redis_sentinel_lb_with_haproxy.adoc[]
+*** xref:csp/spks/redis_fake_sentinel.adoc[]
 *** Runbooks
-**** xref:app-catalog:ROOT:runbooks/redis/RedisClusterFlapping.adoc[RedisClusterFlapping]
-**** xref:app-catalog:ROOT:runbooks/redis/RedisDisconnectedSlaves.adoc[RedisDisconnectedSlaves]
-**** xref:app-catalog:ROOT:runbooks/redis/RedisDown.adoc[RedisDown]
-**** xref:app-catalog:ROOT:runbooks/redis/RedisKeyEviction.adoc[RedisKeyEviction]
-**** xref:app-catalog:ROOT:runbooks/redis/RedisMasterMissing.adoc[RedisMasterMissing]
-**** xref:app-catalog:ROOT:runbooks/redis/RedisMemoryHigh.adoc[RedisMemoryHigh]
-**** xref:app-catalog:ROOT:runbooks/redis/RedisOutOfMemory.adoc[RedisOutOfMemory]
-**** xref:app-catalog:ROOT:runbooks/redis/RedisReplicationBroken.adoc[RedisReplicationBroken]
-**** xref:app-catalog:ROOT:runbooks/redis/RedisTooManyMasters.adoc[RedisTooManyMasters]
-
-** xref:mariadb_galera.adoc[MariaDB Galera]
-*** xref:app-catalog:ROOT:explanations/decisions/mariadb.adoc[]
-*** xref:app-catalog:ROOT:explanations/mariadb_galera_lb_with_haproxy.adoc[MariaDB Galera with HAProxy]
-*** xref:app-catalog:ROOT:how-tos/mariadbgalera/debug.adoc[Debug MariaDB Galera]
-*** xref:app-catalog:ROOT:how-tos/mariadbgalera/find_cluster_for_instance.adoc[Find the Service Cluster]
-*** xref:app-catalog:ROOT:how-tos/mariadbgalera/bootstrap_cluster.adoc[Bootstrap Cluster]
+**** xref:csp/spks/runbooks/redis/debug_sentinel.adoc[]
+**** xref:csp/spks/runbooks/redis/manual_failover.adoc[]
+**** xref:csp/spks/runbooks/redis/no_active_leader.adoc[]
+**** xref:csp/spks/runbooks/redis/RedisClusterFlapping.adoc[]
+**** xref:csp/spks/runbooks/redis/RedisClusterDown.adoc[]
+**** xref:csp/spks/runbooks/redis/RedisDisconnectedSlaves.adoc[]
+**** xref:csp/spks/runbooks/redis/RedisDown.adoc[]
+**** xref:csp/spks/runbooks/redis/RedisKeyEviction.adoc[]
+**** xref:csp/spks/runbooks/redis/RedisMasterMissing.adoc[]
+**** xref:csp/spks/runbooks/redis/RedisMemoryHigh.adoc[]
+**** xref:csp/spks/runbooks/redis/RedisOutOfMemory.adoc[]
+**** xref:csp/spks/runbooks/redis/RedisReplicationBroken.adoc[]
+**** xref:csp/spks/runbooks/redis/RedisTooManyMasters.adoc[]
+** xref:csp/spks/mariadb_galera.adoc[]
+*** xref:csp/spks/mariadb_galera_lb_with_haproxy.adoc[]
+*** xref:csp/spks/mariadb_haproxy_stats.adoc[]
 *** Runbooks
-**** xref:app-catalog:ROOT:runbooks/mariadbgalera/MySQLGaleraClusterDown.adoc[MySQLGaleraClusterDown]
-**** xref:app-catalog:ROOT:runbooks/mariadbgalera/MySQLGaleraClusterEvenNodes.adoc[MySQLGaleraClusterEvenNodes]
-**** xref:app-catalog:ROOT:runbooks/mariadbgalera/MySQLGaleraClusterSmall.adoc[MySQLGaleraClusterSmall]
-**** xref:app-catalog:ROOT:runbooks/mariadbgalera/MySQLGaleraDonorFallingBehind.adoc[MySQLGaleraDonorFallingBehind]
-**** xref:app-catalog:ROOT:runbooks/mariadbgalera/MySQLGaleraNotConnected.adoc[MySQLGaleraNotConnected]
-**** xref:app-catalog:ROOT:runbooks/mariadbgalera/MySQLGaleraNotOperational.adoc[MySQLGaleraNotOperational]
-**** xref:app-catalog:ROOT:runbooks/mariadbgalera/MySQLGaleraNotReady.adoc[MySQLGaleraNotReady]
-**** xref:app-catalog:ROOT:runbooks/mariadbgalera/MySQLGaleraOutOfSync.adoc[MySQLGaleraOutOfSync]
-**** xref:app-catalog:ROOT:runbooks/mariadbgalera/MySQLInnoDBLogWaits.adoc[MySQLInnoDBLogWaits]
+**** xref:csp/spks/runbooks/mariadb_galera/debug.adoc[]
+**** xref:csp/spks/runbooks/mariadb_galera/find_cluster_for_instance.adoc[]
+**** xref:csp/spks/runbooks/mariadb_galera/bootstrap_cluster.adoc[]
+**** xref:csp/spks/runbooks/mariadb_galera/MySQLGaleraClusterDown.adoc[]
+**** xref:csp/spks/runbooks/mariadb_galera/MySQLGaleraClusterEvenNodes.adoc[]
+**** xref:csp/spks/runbooks/mariadb_galera/MySQLGaleraClusterSmall.adoc[]
+**** xref:csp/spks/runbooks/mariadb_galera/MySQLGaleraDonorFallingBehind.adoc[]
+**** xref:csp/spks/runbooks/mariadb_galera/MySQLGaleraNotConnected.adoc[]
+**** xref:csp/spks/runbooks/mariadb_galera/MySQLGaleraNotOperational.adoc[]
+**** xref:csp/spks/runbooks/mariadb_galera/MySQLGaleraNotReady.adoc[]
+**** xref:csp/spks/runbooks/mariadb_galera/MySQLGaleraOutOfSync.adoc[]
+**** xref:csp/spks/runbooks/mariadb_galera/MySQLInnoDBLogWaits.adoc[]
+** xref:csp/spks/crossplane/overview.adoc[]
+*** xref:csp/spks/crossplane/crossplane_service_broker.adoc[]
+*** xref:csp/spks/crossplane/crossplane_provider_mechanics.adoc[]
+*** xref:csp/spks/crossplane/setup_crossplane_service_broker.adoc[]
+*** xref:csp/spks/crossplane/setup_service_catalog.adoc[]
+*** xref:csp/spks/crossplane/bearer_token_authentication.adoc[]
+*** xref:csp/spks/crossplane/connect_service_catalog_to_service_broker.adoc[]
+*** xref:csp/spks/crossplane/kube_token_refresher.adoc[]
+*** xref:csp/spks/crossplane/basic_authentication.adoc[]
+*** xref:csp/spks/crossplane/implement_new_service_offering.adoc[]
+*** xref:csp/spks/crossplane/setting_up_crossplane_service_broker.adoc[]
+** xref:csp/spks/vault.adoc[]
+*** xref:csp/spks/vault_auto_unseal.adoc[]
+*** xref:csp/spks/vault_backup_restore.adoc[]
+** xref:csp/spks/enable_plan_upgrade.adoc[]
 
-** xref:vault.adoc[Vault]
-*** xref:app-catalog:ROOT:explanations/vault_auto_unseal.adoc[Auto Unseal]
-*** xref:app-catalog:ROOT:explanations/vault_backup_restore.adoc[Backup and Restore]
+* Framework
+** xref:framework/framework-requirements.adoc[]
+** xref:framework/service-maturity.adoc[]
+** xref:framework/ci-cd.adoc[]
+** xref:framework/working_with_functions.adoc[]
+** xref:framework/slareports.adoc[]
+** Billing
+*** xref:framework/cloud-usage-reporting.adoc[]
+*** xref:framework/vshn-usage-reporting.adoc[]
+*** xref:framework/backfill_billing.adoc[]
+** xref:framework/quality-requirements.adoc[]
+*** xref:framework/quality-requirements/maintainability/readiness-standards.adoc[]
+*** xref:framework/quality-requirements/portability/backup-exports.adoc[]
+*** Reliability
+**** xref:framework/quality-requirements/reliability/automatic-updates.adoc[]
+**** xref:framework/quality-requirements/reliability/mandatory-updates.adoc[]
+**** xref:framework/quality-requirements/reliability/backup-interval.adoc[]
+*** Usability
+**** xref:framework/quality-requirements/usability/actionable-alerts.adoc[]
+**** xref:framework/quality-requirements/usability/api-declarative.adoc[]
+**** xref:framework/quality-requirements/usability/api-validation.adoc[]
+**** xref:framework/quality-requirements/usability/provisioning-time.adoc[]
+**** xref:framework/quality-requirements/usability/logs.adoc[]
+** Runbooks
+*** xref:framework/runbooks/AppCatBackupJobError.adoc[]
+*** xref:framework/runbooks/GuaranteedUptimeTarget.adoc[]
+*** xref:framework/runbooks/AppCatHighAvailableStatefulsetWarning.adoc[]
+*** xref:framework/runbooks/AppCatHighAvailableDeploymentWarning.adoc[]
 
-** Crossplane
-*** xref:app-catalog:ROOT:how-tos/crossplane/investigate_service_instances.adoc[Investigate a Service]
-*** xref:app-catalog:ROOT:how-tos/crossplane/enable_plan_upgrade.adoc[Enable Plan Upgrade]
+* Control Plane
+** xref:control-plane/central-control-plane-arch.adoc[]
+** xref:control-plane/split-architecture.adoc[]
+** xref:control-plane/split-sli-prober.adoc[]
 
-** xref:app-catalog:ROOT:how-tos/crossplane_service_broker/overview.adoc[Crossplane Service Broker]
-*** xref:app-catalog:ROOT:explanations/crossplane_service_broker.adoc[Service Broker]
-*** xref:app-catalog:ROOT:explanations/crossplane_provider_mechanics.adoc[Provider Mechanics]
-*** xref:app-catalog:ROOT:how-tos/crossplane_service_broker/setup_crossplane_service_broker.adoc[Setup a _Crossplane Service Broker_]
-*** xref:app-catalog:ROOT:how-tos/crossplane_service_broker/setup_service_catalog.adoc[Setup a _Service Catalog_]
-*** xref:app-catalog:ROOT:how-tos/crossplane_service_broker/bearer_token_authentication.adoc[HTTP _Bearer Token_ authentication]
-*** xref:app-catalog:ROOT:how-tos/crossplane_service_broker/connect_service_catalog_to_service_broker.adoc[Connect the _Service Catalog_ to the _Service Broker_]
-*** xref:app-catalog:ROOT:how-tos/crossplane_service_broker/kube_token_refresher.adoc[Setup Kube Token Refresher]
-*** xref:app-catalog:ROOT:how-tos/crossplane_service_broker/basic_authentication.adoc[HTTP _Basic_ authentication]
-*** xref:app-catalog:ROOT:how-tos/crossplane/implement_new_service_offering.adoc[Implement a New Service]
-*** xref:app-catalog:ROOT:tutorials/crossplane_service_broker/setting_up_crossplane_service_broker.adoc[Crossplane Complete Setup Tutorial]
-
-** xref:app-catalog:ROOT:how-tos/haproxy/stats.adoc[HAProxy]
-
-* HowTos
-** xref:app-catalog:ROOT:how-tos/appcat/backfill_billing.adoc[]
-
-* Runbooks
-** PostgreSQL By VSHN
-*** xref:app-catalog:ROOT:how-tos/appcat/vshn/postgres/PostgreSQLConnectionsCritical.adoc[]
-** xref:app-catalog:ROOT:how-tos/appcat/appuio-quotas.adoc[]
-** xref:app-catalog:ROOT:how-tos/appcat/vshn/postgres/manual-restore.adoc[]
-** xref:app-catalog:ROOT:how-tos/appcat/AppCatBackupJobError.adoc[]
-** xref:app-catalog:ROOT:how-tos/appcat/GuaranteedUptimeTarget.adoc[]
-** High Available Alerts
-*** xref:app-catalog:ROOT:how-tos/appcat/vshn/AppCatHighAvailableStatefulsetWarning.adoc[]
-*** xref:app-catalog:ROOT:how-tos/appcat/vshn/AppCatHighAvailableDeploymentWarning.adoc[]
+* xref:adr/index.adoc[]
+** xref:adr/working-with.adoc[]
+include::partial$nav-adrs.adoc[]

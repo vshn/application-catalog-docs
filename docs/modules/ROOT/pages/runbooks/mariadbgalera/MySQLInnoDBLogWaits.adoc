@@ -1,9 +1,0 @@
-= Alert rule: MySQLInnoDBLogWaits
-
-== icon:glasses[] Overview
-
-TODO
-
-== icon:bug[] Steps for Debugging
-
-TODO

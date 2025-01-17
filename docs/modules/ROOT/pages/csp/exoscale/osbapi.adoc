@@ -1,0 +1,454 @@
+= Exoscale Marketplace Integration
+:page-aliases: reference/exoscale-osbapi.adoc
+
+To integrate services from the https://products.vshn.ch/appcat/services_index.html[VSHN Application Catalog^] into the https://www.exoscale.com/marketplace/[Exoscale Marketplace^], we provide an Exoscale-specific https://github.com/openservicebrokerapi/servicebroker/blob/master/spec.md[Open Service Broker (OSB) API^] endpoint to provision Organizations and enable access to the service offering. A web portal is provided by VSHN to the end-user of Exoscale to provision and manage services.
+
+When an Exoscale customer enables a service on the Exoscale Marketplace, access to the service will be enabled on the https://products.vshn.ch/marketplace/index.html[VSHN Application Marketplace^].
+The Exoscale customer then self-service provisions and configures the service instances on the VSHN portal.
+Disabling a service by an Exoscale customer will disable access to the service on our side, and after a grace period, all instances are deleted if they haven't been deleted by the customer yet.
+
+Except the Central Control Plane (CCP, see xref:reference/arch-control-plane.adoc[]) everything runs on Exoscale premises.
+Every Exoscale zone will run at least one Worker Cluster which hosts the service instances and a Cloud Service Provider Control Plane (CSPCP).
+
+We regularly send usage data from https://central.vshn.ch/[VSHN Central (Odoo)^] to Exoscale for invoicing the end-user.
+Every month an invoice is sent from VSHN to Exoscale for the service usage of the last month.
+
+== Terminology
+
+Open Service Broker API::
+"The https://www.openservicebrokerapi.org/[Open Service Broker API project^] allows independent software vendors, SaaS providers and developers to easily provide backing services to workloads running on cloud native platforms."
+See official https://github.com/openservicebrokerapi/servicebroker/blob/master/spec.md[API spec^].
+
+OSB API::
+Abbreviation of Open Service Broker API.
+
+OSB Specific Terms::
+Excerpt from https://github.com/openservicebrokerapi/servicebroker/blob/v2.17/spec.md#terminology[API spec Terminology^]:
+* _Service Offering_: The advertisement of a Service that a Service Broker supports.
+* _Service Plan_: The representation of the costs and benefits for a given variant of the Service Offering, potentially as a tier.
+* _Service Instance_: An instantiation of a Service Offering and Service Plan.
+
+Exoscale Marketplace::
+The https://www.exoscale.com/marketplace/[marketplace^] of Exoscale enabling the self-service ordering of services from third-party providers.
+
+== Architecture
+
+[mermaid,arch,png]
+....
+flowchart TB
+    exo["Exoscale Marketplace"]
+    eu("Exoscale End-User")
+    vshn["VSHN Exoscale OSB API"]
+    vshnccpapi["Application Marketplace API"]
+    vshnccpui["Application Marketplace Portal"]
+
+    exo-- OpenServiceBroker API -->vshn-- K8s API --> vshnccpapi
+    eu-- WebUI -->exo
+    eu-- WebUI -->vshnccpui-- K8s API --> vshnccpapi
+....
+
+The xref:reference/arch-control-plane.adoc[] is doing the heavy lifting, while the custom OSB API endpoint is used for Exoscale integration, acting like an end-user which directly interacts with the control-plane API (which is a custom Kubernetes API).
+
+The "Enable" button in the Exoscale Marketplace Portal will:
+
+* Provision an Organization at VSHN (if it not already exists) which is tied to Exoscale (`origin=exoscale`). See <<Exoscale Organizations>>.
+* Enable access to the enabled service, ready to be provisioned in the VSHN Portal
+
+This Organization will be tied to Exoscale services, it can only see services from Exoscale and only provision at Exoscale premises.
+
+=== OSB API at Exoscale
+
+Exoscale uses the OpenServiceBroker (OSB) API for service provisioning and deprovisioning with external vendors, that's why we're integrating this way.
+
+The API currently https://community.exoscale.com/documentation/vendor/marketplace-managed-services-provision/#open-service-broker-api-osbapi[has the following features^]:
+
+* Service instance provisioning
+* Service instance update (plan changes, suspensions, user sync)
+* Service instance deprovisioning
+* Synchronous requests support
+
+== Service Listing
+
+Every service in the VSHN Application Catalog that is available in the Exoscale Marketplace is individually listed in the Exoscale Marketplace.
+Listing in the Exoscale Marketplace is done on the Exoscale side (they manually add them to their database). We don't offer the listing from our side through the OSB API (no `catalog` endpoint).
+
+We specifically only list services in the VSHN Portal which are enabled on the Exoscale Marketplace.
+This is handled by the `ProvidedService` object in the Central Control Plane.
+
+Other available services do get a hint in the VSHN Portal that they need to be enabled first on the Exoscale Marketplace to get available for provisioning.
+
+=== OSB Plans and Services
+
+There are a few https://github.com/openservicebrokerapi/servicebroker/blob/master/spec.md#service-plan-object[OSB plan^] requirements:
+
+* An OSB API service must match one product on the Exoscale marketplace.
+* An OSB API plan should be setup for each published plan for that product.
+* An additional technical plan must be available for managing suspensions of end user organizations.
+
+Mapping of service ID and plan ID to Compositions is configured in the OSB API.
+It will set the values in `ProvidedService` (see xref:reference/arch-control-plane.adoc[]).
+
+NOTE: We don't provide the OSB API `/v2/catalog` endpoint as this is not required for the Exoscale Marketplace (See <<Service Listing>>).
+
+== Exoscale Organizations
+
+When an Exoscale user clicks on the green "Enable" button on a service offering page, the <<Onboarding, onboarding flow>> is triggered in the xref:reference/arch-control-plane.adoc[].
+
+image::exoscale-marketplace-empty-service.png[]
+
+=== Onboarding
+
+[mermaid,onboarding,png]
+....
+sequenceDiagram
+    autonumber
+    actor EU as Exoscale User
+    participant EP as Exoscale Portal
+    participant VCA as VSHN OSB API
+    participant CCP as Central Control Plane
+
+    EU->>EP: Enable VSHN Service
+    EP->>VCA: OSB API "PUT"
+    VCA-->>CCP: Create "Organization"<br/>(if not exist)
+    CCP-->>EU: Send invitation to organization<br/> via E-Mail (if new Organization)
+    VCA->>CCP: Create "ProvidedService"
+    CCP->>EU: Send Service Welcome Mail
+    VCA->>EP: OSB API Confirmation
+    Note over VCA,EP: see return codes below
+    EP->>EU: Confirmation
+....
+
+.OSB API Provisioning call from Exoscale to VSHN
+[source,json]
+----
+PUT http://exo-osbapi.vshn.net/v2/service_instances/:instance_id
+{
+    "service_id": "service-test-guid", <1>
+    "plan_id": "plan1-test-guid", <2>
+    "organization_guid": "org-guid-here", <3>
+    "space_guid": "org-guid-here", <3>
+    "parameters": {
+        "users": [ <4>
+            {
+                "email":"email",
+                "full_name": "full name",
+                "role":"owner|tech"
+            }
+        ]
+    },
+    "context": {
+        "platform": "exoscale",
+        "organization_guid": "org-guid-here", <3>
+        "space_guid": "org-guid-here", <3>
+        "organization_name": "organization-name",
+        "organization_display_name": "organization-display-name",
+    }
+}
+----
+<1> The ID of the service on VSHN side
+<2> The ID of the plan on VSHN side
+<3> The Exoscale organization UUID
+<4> List of users
+
+https://github.com/openservicebrokerapi/servicebroker/blob/master/spec.md#response-3[HTTP response codes^]:
+
+* `200`: `ProvidedService` already exists
+* `201`: Successfully created `ProvidedService` object
+
+Sources:
+
+* https://community.exoscale.com/documentation/vendor/marketplace-managed-services-provision/#provisioning[Exoscale docs - Provisioning^]
+* https://github.com/openservicebrokerapi/servicebroker/blob/master/spec.md#provisioning[OSB API Spec^]
+
+On the xref:reference/arch-control-plane.adoc[] an `Organization` object is created by the OSB API if it doesn't exist yet.
+
+Organization Object Name::
+We use the Exoscale organization UUID for the object name `.metadata.name`, prefixed by `exo-`.
+
+Organization Display Name::
+The display name `.spec.displayName` is set to the name of the Exoscale organization in `.context.organization_display_name`
+
+Organization Origin::
+The field `.spec.originRef` is set to `exoscale` (hardcoded in the OSB API service)
+
+Invitation::
+When the Organization is created the first time, an https://kb.vshn.ch/appuio-cloud/references/architecture/control-api-invitation.html[`Invitation`^] resource is created, sending an invitation to the user in the field `parameters.users[0].email` from the OSB API.
+
+To keep track of provisioning requests and enabling access to services, we store a `ProvidedService` (see xref:reference/arch-control-plane.adoc[]) resource in the organization namespace, containing all the details of the provisioning call, including `.status` which stores the details what happened (for example organization created or already existed, Exoscale API informed, ...)
+
+=== Suspension
+
+This flow is triggered when an Exoscale organization:
+
+* changes their current plan
+* is suspended
+* changes the user list on Exoscale side and user sync is turned on
+
+The suspension uses a special "suspension" plan.
+
+[mermaid,suspension,png]
+....
+sequenceDiagram
+    autonumber
+    participant EP as Exoscale Portal
+    participant VCA as VSHN OSB API
+    participant CCP as Central Control Plane
+    participant VSHNEER as VSHNeer
+
+    EP->>VCA: OSB API "PATCH"
+    Note over EP, VCA: Set suspension Plan
+    VCA->>CCP: Update "ProvidedService"
+    CCP->>VSHNEER: Send E-Mail
+    VCA->>EP: OSB API Confirmation
+    Note over VCA,EP: see return codes below
+....
+
+[source,json]
+----
+PATCH http://exo-osbapi.vshn.net/v2/service_instances/:instance_id
+
+{
+    "service_id": "service-test-guid",
+    "plan_id": "plan1-test-guid", <1>
+    "parameters": {
+        "users": [
+            {
+                "email":"email",
+                "full_name": "full name",
+                "role":"owner|tech"
+            }
+        ]
+    }
+}
+----
+<1> Special suspension plan, to be defined
+
+https://github.com/openservicebrokerapi/servicebroker/blob/master/spec.md#response-5[HTTP response codes^]:
+
+* `200`: `ProvidedService` updated
+
+Sources:
+
+* https://community.exoscale.com/documentation/vendor/marketplace-managed-services-provision/#service-instance-update[Exoscale docs - Service Instance Update^]
+* https://github.com/openservicebrokerapi/servicebroker/blob/master/spec.md#updating-a-service-instance[OSB API Spec^]
+
+When the suspension plan is triggered, we send an E-Mail to customers@vshn.ch with all the information we have, so that we can check back with Exoscale what to do.
+No service is automatically suspended. If it has to happen, we'll do it manually.
+
+Also, the annotation `exoscale.com/planId` in the affected `ProvidedService` of the `instance_id` is updated with the `plan_id`.
+
+=== Offboarding
+
+This flow is triggered when an Exoscale organization:
+
+* decides to unsubscribe the product
+* suspension is not resolved before 7 days in trial mode, or 30 days outside of trial mode, which triggers a purge of their resources
+* decides to close their Exoscale account, or their account is terminated
+
+[mermaid.offboarding,png]
+....
+sequenceDiagram
+    autonumber
+    actor EU as Exoscale User
+    participant EP as Exoscale Portal
+    participant VCA as VSHN OSB API
+    participant CCP as Central Control Plane
+    
+    EU->>EP: Disable VSHN Service
+    EP->>VCA: OSB API "DELETE"
+    VCA->>CCP: Set deletionTimestamp<br />in ProvidedService
+    CCP->>EU: Send Deletion Confirmation Mail
+    VCA->>EP: OSB API Confirmation
+    Note over VCA,EP: see return codes below
+    EP->>EU: Confirmation
+    CCP->>CCP: Delete service instances<br />after grace period
+....
+
+[source,json]
+----
+DELETE http://exo-osbapi.vshn.net/v2/service_instances/:instance_id?service_id=service-test-guid&plan_id=plan1-test-guid
+----
+
+https://github.com/openservicebrokerapi/servicebroker/blob/master/spec.md#response-10[HTTP response codes^]:
+
+* `200`: `ProvidedService` updated with deletionTimestamp
+
+Sources:
+
+* https://community.exoscale.com/documentation/vendor/marketplace-managed-services-provision/#deprovisioning[Exoscale docs - Deprovisioning^]
+* https://github.com/openservicebrokerapi/servicebroker/blob/master/spec.md#deprovisioning[OSB API Spec^]
+
+When all `ProvidedService` objects are deleted (none exists anymore), an email is sent to customer@vshn.ch for the final closure of the organization.
+
+Also, there is a monitoring check which triggers when no `ProvidedService` is available, but service instances are still there and the deletion grace period is over.
+This means something failed in cleaning up.
+
+See also <<Deprovisioning>>, which details the single service deprovisioning.
+
+=== User Synchronization
+
+We don't do https://community.exoscale.com/documentation/vendor/marketplace-managed-services-provision/#user-sync[user synchronization^] from Exoscale to VSHN.
+
+____
+When user sync is disabled, only the information of the user that made the product purchase will be provided. The information will never be updated.
+____
+
+== Instances
+
+=== Provisioning
+
+Instances aren't directly provisioned via the OSB API.
+Instead, a `ProvidedService` is stored which enables access to the enabled service in the VSHN Portal.
+
+See <<Onboarding>> for more details, as it's mostly the same flow.
+
+.Example
+[source,yaml]
+----
+apiVersion: appcat.vshn.io/v1
+kind: ProvidedService
+metadata:
+  name: $instance_id <1>
+  namespace: $organization <2>
+  labels:
+    exoscale.com/serviceId: $service_id <3>
+    exoscale.com/planId: $plan_id <4>
+    exoscale.com/email: $email <5>
+spec:
+  compositionSelector: <6>
+    metadata.appcat.vshn.io/serviceprovider: exoscale
+    metadata.appcat.vshn.io/servicename: VSHNPostgreSQL
+----
+<1> From OSB API `:instance_id`
+<2> From <<Onboarding>>
+<3> From OSB API `.service_id`
+<4> From OSB API `.plan_id`
+<5> From OSB API `.parameters.users[0].email`
+<6> From OSB API static configuration, mapping of `service_id`
+
+An E-Mail is sent to the address in the annotation `exoscale.com/email` with a well-crafted link to the portal to actually provision the instance.
+
+The portal link encodes:
+
+* The Organization GUID (`exo-$UUID`)
+* The `service_id`
+* The `plan_id`
+
+When this portal link is opened, a pre-filled service ordering form is presented in the portal, ready for the user to actually provision the service.
+
+This flow allows an Exoscale user to have more than one instance per service per Exoscale organization.
+
+The actual service provisioning happens via the xref:reference/arch-control-plane.adoc[].
+
+E-Mail sending is handled the same way as in https://kb.vshn.ch/appuio-cloud/references/architecture/control-api-invitation.html#_invitation_messages[Invitation^].
+
+=== Plan Change
+
+We don't support plan changes on the Exoscale console, all service parameters are configured on our portal on the actual service provisioning.
+There is only one plan per service, the default plan.
+
+One exception is the "suspension plan" which is described in the <<Suspension, suspension flow>>.
+
+=== Deprovisioning
+
+See also <<Offboarding>> which talks about Organization offboarding and the OSB API flow.
+
+The matching `ProvidedService` gets updated, storing the deletion intention in `spec.deletionTimestamp`.
+After a grace period, all service instances matching the service are deleted automatically by a custom controller.
+The `ProvidedService` gets updated with the information which service instances have been deleted.
+
+We also send an E-Mail for each service instance which gets deleted that way, telling the customer that the service either has to be removed from the VSHN Portal or that it's automatically deleted after the deletion grace period.
+
+== Billing
+
+NOTE: This part is still in its early stages!
+
+The basic flow: We send billing data to Exoscale, Exoscale invoices the end-user, VSHN sends an invoice to Exoscale, Exoscale pays VSHN.
+
+[mermaid,billing,png]
+....
+flowchart TB
+    exo["Exoscale"]
+    exocust["Exoscale Customer"]
+    vshn["VSHN"]
+
+    exo-- Invoices --> exocust
+    exocust-- Pays -->exo
+
+    vshn-- Invoices --> exo
+    exo-- Pays -->vshn
+....
+
+Exoscale must keep track on our pricing on their end, because we only send usage data and they do the calculation.
+
+TODO
+
+* Send billing data to Exoscale billing API - Exoscale does invoicing to customer - we send invoice to Exoscale
+* One SO on VSHN side for Exoscale, to send invoice to Exoscale
+** We track the Exoscale organization ID in the SO
+** Maybe different product in product DB? Or different variant?
+* How to send billing data to Exoscale? Once per month directly from Odoo data, so that we send the same data?
+
+From Exoscale docs:
+
+____
+
+You can define one or more plans corresponding to various service offerings or service levels on your platform.
+
+*Monthly fees*
+
+Each plan can have an optional monthly fee.
+When a subscriber unsubscribes from your service, the service is cancelled immediately and they are charged with a pro-rated amount dating from their last subscription charge.
+
+*Additional charges*
+
+It is possible to charge for additional products and services in addition to the optional monthly fee.
+All additional billing dimensions must be declared in advance with a defined price for each available plan.
+
+Billing dimensions are specified by:
+
+* a technical name
+* a unit
+
+Supported units are:
+
+* h : hours
+* gb : gigabytes
+* gb.h : gigabytes per hour
+* u : arbitrary quantity
+
+The frequency of metering reporting is up to the vendor. You can meter as frequently as every hour.
+Metering should be reported at least once a month per customer.
+Metering is reported per client organization with the consumption that has occurred since the last successful report. Multiple charges can be reported at once.
+When reporting usage, you send the quantity for each defined variable and the client is charged accordingly.
+____
+
+
+[source,json]
+----
+POST /orgs/:uuid/usage <1>
+
+{
+    "records": [
+        {
+            "variable": "something",
+            "quantity": 12.5
+        },
+        {
+            "variable": "something_else",
+            "quantity": 1.2
+        }
+    ]
+}
+----
+<1> `:uuid` is the technical ID of the client organization in the Exoscale backend, which will be shared during the onboarding process.
+
+== Resources
+
+* https://kb.vshn.ch/appuio-cloud/references/architecture/control-api.html[APPUiO Control API Architecture^]
+* https://kb.vshn.ch/appuio-cloud/references/architecture/invitations.html[APPUiO Invitations]
+* https://github.com/vshn/crossplane-service-broker[Crossplane Service Broker (Code)^] - xref:how-tos/crossplane_service_broker/overview.adoc[Crossplane Service Broker (Docs)]
+* https://github.com/vshn/swisscom-service-broker[Swisscom Service Broker^]
+* https://community.exoscale.com/documentation/vendor/marketplace-managed-services/[Exoscale Vendor Documentation - Managed Services^]
+* https://community.exoscale.com/documentation/vendor/marketplace-managed-services-billing/[Exoscale Vendor Documentation - Managed Services Billing^]
+* https://community.exoscale.com/documentation/vendor/marketplace-managed-services-provision/[Exoscale Vendor Documentation - Managed Services Provisioning^]

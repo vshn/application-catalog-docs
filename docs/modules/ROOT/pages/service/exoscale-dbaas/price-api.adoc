@@ -1,0 +1,31 @@
+= Exoscale Price API
+:page-aliases: how-tos/exoscale_dbaas/price-api.adoc
+
+Getting and generating prices for the Exoscale DBaaS offering is currently a very hand-knitted process, not much automation in place.
+Therefore, the documentation here is just some keyword style explanation.
+
+* Get upstream prices via the Exoscale API, see <<API URLs,below>> for the URLs
+* With the following Python snippet CHF prices can be easily extracted into a CSV format:
++
+[,python]
+----
+include::example$exoscale-api-to-chf.py[]
+----
+* Feed that into the Google Spreadsheet "Application Catalog Service Pricing Calculation" (manual copy/paste)
+* Enrich the information with the data found on the https://www.exoscale.com/pricing/#dbaas[Exoscale website]
+* Convert the data from the Google Spreadsheet into a format which can be copy/pasted into the https://git.vshn.net/vshn/docs/products/-/blob/master/docs/modules/ROOT/pages/appcat/pricing.adoc[products.docs] page with the Python snippet.
++
+[,python]
+----
+include::example$exoscale-dbass-prep-for-product-docs.py[]
+----
++
+To get the `csvurl`: In the spreadsheet, go to File -> Share -> Publish to web -> Link. Choose the correct tab, and publish it as CSV. That's the URL you want.
+
+== API URLs
+
+* https://portal.exoscale.com/api/pricing/dbaas-pg
+* https://portal.exoscale.com/api/pricing/dbaas-mysql
+* https://portal.exoscale.com/api/pricing/dbaas-opensearch
+* https://portal.exoscale.com/api/pricing/dbaas-redis
+* https://portal.exoscale.com/api/pricing/dbaas-kafka

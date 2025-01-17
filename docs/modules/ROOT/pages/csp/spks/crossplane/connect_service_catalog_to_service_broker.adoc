@@ -1,0 +1,89 @@
+= Connect the _Service Catalog_ to a _Service Broker_
+:page-aliases: how-tos/crossplane_service_broker/connect_service_catalog_to_service_broker.adoc
+
+WARNING: This tutorial is deprecated. Some links may not work.
+
+This how-to will explain how a _Service Catalog_ is connected to the _Crossplane Service Broker_.
+
+== Preparations
+
+- Have access to an authentication server from which you can xref:app-catalog:ROOT:how-tos/crossplane_service_broker/bearer_token_authentication.adoc[request _Bearer Tokens_].
+- xref:app-catalog:ROOT:how-tos/crossplane_service_broker/setup_crossplane_service_broker.adoc[Have a _Crossplane Service Broker_ in your cluster that's configured for HTTP _Bearer Token_ authentication.]
+- xref:app-catalog:ROOT:how-tos/crossplane_service_broker/setup_service_catalog.adoc[Have a _Service Catalog_ running on your cluster.]
+- https://svc-cat.io/docs/install/#installing-the-service-catalog-cli[Have `svcat` installed on your computer.]
+
+== Configuring HTTP _Bearer Token_ Authentication
+// tag::main[]
+
+For the following instructions, change to the `catalog` namespace of your cluster:
+
+```bash
+kubectl config set-context --current --namespace=catalog
+```
+
+In order to connect the _Service Catalog_ to the _Crossplane Service Broker_, we'll have to provide the _Service Catalog_ with some credentials.
+These credentials are used by the _Service Catalog_ to identify itself to the _Crossplane Service Broker_.
+In this how-to, we focus on _Bearer Token_ authentication.
+The advantage of the _Bearer Token_ authentication is that the _Crossplane Service Broker_ can restrict the offered services based on information provided in the _Bearer Token_.
+
+[TIP]
+=====
+If you don't need to use _Bearer Token_ authentication, you may want to fall back to _Basic_ authentication.
+This would typically be the case when your _Crossplane Service Broker_ is only serving one team, group or customer anyways, or in other words:
+It's a single tenant system instance.
+
+The xref:app-catalog:ROOT:how-tos/crossplane_service_broker/basic_authentication.adoc[Setup HTTP _Basic_ authentication] how-to covers that.
+=====
+
+The _Service Catalog_ will read the _Bearer Token_ from a Kubernetes secret resource.
+Therefore we need to get the _Bearer Token_ from the authentication server and create a Kubernetes secret with it:
+
+```bash
+TOKEN=$(kubectl run \
+  --namespace default \
+  --attach --rm --quiet \
+  "curl-$(date +%s)" \
+  --image=docker.io/curlimages/curl -- \
+  --silent --request POST \
+  --data "grant_type=client_credentials" \
+  --data "client_id=950aaaa5-a656-4a8c-8515-aa505a550a52" \
+  --data "client_secret=5a2924a5-050a-445a-aa5a-0a50a445a845" \
+  "https://auth.corp.internal/token" | jq -r .access_token)
+printf "----BEGIN TOKEN----\n${TOKEN}\n----END TOKEN----\n\n"
+kubectl create secret generic bearer-creds "--from-literal=token=${TOKEN}" --dry-run=client -o yaml | kubectl apply -f -
+```
+
+NOTE: Don't forget to change the values `client_id`, `client_secret` and the URL in the command above.
+
+[IMPORTANT]
+====
+The token that's issued by the authentication server may only be valid for a short time.
+(The token which was shown before in the xref:app-catalog:ROOT:how-tos/crossplane_service_broker/bearer_token_authentication.adoc#get_a_bearer_token[HTTP _Bearer Token_ authentication] section was only valid for 600 seconds, that's just 10 minutes.)
+
+In that case you will need to deploy a https://github.com/vshn/kube-token-refresher[kube-token-refresher].
+The xref:app-catalog:ROOT:how-tos/crossplane_service_broker/kube_token_refresher.adoc[Setup Kube Token Refresher] how-to covers the setup.
+The token refresher will ensure that the service catalog always has a valid _Bearer Token_.
+====
+
+== Register the _Crossplane Service Broker_ at the _Service Catalog_
+
+Now, finally, we must register the _Crossplane Service Broker_ at the  _Service Catalog_.
+The _Service Catalog_ will immediately query the _Crossplane Service Broker_ about the services it offers.
+It (the _Service Catalog_) will then updates its catalog of all the services that can be provided by our (and all other) registered _Service Brokers_.
+
+To register the _Crossplane Service Broker_ run the following command.
+
+```bash
+svcat register servicebroker-test --bearer-secret bearer-creds --url "http://service-broker-test.service-broker"
+```
+
+It should then be possible to interact with this instance of the _Crossplane Service Broker_ through the _Service Catalog_:
+
+```bash
+# List all registered service brokers and their status
+svcat get brokers
+
+# Show the services that are available to order.
+svcat marketplace
+```
+// end::main[]

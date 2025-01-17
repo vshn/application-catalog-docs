@@ -1,0 +1,31 @@
+= Alert rule: PostgreSQLConnectionsCritical
+:navtitle: PostgreSQLConnectionsCritical
+:page-aliases: how-tos/appcat/vshn/postgres/PostgreSQLConnectionsCritical.adoc
+
+== icon:glasses[] Overview
+
+This alert triggers if the amount of available free connections are less than 10%.
+
+== icon:bug[] Steps for Debugging
+
+There are two ways to solve this issue:
+
+First Option:: Increase the amount of connections allowed. Keep in mind that each connection has some overhead in CPU and memory usage.
+So adjusting the amount of CPU and memory for the instance might also be necessary.
+
+.Example: increase max_connections for the instance
+[source,yaml]
+----
+apiVersion: vshn.appcat.vshn.io/v1
+kind: VSHNPostgreSQL
+metadata:
+  name: pgsql-app1-prod
+  namespace: prod-app
+spec:
+  parameters:
+    service:
+      pgSettings:
+        max_connections: "200"
+----
+
+Second Option:: Reduce the amount of connections your application opens.

@@ -1,0 +1,124 @@
+= ADR Index
+:navtitle: ADRs
+
+[cols="3,1,1,1"]
+|===
+|Title |Status |Date |Updated
+
+|xref:adr/0001-architecture-decision-records.adoc[]
+
+`processes`
+|draft |2025-01-01 |2025-01-06
+|xref:adr/0002-service-documentation.adoc[]
+
+`processes`
+|draft |2025-01-06 |2025-01-06
+|xref:adr/0003-stackgres-operator-for-postgresql.adoc[]
+
+`postgresql,service`
+|implemented |2022-11-15 |2023-11-01
+|xref:adr/0004-postgresql-metrics-exporter.adoc[]
+
+`postgresql,service,monitoring,metrics`
+|implemented |2023-02-21 |2023-03-07
+|xref:adr/0005-automated-postgresql-service-upgrades.adoc[]
+
+`postgresql,service,maintenance`
+|implemented |2023-05-23 |2023-05-04
+|xref:adr/0006-bitnami-helm-chart-for-redis.adoc[]
+
+`redis,service`
+|implemented |2022-12-27 |2023-01-04
+|xref:adr/0007-automated-redis-service-upgrades.adoc[]
+
+`redis,upgrades,maintenance`
+|implemented |2023-07-11 |2023-07-11
+|xref:adr/0008-bitnami-helm-chart-for-mariadb.adoc[]
+
+`service,mariadb,helm`
+|implemented |2022-12-27 |2023-10-31
+|xref:adr/0009-proxysql-for-mariadb-clustering.adoc[]
+
+`mariadb,ha,cluster`
+|implemented |2024-10-17 |2024-10-17
+|xref:adr/0010-minio-for-local-object-storage.adoc[]
+
+`minio,service,objectstorage`
+|implemented |2023-10-23 |2023-10-23
+|xref:adr/0011-monitor-object-bucket-with-probe.adoc[]
+
+`minio,monitoring,sli`
+|implemented |2023-10-23 |2023-10-23
+|xref:adr/0012-converged-service-in-managed-namespace.adoc[]
+
+`framework,service`
+|implemented |2022-03-24 |2022-12-05
+|xref:adr/0013-use-logging-facilities-of-platform.adoc[]
+
+`framework,service,logging`
+|implemented |2023-03-14 |2023-03-14
+|xref:adr/0014-commodore-component-to-deploy-compositions-and-xrds.adoc[]
+
+`framework,commodore,crossplane`
+|implemented |2022-08-05 |2022-12-09
+|xref:adr/0015-metrics-and-monitoring-of-services.adoc[]
+
+`framework,monitoring,metrics`
+|implemented |2023-07-06 |2023-09-26
+|xref:adr/0016-service-api-design.adoc[]
+
+`framework,api,service`
+|draft |2022-08-23 |2022-12-05
+|xref:adr/0017-handling-of-capacity-alerts-for-incident-prevention.adoc[]
+
+`framework,service,alerting`
+|implemented |2023-02-24 |2023-03-02
+|xref:adr/0018-sla-reports-handling.adoc[]
+
+`framework,sla,reports`
+|implemented |2023-05-08 |2023-05-09
+|xref:adr/0019-deletion-protection-with-validating-webhook.adoc[]
+
+`framework,service`
+|implemented |2024-03-14 |2024-03-18
+|xref:adr/0020-user-management-in-service-instances.adoc[]
+
+`framework,service`
+|implemented |2024--05-16 |2024--05-17
+|xref:adr/0021-composition-function-error-handling.adoc[]
+
+`framework,crossplane`
+|implemented |2024-06-10 |2024-06-14
+|xref:adr/0022-replace-api-server-by-custom-resources.adoc[]
+
+`framework,apiserver`
+|accepted |2023-11-02 |2023-11-02
+|xref:adr/0023-releasee-process-for-appcat-components.adoc[]
+
+`framework,process,cicd`
+|implemented |2024-07-25 |2024-07-25
+|xref:adr/0024-product-choice-for-secret-management.adoc[]
+
+`service,product`
+|draft |2024-05-27 |2024-05-27
+|xref:adr/0025-nextcloud-deployment-with-helm-chart.adoc[]
+
+`service,nextcloud,helm`
+|implemented |2024-06-12 |2024-07-02
+|xref:adr/0026-mongodb-product.adoc[]
+
+`service,mongodb,product`
+|draft |2024-08-06 |2024-09-05
+|xref:adr/0027-keycloak-deployment-with-helm-chart.adoc[]
+
+`service,keycloak,helm`
+|implemented |2023-10-19 |2023-10-19
+|xref:adr/0028-sli-prober-for-object-storage.adoc[]
+
+`service,monitoring,sli`
+|implemented |2023-10-23 |2023-10-23
+|xref:adr/0029-converged-service-provisioning-implementation.adoc[]
+
+`framework`
+|obsolete |2022-03-24 |2022-11-25
+|===

@@ -1,0 +1,11 @@
+= Alert rule: RedisTooManyMasters
+:page-aliases: runbooks/redis/RedisTooManyMasters.adoc
+
+== icon:glasses[] Overview
+
+Checks if there are more than 1 master configured for more than 5 minutes.
+If so, it will alert and display the instance.
+
+== icon:bug[] Steps for Debugging
+
+Check all the Redis Pods in the namespace of the affected Pod and see why there are 2 elected master Pods.

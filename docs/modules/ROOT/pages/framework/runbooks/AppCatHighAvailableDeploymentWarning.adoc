@@ -1,0 +1,19 @@
+= Alert rule: AppCatHighAvailableDeploymentWarning
+:page-aliases: how-tos/appcat/vshn/AppCatHighAvailableDeploymentWarning.adoc
+
+== icon:glasses[] Overview
+
+High Available alerts are triggered for VSHN based services with multiple instances.
+This alert is triggered when a VSHN service deployment has less replicas than expected.
+
+== icon:bug[] Steps for Debugging
+
+Step one:: Connect to the cluster from the alert description.
+Step two:: Get the service instance from the alert description.
+Step three:: Describe the affected deployment.
++
+[source,bash]
+----
+kubectl -n <instance-namespace> describe deployment <deployment-name>
+----
++

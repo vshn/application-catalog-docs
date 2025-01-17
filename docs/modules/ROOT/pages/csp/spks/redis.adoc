@@ -1,0 +1,56 @@
+= Redis
+:page-aliases: redis.adoc
+
+> https://redis.io/[Redis] is an open source (BSD licensed), in-memory data structure store, used as a database, cache, and message broker. Redis provides data structures such as strings, hashes, lists, sets, sorted sets with range queries, bitmaps, hyperloglogs, geospatial indexes, and streams. Redis has built-in replication, Lua scripting, LRU eviction, transactions, and different levels of on-disk persistence, and provides high availability via Redis Sentinel and automatic partitioning with Redis Cluster.
+
+See xref:explanations/redis.adoc[Explanation -> Redis] for a more detailed technical description of the service.
+
+== Plans
+
+Available plans by default:
+
+[cols=6*,options="header"]
+|===
+|
+|xsmall
+|small
+|medium
+|large
+|xlarge
+
+|Storage Capacity
+|128 MB
+|512 MB
+|2 GB
+|8 GB
+|32 GB
+
+|Memory
+|128 MB
+|512 MB
+|2 GB
+|8 GB
+|32 GB
+
+|Max. Databases
+|unlimited
+|unlimited
+|unlimited
+|unlimited
+|unlimited
+
+|Max. Concurrent Connections
+|unlimited
+|unlimited
+|unlimited
+|unlimited
+|unlimited
+
+|TLS enabled
+|no
+|no
+|no
+|no
+|no
+
+|===

@@ -1,0 +1,158 @@
+= ADR 0007 - Automated Redis Service Upgrades
+:adr_author:    Fabian Fischer
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2023-07-11
+:adr_upd_date:  2023-07-11
+:adr_status:    implemented
+:adr_tags:      redis,upgrades,maintenance
+:page-aliases:  explanations/decisions/redis-upgrades.adoc
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+Both minor and major updates are done manually by the service user.
+====
+
+== Problem
+
+We need to specify how VSHN handles the major and minor upgrades of Redis by VSHN.
+
+So we need to decide two things:
+
+* How upgrades are handled
+* How we communicate with the customer about it
+
+== Goals
+
+* Specification how we do upgrades
+* Specification when we do upgrades
+* Specification how customers should be informed
+* Specification when customers should be informed
+
+== Context
+
+=== Redis Release Cycle
+
+https://redis.io/docs/about/releases/[The Redis documentation] states that Redis generally releases a major version once a year and a minor version upgrade half a year afterwards.
+Patches are released as needed to fix high-urgency issues, or once a version accumulates enough fixes to justify it.
+
+Major versions introduce new capabilities and significant changes and might introduce application-level compatibility issues.
+Minor versions usually deliver maturity and extended functionality.
+They don't introduce any application-level compatibility issues, but may introduce operations-related incompatibilities, including changes in data persistence format and replication protocol.
+
+The latest release is always fully supported and maintained.
+There is maintenance, meaning fixes for critical bugs and major security issues, for the previous minor as well as major version.
+
+This means if there are versions `1.2`, `2.0` and `2.2`, only `2.2` is fully supported and `2.0` and `1.2` will get maintenance updates.
+Older versions are specifically not supported.
+
+If version `3.0` is released, only `3.0`, `2.0` and `2.2` will receive security updates. 
+
+[NOTE]
+====
+Redis seems to not release `x.1` releases but directly skip to `x.2`.
+In general there is always a `x.0` and `x.2` release per major version.
+====
+
+=== Redis Chart Releases
+
+We use the https://github.com/bitnami/charts/tree/main/bitnami/redis[bitnami Redis helm chart] to provide our Redis services.
+The chart releases new versions as needed and seems to adhere to SemVer.
+
+Minor Redis version upgrade are treated as major updates of the chart.
+For example the change of default Redis version from `6.0` to `6.2` caused the release of the chart version `13.0.0`.
+
+It's not explicitly stated which Redis versions are supported by the chart.
+
+== Proposals
+
+We can split this decision in two largely independent sub decisions.
+
+* How do we do upgrades
+* How do we communicate to the service user that they're running an unsupported Redis version
+
+=== Upgrades
+
+==== Automatic Minor and major upgrades
+
+With this approach we don't give the service users any choice of Redis version.
+We will automatically update Redis instances to the latest stable version as soon as it is supported by the helm chart and the update is tested on the Lab cluster.
+
+Automatically upgrading major versions could be problematic, as they may introduce application-level compatibility issues.
+
+==== Automatic minor upgrade and manual major upgrades
+
+With this approach we give the service users the option to choose a supported major Redis version, for example `6` or `7`.
+Instances will automatically be updated to the latest stable minor version as soon as it is supported by the helm chart and the update is tested on the Lab cluster.
+
+According to upstream documentation, automatic updates to the latest minor version should be fine as they shouldn't introduce any application-level compatibility issues.
+
+==== Manual minor and major upgrades
+
+We let the service users choose any supported minor Redis version, for example `6.2` or `7.0`.
+Instances only receive automatic patch updates.
+
+==== Upgrade tracks
+
+We give the service user the option to decide if and how their instance will receive automatic updates.
+
+A user can either choose a specific minor version, in which case there will only be automatic patch updates, a major version, which means there will be automatic minor and patch updates, or `latest`, where the instance will get automatic major, minor and patch updates.
+
+This gives advanced users complete control, while also providing easy automatic updates for simple usecases.
+
+=== Communication
+
+
+==== Keep running
+
+All service users are informed through standard announcement channels when a Redis version is not supported anymore and that affected instances need to be upgraded.
+
+Three months after a version is unsupported, we directly inform the affected service user that we no longer support their instance.
+
+The Redis instance will keep running, but SLAs do no longer apply until the user updates to a supported version, and we will not take any responsibility if changes to AppCat negatively impacts their instance, for example due to helm chart upgrades.
+
+==== Stop instance
+
+All service users are informed through standard announcement channels when a Redis version is not supported anymore and that affected instances need to be upgraded.
+
+Three months after a version is unsupported, we directly inform the affected service user that we no longer support their instance and that their instance will be stopped.
+
+After another 2 weeks, we then delete the instance with enabled deletion protection.
+A service user will need to restore a backup to a new instance running a supported Redis version.
+
+==== Force upgrade
+
+All service users are informed through standard announcement channels when a Redis version is not supported anymore and that affected instances need to be upgraded.
+
+Three months after a version is unsupported, we directly inform the affected service user that we no longer support their instance and that their instance will force upgraded.
+
+After another 2 weeks, we then force upgrade their instance to the oldest supported version.
+
+
+== Decision
+
+Both minor and major updates are done manually by the service user.
+
+Instances running outdated Redis versions will keep running, but we drop any support for them three months after the version is no longer supported by upstream.
+Service users will be informed once a version is unsupported and affected users will be contacted directly once we drop support for their instance.
+
+== Rationale
+
+Major version upgrades might introduce breaking changes and could cause serious issues for our service users.
+Just automatically upgrading major Redis version is not an option.
+
+Also, while upstream claims minor version upgrades don't introduce any application-level compatibility issues, there have been small https://docs.aws.amazon.com/AmazonElastiCache/latest/red-ug/VersionManagementConsiderations.html#VersionManagementConsiderations-redis62[backwards incompatible changes] to commands in version `6.2`.
+While these changes are minor and shouldn't introduce issues for the vast majority of service users, we should give the option to manually set a Redis minor version.
+
+We don't see enough advantages that warrant the engineering effort to provide the option to do both manual and automatic minor upgrade through upgrade tracks.
+As a result we only provide manual updates of both minor and major versions.
+Patch versions will be upgrade automatically.
+
+Once an instance runs an unsupported version, stopping it has no clear benefit, neither for us nor the service user.
+Stopping the instance is very disruptive and having an outdated Redis service running has no serious downsides for us as a service provider, as long as we drop any support for it. 
+
+The same reasoning applies for forced upgrade.
+We see keeping the outdated instances running without support as the best option with the lowest engineering overhead.

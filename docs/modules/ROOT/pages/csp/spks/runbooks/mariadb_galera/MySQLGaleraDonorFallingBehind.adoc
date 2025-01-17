@@ -1,0 +1,12 @@
+= Alert rule: MySQLGaleraDonorFallingBehind
+:page-aliases: runbooks/mariadbgalera/MySQLGaleraDonorFallingBehind.adoc
+
+== icon:glasses[] Overview
+
+TODO
+
+== icon:bug[] Steps for Debugging
+
+See xref:how-tos/mariadbgalera/debug.adoc[How to debug MariaDB Galera] on how to determine the cluster status.
+
+TODO

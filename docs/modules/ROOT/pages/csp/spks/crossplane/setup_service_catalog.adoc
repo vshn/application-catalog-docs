@@ -1,0 +1,54 @@
+= Install a Service Catalog
+:page-aliases: how-tos/crossplane_service_broker/setup_service_catalog.adoc
+
+WARNING: This tutorial is deprecated. Some links may not work.
+
+The https://svc-cat.io[_service catalog_] provides a single, well-defined API to manage services provided by one or many service brokers, such as the _Crossplane Service Broker_.
+
+[NOTE]
+=====
+Sometimes the term _application catalog_ is used instead of _service catalog_.
+They usually mean the same thing.
+=====
+
+== Preparations
+
+- Have access to a Kubernetes cluster installed.
+
+== Configuration
+// tag::main[]
+
+The command below will install the _service catalog_ service in your current Kubernetes cluster using Helm in the `catalog` namespace.
+The namespace will be created if it doesn't already exist.
+
+Before you can run the command below, you need to create a file called `values.yaml` with the following content:
+
+.values.yaml
+```yaml
+image: quay.io/kubernetes-service-catalog/service-catalog:v0.3.1 <1>
+securityContext: { runAsUser: 1001 } <2>
+```
+<1> The specific Docker image of the service catalog that will be deployed.
+<2> Configuring the service catalog such that it doesn't run as root.
+    This may not be necessary in your cluster.
+
+== Installation
+
+Run the following command to install the _service catalog_:
+
+```bash
+helm install \
+  catalog \ <1>
+  --values values.yaml \ <2>
+  --namespace catalog \ <3>
+  --create-namespace \ <4>
+  --repo https://kubernetes-sigs.github.io/service-catalog \ <5>
+  catalog <6>
+```
+<1> The name of the service in your Kubernetes cluster.
+<2> Read configuration options from `values.yaml` file.
+<3> The namespace in which the _service catalog_ will be installed into.
+<4> The previously defined namespace will be created if it doesn't yet exist.
+<5> The Helm repository that contains the chart for the _service catalog_.
+<6> The name of the chart which Helm shall apply.
+// end::main[]

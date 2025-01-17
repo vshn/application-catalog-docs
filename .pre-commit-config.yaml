@@ -1,0 +1,22 @@
+repos:
+  - repo: local
+    hooks:
+      - id: adr-status-valid
+        name: Validate ADR status
+        entry: hack/adr-tool.py
+        args:
+          - validate
+        language: python
+        files: ^docs/modules/ROOT/pages/adr/
+      - id: adr-index
+        name: Generate ADR Index
+        entry: hack/adr-tool.py
+        args:
+          - generate
+        language: python
+        files: ^docs/modules/ROOT/pages/adr/
+      - id: navigation
+        name: Validate Navigation
+        entry: hack/check-nav.py
+        language: python
+        files: ^docs/modules/ROOT/pages/

@@ -1,0 +1,24 @@
+= Minimum Backup Interval
+:page-aliases: reference/quality-requirements/reliability/backup-interval.adoc
+
+Source::
+xref:reference/glossary.adoc#service-engineer[Service Engineer]
+
+Stimulus::
+Inspect backups
+
+Environment::
+{product} enabled Kubernetes cluster
+
+Artifact::
+Backup tool
+
+Response::
+List of available backups.
+
+Response measure::
+Consecutive backups don't exceed the 24h interval.
+
+Rationale::
+At least one backup per day is the accepted norm for backups.
+Services may define shorter intervals.

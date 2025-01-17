@@ -1,0 +1,170 @@
+= Restore PostgreSQL by VSHN Database
+:page-aliases: how-tos/appcat/vshn/postgres/manual-restore.adoc
+
+During emergencies, we need a reliable and a precise solution to restore PostgreSQL databases with Stackgres.
+This will help reduce significantly the downtime of databases thus resulting in short outage for the customer.
+Below are a number of steps to be taken when such outage occurs.
+
+== Step 1 - Asses the damage
+Before restoring the database the damage has to be assessed in order to figure out the appropriate action.
+
+=== Step 1.1 - Retrieve the XRD
+When an outage occurs OpsGenie will alert the responsible ops which databases have issues.
+In most cases the alert is of type SLO Uptime.
+From the said alert the customer namespace can be deducted together with the name of the XRD of the service service:
+
+[source,bash]
+----
+kubectl get XVSHNPostgreSQL <name-from-alert> --as cluster-admin
+----
+
+NOTE: The XRD is protected in case the deletion protection is on.
+
+WARNING: If the XRD is missing, a new database have to be issued via a new claim.
+
+=== Step 1.2 - Find the instance namespace
+The instance namespace is the namespace where the customer PostgreSQL instance is running.
+The instance namespace is hidden from the customer.
+
+[source,bash]
+----
+kubectl get XVSHNPostgreSQL <name-from-alert> -o=jsonpath='{.status.instanceNamespace}' --as cluster-admin
+----
+
+[WARNING]
+If the namespace does not exist then the database has been removed together with the PVCs
+In this case the data is lost and must be retrieved immediately from the S3 buckets.
+
+== Step 2 Prepare for Restore Operation
+Before restoring any data the database must be operational either with the old configuration or via a new setup.
+The following steps will guide you on how to retrieve the backups and prepare resources
+to be applied before proceeding with database restore.
+
+=== Step 2.1 - Retrieve backups
+There are 2 ways to retrieve the backups, either through the `SGBackup` CR or directly through the S3 buckets.
+In case the instance namespace has not been removed then there's a high chance that the `SGBackup` CR are present:
+
+[source,bash]
+----
+kubectl get SGBackups -n <instance-namespace>
+----
+
+NOTE: Use the latest `SGBackup` resource and save its name. Skip the rest of Step 2 and move with Step 3.
+
+In case the `SGBackups` CR have been removed from the instance namespace or the instance namespace is gone then an `SGBackup` must be reconstructed
+with the details of the S3 bucket. Retrieve the XObjectBucket resource which has the same name as XPostgreSQL:
+
+[source,bash]
+----
+kubectl get XObjectBucket <name>
+----
+
+=== Step 2.2 - Retrieve bucket information
+Given the bucket from previous step, access the S3 Bucket with s3cmd or any similar S3 tool. Make sure the data is present.
+
+* Configure
++
+[source,bash]
+----
+s3cmd --configure
+----
+
+* Show Data
++
+[source,bash]
+----
+s3cmd ls --recursive s3://<bucket-name>
+----
+
+=== Step 2.3 - Create SGBackup custom resource
+In case there are no `SGBackup` resources in the instance namespace then one should be created for a proper restore.
+The following is a template for the said resource:
+
+[source,yaml]
+----
+apiVersion: stackgres.io/v1
+kind: SGBackup
+metadata:
+  name: manual-backup
+  namespace: <instance-namespace> # <1>
+spec:
+  sgCluster: <sgcluster-resource-name> # <2>
+status:
+  backupInformation:
+    postgresVersion: "150005" # <3>
+  backupPath: sgbackups.stackgres.io/example-name/example-name/15 # <4>
+  internalName: base_00000048000000010000009D # <5>
+  process:
+    status: Completed
+  sgBackupConfig:
+    baseBackups: {}
+    storage:
+      s3Compatible:
+        awsCredentials:
+          secretKeySelectors:
+            accessKeyId:
+              key: AWS_ACCESS_KEY_ID
+              name: <bucket-secret-credentials> # <6>
+            secretAccessKey:
+              key: AWS_SECRET_ACCESS_KEY
+              name: <bucket-secret-credentials> # <6>
+        bucket: <bucket-name> # <7>
+        enablePathStyleAddressing: true
+        endpoint: https://objects.lpg.cloudscale.ch # <8>
+        region: lpg <9>
+      type: s3Compatible
+----
+<1> The instance namespace from where the database is running
+<2> `SGCluster` resource from the instance namespace. It has the same name as the XVSHNPostgreSQL resource
+<3> The database version can be retrieved as follows:
++
+[source,bash]
+----
+kubectl -n <instance-namespace> get SGCluster <name>
+----
++
+The format is `major version + 00 + minor version`. Example: `15 (major) + 00 + 05 (minor) = 150005`
+<4> The path in the S3 bucket, from the root folder to the version of the database instance:
++
+[source,bash]
+----
+s3cmd ls --recursive s3://odoo-database-9msf4 | awk '{print $4}' | grep basebackups | tail -1 | cut -d "/" -f 4,5,6,7
+----
+<5> Last base backup code from the S3 bucket in the format `base_hexcode`:
++
+[source,bash]
+----
+s3cmd ls --recursive s3://odoo-database-9msf4 | awk '{print $4}' | grep basebackups | tail -1 | cut -d "/" -f 9 | cut -d "_" -f 1,2
+
+----
+<6> Secret of the S3 bucket. Can be retrieved from the XObjectBucket which has the same name as XVSHNPostgreSQL.
+In case there is no secret it has to be recreated with the credentials from the cloud provider.
++
+[source,bash]
+----
+kubectl get XObjectBucket --as cluster-admin <name>
+----
+<7> THe bucket name
+<8> S3 Cloud provider endpoint
+<9> Region of the bucket
+
+== Step 3 Restore the Database
+The restore process is straightforward. The process is to tell to the PostgreSQL cluster to use our backup.
+Recreate `SGCluster` resource and add following snippet of code:
+[source,yaml]
+----
+# skipped #
+spec:
+  initialData:
+    restore:
+      fromBackup:
+        name: manual-backup
+# skipped #
+----
+
+This operation will trigger a restart of the database and subsequently will import all the data from the S3 bucket.ù
+To check the restore process itself use the following command:
+[source,bash]
+----
+kubectl -n <instance-namespace> logs <pod-name> -f
+----
