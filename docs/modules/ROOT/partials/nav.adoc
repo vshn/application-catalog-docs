@@ -23,6 +23,9 @@
 ** Runbooks
 *** xref:service/exoscale-dbaas/runbooks/restore_dbaas.adoc[]
 
+* xref:service/odoo/index.adoc[]
+** xref:service/odoo/architecture.adoc[]
+
 * CSP: Exoscale
 ** xref:csp/exoscale/osbapi.adoc[]
 
