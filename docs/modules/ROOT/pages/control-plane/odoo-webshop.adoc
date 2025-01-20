@@ -1,0 +1,60 @@
+= Odoo Webshop
+
+The xref:control-plane/central-control-plane-arch.adoc[] can be integrated into an Odoo Webshop, very similar to the integration into the xref:csp/exoscale/osbapi.adoc[Exoscale Marketplace].
+
+== Architecture
+
+Odoo uses the Open Service Broker API to enable access to a service on the VSHN Application Marketplace, similar to how it's done in xref:reference/exoscale-osbapi.adoc[].
+
+[mermaid,archosb,png]
+....
+---
+config:
+  fontFamily: serif
+---
+flowchart TB
+    webshop["Odoo Webshop"]
+    eu("End-User (Service buyer)")
+    osbapi["Odoo Webshop specific OSB API"]
+    vshnccpapi["Central Control Plane API"]
+    vshnccpui["Central Control Plane Portal"]
+
+    webshop-- OpenServiceBroker API -->osbapi-- K8s API --> vshnccpapi
+    eu-- WebUI -->webshop
+    eu-- WebUI -->vshnccpui-- K8s API --> vshnccpapi
+....
+
+== Order Flow
+
+[mermaid,flowosb,png]
+....
+---
+config:
+  fontFamily: serif
+---
+sequenceDiagram
+    autonumber
+    actor EU as End-User<br/>(Service buyer)
+    participant ODOO as Odoo Webshop
+    participant OSB as Odoo Webshop OSB API
+    participant CCP as Central Control Plane API
+    participant CCPUI as Central Control Plane WebUI
+
+    EU->>ODOO: Register in Webshop
+    EU->>ODOO: Buy Service<br/>(enable subscription)
+    ODOO->>OSB: Enable Service Access
+    alt New Organization
+        OSB-->>CCP: Create "Organization"
+        CCP-->>EU: Send invitation to Organization
+    end
+    OSB->>CCP: Enable Service Access
+    CCP->>EU: Send Service Welcome Mail
+    EU->>CCPUI: Configure and enable service
+    CCPUI->>CCP: Manage Kubernetes Resource
+    CCP->>CCP: Provision Service
+    ODOO->>EU: Send invoice
+....
+
+== External Links
+
+* https://wiki.mint-system.ch/mint-cloud-spezifikation.html[Mint Cloud Spezifikation^]

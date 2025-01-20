@@ -1,143 +1,17 @@
-= Odoo Hosting Architecture
+= Odoo Architecture
+:navtitle: Architecture
 
-Odoo will be hosted together with Mint System.
-This page describes the VSHN AppCat integration and how this all plays together.
+This page discusses the technical details for https://products.vshn.ch/appcat/odoo.html[Odoo by VSHN^]: Fully managed, dedicated https://www.odoo.com/[Odoo^] instances.
+The service is provided together with https://www.mint-system.ch/[Mint System^].
 
-== Ordering and Subscription
+See also xref:control-plane/odoo-webshop.adoc[].
 
-Ordering and subscriptions will be handled by an Odoo Webshop.
-It handles all important steps like creating, updating or deleting an Odoo instance, as well as the whole billing processes.
+== Deployment
 
-See https://wiki.mint-system.ch/mint-cloud-spezifikation.html[Mint Cloud Spezifikation^] for more information about this webshop.
+Deployment and configuration of Odoo happens with the https://github.com/Mint-System/Odoo-Build/tree/16.0/k8s[Helm Chart provided by Mint System^] and the https://github.com/crossplane-contrib/provider-helm[Crossplane Provider for Helm^].
+In the Crossplane Composite Resource Definition (XRD) we expose all required parameters.
 
-It connects to the xref:reference/arch-control-plane.adoc[] and works directly with `VSHNOdoo` objects.
-
-== Interface with VAMP
-
-=== Variant 1: Open Service Broker API
-
-Odoo uses the Open Service Broker API to enable access to a service on the VSHN Application Marketplace, similar to how it's done in xref:reference/exoscale-osbapi.adoc[].
-
-[mermaid,archosb,png]
-....
----
-config:
-  fontFamily: serif
----
-flowchart TB
-    webshop["Mint / Uri Cloud"]
-    eu("End-User (Service buyer)")
-    osbapi["Odoo Webshop OSB API"]
-    vshnccpapi["Application Marketplace API"]
-    vshnccpui["Application Marketplace Portal"]
-
-    webshop-- OpenServiceBroker API -->osbapi-- K8s API --> vshnccpapi
-    eu-- WebUI -->webshop
-    eu-- WebUI -->vshnccpui-- K8s API --> vshnccpapi
-....
-
-==== Flow
-
-[mermaid,flowosb,png]
-....
----
-config:
-  fontFamily: serif
----
-sequenceDiagram
-    autonumber
-    actor EU as End-User<br/>(Service buyer)
-    participant ODOO as Odoo Webshop
-    participant OSB as Odoo Webshop OSB API
-    participant CCP as Central Control Plane API
-    participant CCPUI as Central Control Plane WebUI
-
-    EU->>ODOO: Register in Webshop
-    EU->>ODOO: Buy Service<br/>(enable subscription)
-    ODOO->>OSB: Enable Service Access
-    alt New Organization
-        OSB-->>CCP: Create "Organization"
-        CCP-->>EU: Send invitation to Organization
-    end
-    OSB->>CCP: Enable Service Access
-    CCP->>EU: Send Service Welcome Mail
-    EU->>CCPUI: Configure and enable service
-    CCPUI->>CCP: Manage Kubernetes Resource
-    CCP->>CCP: Provision Service
-    ODOO->>EU: Send invoice
-....
-
-==== Pros / Cons
-
-Pros::
-* Same multi-CSP processes as for Exoscale
-* Easily reusable for other webshops
-* Organization creation is handled automatically
-* Full flexibility for configuration for the Odoo service
-* Simple integration in Odoo
-
-Cons::
-* Limited features on the Odoo Webshop site
-* Two differents portals for the end-user to navigate in
-
-=== Variant 2: Kubernetes API
-
-[mermaid,archk8s,png]
-....
----
-config:
-  fontFamily: serif
----
-flowchart TB
-    webshop["Mint / Uri Cloud"]
-    eu("End-User (Service buyer)")
-    vshnccpapi["Application Marketplace API"]
-
-    webshop-- K8s API --> vshnccpapi
-    eu-- WebUI -->webshop
-....
-
-==== Flow
-
-[mermaid,flowk8s,png]
-....
----
-config:
-  fontFamily: serif
----
-sequenceDiagram
-    autonumber
-    actor EU as End-User<br/>(Service buyer)
-    participant ODOO as Odoo Webshop
-    participant CCP as Central Control Plane API
-
-    EU->>ODOO: Register in Webshop
-    EU->>ODOO: Buy Service<br/>(enable subscription)
-    alt New Organization
-        ODOO-->>CCP: Create "Organization"
-    end
-    EU->>ODOO: Configure Service
-    ODOO->>CCP: Manage Kubernetes Resource
-    CCP->>CCP: Provision Service
-    ODOO->>EU: Send invoice
-....
-
-==== Pros / Cons
-
-Pros::
-* One portal for the customer
-* Simpler architecture
-
-Cons::
-* More implementation work on Odoo side
-* "Duplicate" implementation, CCP portal does the same (service provisioning)
-* Organization creation must be more strict on CCP
-
-== Composite Resource Definition
-
-An example Claim to show how it could look like:
-
-.Example
+.Claim
 [source,yaml]
 ----
 apiVersion: vshn.appcat.vshn.io/v1
@@ -148,7 +22,10 @@ metadata:
 spec:
   parameters:
     service:
-      majorVersion: "18" 
+      majorVersion: "18" <1>
+      edition: "enterprise" <2>
+      configuration: <3>
+        ADDONS_GIT_REPOS: "git@github.com:Mint-System/Odoo-Apps-Server-Tools.git#16.0,git@github.com:OCA/server-tools.git#16.0"
     size: 
       plan: plus-4
     backup: 
@@ -157,45 +34,151 @@ spec:
   writeConnectionSecretToRef:
     name: odoo-creds 
 ----
+<1> Validated against the <<Odoo Versions, available and supported versions>>. Changing of the version is denied, see <<Upgrade>>.
+<2> Either "community" or "enterprise" (default)
+<3> Configuration mapped to environment variables of container image (filtered and validated)
 
-== Deployment
+== Odoo Configuration
 
-TODO
+In this section the Odoo configuration decisions are documented.
 
-An Odoo deployment consists of several Kubernetes resources:
-
-* Deployment
-* Service
-* Ingress
-* PVC
-
-These Kubernetes resources are defined in the Crossplane Composition and are delivered using `provider-kubernetes` to the worker cluster.
-
-=== Performance Configuration
-
-To properly run Odoo on Kubernetes, certain parameters need to be properly tuned.
-
-TODO
-
-* Requests / Limits
-* Workers
-
-== Container Image
-
-TODO
-
-* Where does it come from?
-
-== Odoo Addon handling
-
-TODO
-
-* How do we handle Odoo addons?
-
-== Database
+=== Database
 
 Odoo makes heavy use of PostgreSQL.
 The database instance is provided by https://products.vshn.ch/appcat/postgresql.html[PostgreSQL by VSHN^].
+
+Connection parameters are automatically available on provisioning of an instance in a secret.
+This secret will then be injected into the Odoo container to make the connection parameter available.
+We use https://www.odoo.com/documentation/16.0/administration/on_premise/deploy.html#ssl-between-odoo-and-postgresql[SSL Between Odoo and PostgreSQL] with `db_sslmode=require`.
+
+TODO: How do we give the user access to backup/restore/clone functionality of the Odoo database manager?
+
+=== Storage
+
+Odoo needs a place to store files.
+
+We use the file system for the Odoo file storage, therefore a PVC is mounted to `/var/lib/odoo`.
+
+=== Odoo Addons and Dependencies
+
+The <<Container Image>> supports cloning of Git repos containing Odoo addons.
+In addition to that it also supports installing additional Python dependencies during container startup using `uv`.
+
+See https://odoo.build/image/[the documentation about the image^] how to use it.
+
+=== Odoo Performance Tuning
+
+It's important to properly configure performance parameters.
+They are exposed in the Claim accordingly.
+
+TODO: More details needed.
+
+== Odoo Versions
+
+Supported are only the https://www.odoo.com/documentation/master/administration/supported_versions.html[officially supported versions by Odoo^].
+
+=== Upgrade
+
+https://www.odoo.com/documentation/master/administration/upgrade.html[Upgrading Odoo^] from one major version to the next is not a "1-click" experience.
+The database needs to be carefully upgraded by https://upgrade.odoo.com/[Odoo (Enterprise)^] or https://github.com/OCA/OpenUpgrade[OpenUpgrade (Community)] and the addons have to be compatible with the new version.
+
+An automatic upgrade process is therefore not possible and has to be conducted manually by creating a new Odoo instance and importing the upgraded database.
+
+== Backup and Restore
+
+The <<Database, database>> and the <<Storage, filestorage>> must be stored into the backup at roughly the same time to keep it consistent.
+While the database is taken care of by the PostgreSQL by VSHN service, we can't be sure when exactly the backup happens and need to take care of the filestorage as well.
+Therefore, we conduct the backup of the database and the file storage using K8up with a https://docs.k8up.io/k8up/2.11/how-tos/application-aware-backups.html[backup command^].
+
+TODO: Work out the details
+
+== Metrics and Monitoring
+
+TODO: What metrics to collect? What to monitor exactly?
+
+== E-Mail
+
+Odoo needs to be able to send and receive E-Mails.
+This is a crucial configuration which is exposed on the Claim to the user of Odoo.
+
+TODO: Should we provide a default mail provider?
+
+== Container Image
+
+The container image for Odoo is provided and maintained by https://odoo.build/image/[Odoo Build by Mint System^].
+This image brings various improvements over the original upstream Odoo image and is tailor-made to support all configuration options of the provided service.
+
+Source: https://github.com/Mint-System/Odoo-Build/tree/16.0/image/[GitHub^] (choose the branch with the Odoo majar version).
+
+=== Environment Variables
+
+The image is configured via environment variables.
+
+See https://odoo.build/image/#usage[Odoo Build - Image - Usage^] for more details about these environment variables.
+
+In the following table the variables are explained in the context of this service.
+
+[cols=",",options="header"]
+|===
+|Name
+|Description
+
+|PGHOST| Auto injected
+|PGUSER| Auto injected
+|PGPASSWORD| Auto injected
+|PGPORT| Auto injected
+|MAIL_DEFAULT_FROM| Exposed in Claim
+|MAIL_CATCHALL_DOMAIN| Exposed in Claim
+|MAIL_CATCHALL_ALIAS| Exposed in Claim
+|ODOO_MAIL_SMTP_HOST| Exposed in Claim
+|ODOO_MAIL_SMTP_PORT| Exposed in Claim
+|ODOO_MAIL_SMTP_ENCRYPTION| Exposed in Claim
+|ODOO_MAIL_SMTP_FROM_FILTER| Exposed in Claim
+|ODOO_MAIL_IMAP_HOST| Exposed in Claim
+|ODOO_MAIL_IMAP_PORT| Exposed in Claim
+|ODOO_MAIL_IMAP_SSL| Exposed in Claim
+|ODOO_MAIL_USERNAME| Exposed in Claim
+|ODOO_MAIL_PASSWORD| Exposed in Claim
+|GIT_SSH_PUBLIC_KEY| Exposed in Claim
+|GIT_SSH_PRIVATE_KEY| Exposed in Claim
+|ADDONS_GIT_REPOS| Exposed in Claim
+|ODOO_ADDONS_PATH| Exposed in Claim
+|ODOO_DATABASE| Exposed in Claim
+|ODOO_INIT| Exposed in Claim
+|ODOO_INIT_LANG| Exposed in Claim
+|ODOO_INIT_ADDONS| Exposed in Claim
+|ENVIRONMENT| Exposed in Claim
+|PYTHON_INSTALL| Exposed in Claim
+|SERVER_WIDE_MODULES| Exposed in Claim
+|SESSION_DB_URI| Auto injected
+|PROXY_MODE| Auto injected
+|LOG_LEVEL| Exposed in Claim
+|LIST_DB| Auto injected
+|ADMIN_PASSWD| Auto generated
+|DBFILTER| Exposed in Claim
+|WORKERS| Exposed in Claim
+|LIMIT_REQUEST| Exposed in Claim
+|LIMIT_TIME_CPU| Exposed in Claim
+|LIMIT_TIME_REAL| Exposed in Claim
+|MODULE_AUTO_INSTALL_DISABLED| Exposed in Claim
+|CLICK_ODOO_UPDATE| Exposed in Claim
+
+|===
+
+== Kubernetes Resource Configuration
+
+To properly run Odoo on Kubernetes, certain parameters need to be properly tuned.
+
+TODO Requests / Limits
+
+== Enterprise vs Community
+
+We support both https://www.odoo.com/page/editions[Enterprise and Community^] editions of Odoo, while the preference lies on Enterprise.
+The main differences:
+
+* Yearly major version upgrades for Enterprise are fully supported, while the Community edition upgrades are best-effort
+* While the core is the same, in the Enteprise edition the Enterprise addons are automatically injected
+* Bringing the Enterprise license key is the users concern
 
 == Links
 
