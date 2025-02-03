@@ -1,7 +1,4 @@
-= Exoscale Marketplace Integration
-:page-aliases: reference/exoscale-osbapi.adoc
-
-IMPORTANT: This architecture won't be implemented in this way right now, see xref:csp/exoscale/osbapiv2.adoc[] for the successor.
+= Exoscale Marketplace Integration v2
 
 To integrate services from the https://products.vshn.ch/appcat/services_index.html[VSHN Application Catalog^] into the https://www.exoscale.com/marketplace/[Exoscale Marketplace^], we provide an Exoscale-specific https://github.com/openservicebrokerapi/servicebroker/blob/master/spec.md[Open Service Broker (OSB) API^] endpoint to provision Organizations and enable access to the service offering. A web portal is provided by VSHN to the end-user of Exoscale to provision and manage services.
 

@@ -24,6 +24,7 @@
 *** xref:service/exoscale-dbaas/runbooks/restore_dbaas.adoc[]
 
 * CSP: Exoscale
+** xref:csp/exoscale/osbapiv2.adoc[]
 ** xref:csp/exoscale/osbapi.adoc[]
 
 * CSP: APPUiO
@@ -112,6 +113,7 @@
 *** xref:framework/runbooks/AppCatHighAvailableDeploymentWarning.adoc[]
 
 * Control Plane
+** xref:control-plane/classic-webapp-portal.adoc[]
 ** xref:control-plane/central-control-plane-arch.adoc[]
 ** xref:control-plane/split-architecture.adoc[]
 ** xref:control-plane/split-sli-prober.adoc[]

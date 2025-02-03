@@ -1,6 +1,8 @@
 = Central Control Plane (CCP)
 :page-aliases: reference/arch-control-plane.adoc
 
+IMPORTANT: This architecture won't be implemented in this way right now, see xref:control-plane/classic-webapp-portal.adoc[] for the successor.
+
 image::universal-control-plane.drawio.svg[]
 
 The Central Control Plane (CCP) provides the multi-tenant multi-service-provider aggregation and central entry-point.
@@ -81,7 +83,7 @@ The origin specifies from where an organization originates, either from VSHN, a 
 
 This origin is used in further processes, like filtering of resources or access control.
 
-It's part of the `Organization` resource, in `.spec.originRef` which references a `OrganizationOriginConfig` (see <<Organization Origin Configuration>>.
+It's part of the `Organization` resource, in `.spec.originRef` which references a `OrganizationOriginConfig` (see <<Organization Origin Configuration>>).
 
 .Example Organization
 [source,yaml]
