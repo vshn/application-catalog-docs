@@ -119,4 +119,4 @@ There are however some special cases where an ignore label has to be set on the 
 
 - User and Database management for PostgreSQL and MariaDB. The comp functions create adhoc `providerConfigs` based on the connection details for the `provider-sql`. Because they are bound to the specific instance.
 - Nested Composites, as described above. Composistes themselves don't have a schema for the `providerConfig` so it's actually not possible to set it on a composite itself.
-- Object Beckets, they usually connect to a globally available Object storage instance, so the default `provideConfig` should apply.
+- Object Buckets, they usually connect to a globally available Object storage instance, so the default `provideConfig` should apply.
