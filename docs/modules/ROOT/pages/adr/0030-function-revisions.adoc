@@ -13,6 +13,8 @@ include::partial$adr-meta.adoc[]
 .Summary
 ====
 In order to make rollouts easier, we want to make sure any changes will only be applied to existing instances during their respective maintenance window.
+
+This ADR assumes that you've read: https://docs.crossplane.io/latest/concepts/composition-revisions
 ====
 
 PoC URL: https://github.com/vshn/component-appcat/pull/612
@@ -25,11 +27,11 @@ Currently, if we have changes that trigger restarts, then we have either to:
 
 Both of these solutions are manual and prone to error. Additionally, the first approach breaks our Renovate process that deploys a change on test clusters for a week before its rolled out everywhere.
 
-Crossplane has a concept called https://docs.crossplane.io/latest/concepts/composition-revisions/#using-composition-revisions[Composition Revisions]. They are automatically created each time a change in a composition is applied. By default, any claim or composite deployed will automatically point to the most recent revision as soon as they are available.
+Crossplane has a concept called https://docs.crossplane.io/latest/concepts/composition-revisions/#using-composition-revisions[Composition Revisions]. They are automatically created each time a change in a composition is applied. By default, any claim or composite deployed will automatically point to the most recent revision as soon as they are available. AppCat currently doesn't make any use of composition revisions at all. This ADR will introduce and extend this concept to AppCat and its Compositon Functions.
 
-This behaviour can be switched to `Manual`, which means that a claim or composite won't automatically update to the latest revision. They are effectively pinned to a version. If a claim or composite gets created with the `Manual` policy, it will point to the latest available revision at the time of creation.
+The behaviour can be switched to `Manual`, which means that a claim or composite won't automatically update to the latest revision. They are effectively pinned to a version. If a claim or composite gets created with the `Manual` policy, it will point to the latest available revision at the time of creation.
 
-Unfortunately these revisions don't work natively with https://docs.crossplane.io/latest/guides/write-a-composition-function-in-go/[Compostion Functions]. Even though there are `functionRevisions` similar to the `compositionRevisions` they can't be used for anything at the moment.
+Unfortunately these revisions don't work natively with https://docs.crossplane.io/latest/guides/write-a-composition-function-in-go/[Compostion Functions]. Even though there are `functionRevisions` similar to the `compositionRevisions` they can't be used for anything at the moment. There's an open feature request about this https://github.com/crossplane/crossplane/issues/6139[on Crossplane's github].
 
 == DIY Function Revisions
 It is possible to leverage the current Compositon Revisions together with Composition Functions, however some changes are necessary.
