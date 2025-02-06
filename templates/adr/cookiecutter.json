@@ -31,8 +31,8 @@
             "__prompt__": "State of the ADR",
             "draft": "Draft - ADR still being worked on - no decision has been taken yet.",
             "accepted": "Accepted - The decision is accepted.",
-            "rejected": "Rejected - ADRs which were accepted and are implemented.",
-            "implemented": "Implemented - The ADR has been rejected. It's still here for history reasons and to understand why it has been rejected.",
+            "rejected": "Rejected - The ADR has been rejected. It's still here for history reasons and to understand why it has been rejected.",
+            "implemented": "Implemented - ADRs which were accepted and are implemented.",
             "obsolete": "Obsolete - ADRs kept for historical reasons, but don't reflect the current or impending state of the codebase or project."
         },
         "adr_tags": "Comma separated list of tags - all lowercase"
