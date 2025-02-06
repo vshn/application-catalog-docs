@@ -69,6 +69,11 @@ If not hardcoded, how to map the API spec to the fields then?
 
 For the organization origin, we filter the available CSPCPs and if coming from OSB API, filter the enabled services.
 
+Modeling the services in the application has the positive effect on being able to be flexible.
+For example, for "month-to-month" services like Codey, we could properly resemble the plans, add a subscription to Odoo and handle all these things.
+
+Would each service be modeled individually in code? Or would we have a "configuration interface" where the configuration lies in the database?
+
 === Source of truth
 
 Service definitions must be on the CSPCP and must not be stored in the Portal DB.
