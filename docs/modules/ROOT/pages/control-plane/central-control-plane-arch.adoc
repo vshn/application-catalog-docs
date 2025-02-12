@@ -1,7 +1,7 @@
 = Central Control Plane (CCP)
 :page-aliases: reference/arch-control-plane.adoc
 
-IMPORTANT: This architecture won't be implemented in this way right now, see xref:control-plane/classic-webapp-portal.adoc[] for the successor.
+IMPORTANT: This architecture won't be implemented in this way right now, see xref:control-plane/web-portal.adoc[] for the successor.
 
 image::universal-control-plane.drawio.svg[]
 

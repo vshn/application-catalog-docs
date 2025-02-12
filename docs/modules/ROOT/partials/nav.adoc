@@ -113,7 +113,7 @@
 *** xref:framework/runbooks/AppCatHighAvailableDeploymentWarning.adoc[]
 
 * Control Plane
-** xref:control-plane/classic-webapp-portal.adoc[]
+** xref:control-plane/web-portal.adoc[]
 ** xref:control-plane/central-control-plane-arch.adoc[]
 ** xref:control-plane/split-architecture.adoc[]
 ** xref:control-plane/split-sli-prober.adoc[]
