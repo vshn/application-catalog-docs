@@ -1,0 +1,291 @@
+= Web Portal
+
+image::servala.png[]
+
+image::web-portal-arch.drawio.svg[]
+
+The Web Portal is the central multi-tenant multi-service-provider aggregation and self-service main entrypoint for Servala - The Cloud Native Service Hub.
+Servala is the brand for the product also known as "VSHN Application Marketplace".
+
+It offers self-service provisioning, multi-tenancy via organizations, access control, and gives a central view over multi cloud providers and the instances running this way.
+The portal is a web application consuming various third party APIs to provide an aggregated and opinionated view.
+
+External resources to read about it:
+
+* http://vshn.ch/marketplace[vshn.ch Website^]
+* https://products.vshn.ch/marketplace/index.html[VSHN products site^]
+
+== Terminology
+
+Web Portal (Portal)::
+This is the aggregated view and entry point for the user.
+It provides the mechanisms for the multi-tenant, multi-service-provider self-service portal.
+
+Control Plane (CP)::
+This runs Crossplane and the AppCat Control Plane (Kubernetes API) which manages all the service instances on worker clusters.
+Each zone of a Service Provider runs at least one CP.
+
+Worker Cluster::
+Clusters running the actual workload, managed by the Control Plane.
+Each zone of a CSP runs at least one Worker Cluster.
+Services are directly exposed to the end-user.
+
+Service::
+A generic service like "PostgreSQL" or "Keycloak".
+This doesn't include pricing or any other aspect of a managed service.
+
+Plan::
+A bundle of a service, a price, an SLA and other parameters to form an offering.
+It can be instantiated (ordered) and parametrized according to the specification in the offering.
+
+Crossplane specific terms::
+* Compositions - A template to define how to create resources.
+* Composite Resource Definition (`XRD`) - A custom API specification.
+* Composite Resource (`XR`) - Created by using the custom API defined in a Composite Resource Definition. XRs use the Composition template to create new managed resources.
+* Claims (`XRC`) - Like a Composite Resource, but with namespace scoping.
+* Managed Resource (`MR`) - Represents an external service in a Provider.
+* Providers enable Crossplane to provision infrastructure on an external service. Providers create new Kubernetes APIs and map them to external APIs.
+
+== Technology Stack
+
+We choose:
+
+* Python https://docs.djangoproject.com/en/dev/internals/release-process/#term-Long-term-support-release[Django LTS^]
+* PostgreSQL as database backend
+* https://gunicorn.org/[Gunicorn^] Python WSGI HTTP Server
+* https://caddyserver.com/[Caddy^] for serving static files and WSGI, or https://whitenoise.readthedocs.io/en/latest/[WhiteNoise^] (TBD)
+* https://docs.astral.sh/uv/[Astral uv^] for Python project, dependency and build management
+* https://htmx.org/[htmx] for the dynamic part in the frontend
+* https://getbootstrap.com/[Bootstrap 5] for styling the frontend
+
+A complete reasoning for this stack is available in https://vshnwiki.atlassian.net/wiki/spaces/VSHNPM/pages/402718747/Self-Service+Marketplace+Web+Application[our wiki^] (internal page).
+
+== Development Paradigms
+
+Keep usage of dependencies low::
+Every external dependency adds a burden on the maintenance of the application.
+Adding a dependency must be done with care:
+* Is the dependency well maintained and adopted in the ecosystem?
+* Could we do it without the dependency? If not, why?
+* What happens if the dependency is abandoned?
+* Document the reason for each dependency, why it has been chosen and why we can't live without it.
+
+Graceful Degradation::
+The application will connect to various upstream APIs which we can't control.
+Should issues arise with one of these APIs, gracefully degrade the feature set and inform accordingly ("This service is currently not availabe - we're working on it").
+Never must the application crash because and upstream API is not reachable, has slow response time or reacts in a undefined way.
+
+Use database and caches wisely::
+External systems like databases, caches or queues add additional complexity and burden to the application operations.
+Every additional system must be chosen carefully and the reasoning documented.
+Alternatives must be considered and documented.
+
+Business logic vs. views::
+Whenever possible, split business logic from views.
+This allows to progress the application in the future to allow for different views (For example APIs or other alternative frontends).
+
+Django Specifics::
+* We use class based views by default, exceptions can be made
+* Dynamic configuration happens via enviroment variables
+* Different environments (dev / test / prod) must be clearly separated inside the application
+
+Testing::
+TODO (pytest, ..)
+
+== Homepage / Website
+
+The application will be used as the website of Servala as well, so there must be some CMS functionality incorporated.
+For that we might use https://wagtail.org/[Wagtail^] or https://www.django-cms.org/[Django CMS].
+
+The service directory, offerings, service providers and consulting partner listing will be publicly available.
+See https://poc.serva.la/[Servala PoC^] for an idea what that means.
+
+== Multi-Tenancy and Organizations
+
+The portal is fully multi-tenant aware. Everything happens in the context of an "Organization".
+Users of the platform must be part of one or multiple organizations and can have different access rights inside an organization.
+
+Some parts of the portal are global objects:
+
+* Organizations
+* Users
+
+Everything else happens in the context of an organization.
+Therefore, organizations are a main part of the user interface and will need to be prominently displayed and enforced.
+
+Users can either be manually granted access to an organization by an organization admin or they can get an invitation which allows them to join the organization.
+
+Potential candidates to implement this functionality:
+
+* https://django-organizations.readthedocs.io/[django-organizations: multi-user accounts^] (Has some https://django-organizations.readthedocs.io/en/latest/reference/backends.html[invitation^] functionality)
+* https://docs.saaspegasus.com/teams/[SaaS Pegasus Teams^]
+
+=== Source of Truth of Organizations
+
+Today, VSHN has the notion of organizations in the context of the https://kb.vshn.ch/appuio-cloud/references/architecture/control-api.html[APPUiO Control API^].
+We must make sure to not duplicate this concept and be very clear about the source of truth.
+Also to prepare for a potential integration of APPUiO features into the portal.
+
+An organization in APPUiO manages:
+
+* A user group in VSHN Account (Keycloak)
+* A sales order in VSHN Central (Odoo)
+* A Kubernetes namespace in the Control API
+
+The https://github.com/appuio/appuio-cloud-agent[APPUiO Cloud Agent^] connects to the control API via the Kubernetes API to retrieve certain information, for example user group mapping.
+We therefore cannot just switch the organization handling to the Portal.
+Should we decide to do so, we would need to have a proper migration path.
+
+As organizations must also be available in the portal, we must keep the APPUiO Control API and the portal database in sync: Creating, updating and deleting an organization in the Portal must do the same in the APPUiO Control API, and vice versa.
+This will imply some form of synchronization mechanism, with all its downsides of data consistency.
+
+The main source of truth is the APPUiO Control API and has precedence over the data in the portal.
+This includes the https://kb.vshn.ch/appuio-cloud/references/architecture/control-api-billing-entity.html[BillingEntity^] as well.
+
+=== Organization Origin
+
+For some functionality, like filtering available control planes or service plans, we need to know the origin of an organization.
+As this is a feature specific to the portal, we track the origin of the organization in the portal.
+
+Organization origins have a specific configuration, to be managed in the portal.
+A default organization origin can be specified, for organizations not having a specific origin configured during creation.
+
+=== Organization Origin Configuration
+
+The organization origin configuration specifies certain behavior:
+
+* Which control planes and plans are available to the organization
+* Default billing entity
+* Only show enabled services
+
+== User Authentication / Login
+
+Authentication to the portal happens via OpenID Connect, the so called VSHN Account.
+This IdP is provided by Keycloak at https://id.vshn.net/[id.vshn.net].
+We use https://docs.allauth.org/[Django Allauth] for this.
+
+There is no user registration, password reset or other account management possibility in the portal.
+All these tasks are provided by the VSHN Account system.
+
+A user which can authenticate with a VSHN Account automatically gets access to the portal.
+If no user exists in the portal yet, it will get created.
+
+== Service Provider Control Planes
+
+Control Planes are Kubernetes API endpoints, reachable directly from the Web Portal. It represents a datacenter of a Service Provider.
+A Service Provider can have with multiple datacenters (zones).
+
+The portal connects to these Kubernetes API endpoints by using the official https://github.com/kubernetes-client/python[Python Kubernetes Client].
+
+Every control plane is registered in the portal database with connection details, names and other metadata (description, location, service provider, zone, logo, etc.).
+
+Authentication happens via different mechanisms, depending on the task at hand:
+
+System Connections::
+Certain operations are initiated by the portal, for example retrieving the available service definitions (XRDs).
+This is done via a dedicated Service Account token, having stringent RBAC rules on the cluster.
+
+User Connections::
+Tasks like creating, listing, updating, or deleting service instances is done in the users context.
+For that we use https://www.keycloak.org/securing-apps/token-exchange[OIDC Token Exchange] to get a token to authenticate in the users context agains the control plane API.
+On the Kubernetes API, we take appropriate measure to secure the access.
+
+Not all users and organizations have access to all control planes, therefore we implement access control on a user and organization level to control planes.
+This way we filter the available service providers available.
+
+== Service Catalog and Offering
+
+The service catalog will be available publicly (without authentication), so that they can be discovered.
+An authenticated user might see more or less services, depending on 1) the user rights and 2) the organization context and 3) the organization origin configuration.
+
+Services will be registered in the portal database to make them available in the catalog.
+Each service contains meta information (Description, logo, Links, etc.).
+
+Services are made available through plans (zero, or more). A plan consists of:
+
+* Meta information (Description, pricing, links, etc.)
+* Kubernetes GVK (Group/Version/Kind)
+* Control Planes offering this plan (named: "Service Provider Zone")
+* Service spec per Control Plane
+* Access control to the plan (who can see and access this plan? User and organization specific. Public or not.)
+
+All Control Planes expose the service definition of the GVK via Kubernetes APIs (Crossplane XRDs).
+The Web Portal discovers these APIs and loads the definition from the https://kubernetes.io/docs/concepts/overview/kubernetes-api/#openapi-interface-definition[OpenAPI spec^] into the database (updated regularly).
+With this OpenAPI spec, the fields of the service spec are dynamically built.
+As the OpenAPI spec doesn't contain nice field names, we might want to be able to edit the service spec for the presentation in the web ui, or we add some heuristics to make them look nice.
+
+If a plan doesn't link to a Control Plane or a service doesn't belong to a plan, the service or plan is "available on request".
+This means we show a contact form for a customer to show interest.
+
+== Service Instances
+
+Working with service instances happens by directly talking to the control plane APIs.
+The actions of ordering, listing, viewing, updating and deleting are directly executed on the control plane API.
+
+No state of any service instance is stored in the database of the portal, the source of truth is in the possession of the control plane.
+
+All actions are executed in the context of the organization and control plane tuple.
+This dictates what is available and possible.
+
+Examples of Kubernetes service resources, see https://docs.appcat.ch/[docs.appcat.ch^].
+
+=== Organization Namespace
+
+Every organization has a dedicated Kubernetes namespace on the control plane.
+This namespace is managed by the portal and created on first use (see https://docs.appuio.cloud/user/how-to/manage-projects-and-namespaces.html#_creating_namespaces[APPUiO docs on creating namespaces]).
+Service instance resources live in the organizations namespace.
+
+=== Dynamic Service Spec Form
+
+Service parametrization is subject to the capability of the API (XRD) exposed by the control plane.
+The form is dynamically generated by the OpenAPI spec.
+Certain standard fields of this spec are intercepted and either hidden, shown read-only or filled with default values.
+These mainly concerns the Crossplane core fields:
+
+* `spec.compositionRef`
+* `spec.compositionSelector`
+* `spec.compositionRevisionRef`
+* `spec.compositionRevisionSelector`
+* `spec.resourceRefs`
+* `spec.writeConnectionSecretToRef`
+
+We can also specify rules how to make field names look nicer (For example: `logLevel` (original) becomes `Log Level`).
+And we might also want to intercept other fields (configurable).
+
+=== Create / Update / Delete
+
+By choosing a service from the available plans (organization and control plane context), the service is parametrized and then created directly in the chosen control plane in the organizations namespace.
+The control plane does its validation and admission tasks, any errors, warnings or other information returned by the control plane is surfaced to the user via the portal.
+
+For updating a service instance, the form is pre-filled with the current values.
+
+Deletion happens by deleting the resource in the control plane.
+The portal makes sure to handle potentially available deletion protection, available on certain services (For example https://docs.appcat.ch/vshn-managed/postgresql/delete.html[PostgreSQL by VSHN^]).
+
+=== Listing and Viewing
+
+Listing of service instances and viewing their details is done by directly querying the control plane API.
+
+The list view shows all service instances on all control planes of the organization and depending on the access the user has.
+
+In the detail view of a service instance, all important details are displayed, also from the `.status` sub-resource.
+This view also allows access to the connection credentials which contain the details how to access the service instance.
+
+== Other Service Features
+
+Services might have additional features which will be incorporated into the portal for ease of use.
+A non-exhaustive list:
+
+* Listing of available backups
+* Restoring from backup
+* Metrics and alerts
+
+This part won't be in the MVP and will be worked out at a later stage.
+
+== Portal API
+
+To allow the use of infrastructure as code tools like Terraform, Pulumi or even Crossplane, the portal exposes an API.
+The API is following the RESTful API principle and makes use of the OpenAPI v3 standard.
+
+We will either use https://django-ninja.dev/[Django Ninja^] or https://www.django-rest-framework.org/[Django REST framework^] to build the API.
+Throughout the development, it's crucial to differentiate between views and business logic, so that we can reuse the same business logic for the web portal, as well as for the API.
