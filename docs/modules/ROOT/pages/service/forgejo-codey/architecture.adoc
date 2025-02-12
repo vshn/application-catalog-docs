@@ -80,7 +80,8 @@ spec:
   parameters:
     service:
       majorVersion: "9"
-      fqdn: poc.mydomain.com <1>
+      fqdn: <1>
+      - poc.mydomain.com
       adminEmail: admin@example.com <2>
       forgejoSettings:
         config: <3>
@@ -128,7 +129,7 @@ Think of `Codey` being the template for a `XVSHNForgejo` Composite Resource.
 [source,yaml]
 ----
 apiVersion: codey.io/v1
-kind: Instance
+kind: CodeyInstance
 metadata:
   name: my-codey-prod
 spec:
