@@ -1,13 +1,13 @@
 = Exoscale Marketplace Integration v2
 
-To integrate services from the https://products.vshn.ch/appcat/services_index.html[VSHN Application Catalog^] into the https://www.exoscale.com/marketplace/[Exoscale Marketplace^], we provide an Exoscale-specific https://github.com/openservicebrokerapi/servicebroker/blob/master/spec.md[Open Service Broker (OSB) API^] endpoint to provision Organizations and enable access to the service offering. A web portal is provided by VSHN to the end-user of Exoscale to provision and manage services.
+To integrate services from the https://products.vshn.ch/appcat/services_index.html[VSHN Application Catalog^] into the https://www.exoscale.com/marketplace/[Exoscale Marketplace^], we provide an Exoscale-specific https://github.com/openservicebrokerapi/servicebroker/blob/master/spec.md[Open Service Broker (OSB) API^] endpoint to provision Organizations and enable access to the service plans. A web portal is provided by VSHN to the end-user of Exoscale to provision and manage services.
 
-When an Exoscale customer enables a service on the Exoscale Marketplace, access to the service will be enabled on the https://products.vshn.ch/marketplace/index.html[VSHN Application Marketplace^].
-The Exoscale customer then self-service provisions and configures the service instances on the VSHN portal.
-Disabling a service by an Exoscale customer will disable access to the service on our side, and after a grace period, all instances are deleted if they haven't been deleted by the customer yet.
+When an Exoscale customer enables a service on the Exoscale Marketplace, access to the service will be enabled on the xref:control-plane/web-portal.adoc[Servala Web Portal].
+The Exoscale customer then self-service provisions and configures the service instances via the portal.
+Disabling a service by an Exoscale customer will disable access to the service on Servala, and after a grace period, all instances are deleted if they haven't been deleted by the customer yet.
 
-Except the Central Control Plane (CCP, see xref:reference/arch-control-plane.adoc[]) everything runs on Exoscale premises.
-Every Exoscale zone will run at least one Worker Cluster which hosts the service instances and a Cloud Service Provider Control Plane (CSPCP).
+Except the Servala portal everything runs on Exoscale premises.
+Every Exoscale zone will run at least one Worker Cluster which hosts the service instances and a Control Plane (CP).
 
 We regularly send usage data from https://central.vshn.ch/[VSHN Central (Odoo)^] to Exoscale for invoicing the end-user.
 Every month an invoice is sent from VSHN to Exoscale for the service usage of the last month.
@@ -37,21 +37,21 @@ The https://www.exoscale.com/marketplace/[marketplace^] of Exoscale enabling the
 flowchart TB
     exo["Exoscale Marketplace"]
     eu("Exoscale End-User")
-    vshn["VSHN Exoscale OSB API"]
-    vshnccpapi["Application Marketplace API"]
-    vshnccpui["Application Marketplace Portal"]
+    vshn["Servala Exoscale OSB API"]
+    vshnccpapi["Control Plane(s)"]
+    vshnccpui["Servala Portal"]
 
-    exo-- OpenServiceBroker API -->vshn-- K8s API --> vshnccpapi
+    exo-- OSB API -->vshn-- API --> vshnccpui
     eu-- WebUI -->exo
     eu-- WebUI -->vshnccpui-- K8s API --> vshnccpapi
 ....
 
-The xref:reference/arch-control-plane.adoc[] is doing the heavy lifting, while the custom OSB API endpoint is used for Exoscale integration, acting like an end-user which directly interacts with the control-plane API (which is a custom Kubernetes API).
+The xref:control-plane/web-portal.adoc[Servala Web Portal] is doing the heavy lifting, while the custom OSB API endpoint is used for Exoscale integration.
 
 The "Enable" button in the Exoscale Marketplace Portal will:
 
-* Provision an Organization at VSHN (if it not already exists) which is tied to Exoscale (`origin=exoscale`). See <<Exoscale Organizations>>.
-* Enable access to the enabled service, ready to be provisioned in the VSHN Portal
+* Provision an Organization at Servala (if it not already exists) which is tied to Exoscale (`origin=exoscale`). See <<Exoscale Organizations>>.
+* Enable access to the enabled service, ready to be provisioned in the Servala Portal
 
 This Organization will be tied to Exoscale services, it can only see services from Exoscale and only provision at Exoscale premises.
 
@@ -68,30 +68,29 @@ The API currently https://community.exoscale.com/documentation/vendor/marketplac
 
 == Service Listing
 
-Every service in the VSHN Application Catalog that is available in the Exoscale Marketplace is individually listed in the Exoscale Marketplace.
-Listing in the Exoscale Marketplace is done on the Exoscale side (they manually add them to their database). We don't offer the listing from our side through the OSB API (no `catalog` endpoint).
+Every service of the VSHN Application Catalog that is available in the Exoscale Marketplace is individually listed in the Exoscale Marketplace.
+Listing in the Exoscale Marketplace is done by Exoscale themselves (they manually add them to their database).
 
-We specifically only list services in the VSHN Portal which are enabled on the Exoscale Marketplace.
-This is handled by the `ProvidedService` object in the Central Control Plane.
+We specifically only list services in the Servala Portal which are enabled on the Exoscale Marketplace when being in the context of an organization with origin Exoscale.
 
-Other available services do get a hint in the VSHN Portal that they need to be enabled first on the Exoscale Marketplace to get available for provisioning.
+Other available services do get a hint in the Servala Portal that they need to be enabled first on the Exoscale Marketplace to get available for provisioning.
+
+This is done due to the fact that there is no backchannel from the Servala Portal to the Exoscale Marketplace.
+Would we allow to provision other services than enabled in the Exoscale Marketplace, there would be a mismatch, also from billing and legal perspectives.
 
 === OSB Plans and Services
 
-There are a few https://github.com/openservicebrokerapi/servicebroker/blob/master/spec.md#service-plan-object[OSB plan^] requirements:
+There are a few https://github.com/openservicebrokerapi/servicebroker/blob/master/spec.md#service-plan-object[OSB plan^] requirements by Exoscale:
 
 * An OSB API service must match one product on the Exoscale marketplace.
 * An OSB API plan should be setup for each published plan for that product.
 * An additional technical plan must be available for managing suspensions of end user organizations.
 
-Mapping of service ID and plan ID to Compositions is configured in the OSB API.
-It will set the values in `ProvidedService` (see xref:reference/arch-control-plane.adoc[]).
-
-NOTE: We don't provide the OSB API `/v2/catalog` endpoint as this is not required for the Exoscale Marketplace (See <<Service Listing>>).
+OSB services and plans, including their mapping to specific configurations are configured in the Portal database.
 
 == Exoscale Organizations
 
-When an Exoscale user clicks on the green "Enable" button on a service offering page, the <<Onboarding, onboarding flow>> is triggered in the xref:reference/arch-control-plane.adoc[].
+When an Exoscale user clicks on the green "Enable" button on a service offering page, the <<Onboarding, onboarding flow>> is triggered in the Servala Portal.
 
 image::exoscale-marketplace-empty-service.png[]
 
@@ -103,14 +102,14 @@ sequenceDiagram
     autonumber
     actor EU as Exoscale User
     participant EP as Exoscale Portal
-    participant VCA as VSHN OSB API
-    participant CCP as Central Control Plane
+    participant VCA as Servala OSB API
+    participant CCP as Servala Portal
 
     EU->>EP: Enable VSHN Service
     EP->>VCA: OSB API "PUT"
     VCA-->>CCP: Create "Organization"<br/>(if not exist)
     CCP-->>EU: Send invitation to organization<br/> via E-Mail (if new Organization)
-    VCA->>CCP: Create "ProvidedService"
+    VCA->>CCP: Enable Service Plan
     CCP->>EU: Send Service Welcome Mail
     VCA->>EP: OSB API Confirmation
     Note over VCA,EP: see return codes below
@@ -151,29 +150,24 @@ PUT http://exo-osbapi.vshn.net/v2/service_instances/:instance_id
 
 https://github.com/openservicebrokerapi/servicebroker/blob/master/spec.md#response-3[HTTP response codes^]:
 
-* `200`: `ProvidedService` already exists
-* `201`: Successfully created `ProvidedService` object
+* `200`: Service already enabled
+* `201`: Successfully enabled service
 
 Sources:
 
 * https://community.exoscale.com/documentation/vendor/marketplace-managed-services-provision/#provisioning[Exoscale docs - Provisioning^]
 * https://github.com/openservicebrokerapi/servicebroker/blob/master/spec.md#provisioning[OSB API Spec^]
 
-On the xref:reference/arch-control-plane.adoc[] an `Organization` object is created by the OSB API if it doesn't exist yet.
-
-Organization Object Name::
-We use the Exoscale organization UUID for the object name `.metadata.name`, prefixed by `exo-`.
+In the Servala Portal an Organization is created by the OSB API if it doesn't exist yet.
 
 Organization Display Name::
-The display name `.spec.displayName` is set to the name of the Exoscale organization in `.context.organization_display_name`
+The display name is set to the name of the Exoscale organization
 
 Organization Origin::
-The field `.spec.originRef` is set to `exoscale` (hardcoded in the OSB API service)
+The organization origin is set to `exoscale` (hardcoded in the OSB API service)
 
 Invitation::
-When the Organization is created the first time, an https://kb.vshn.ch/appuio-cloud/references/architecture/control-api-invitation.html[`Invitation`^] resource is created, sending an invitation to the user in the field `parameters.users[0].email` from the OSB API.
-
-To keep track of provisioning requests and enabling access to services, we store a `ProvidedService` (see xref:reference/arch-control-plane.adoc[]) resource in the organization namespace, containing all the details of the provisioning call, including `.status` which stores the details what happened (for example organization created or already existed, Exoscale API informed, ...)
+When the Organization is created the first time, an invitation is sent to the user in the field `parameters.users[0].email` from the OSB API.
 
 === Suspension
 
@@ -190,13 +184,13 @@ The suspension uses a special "suspension" plan.
 sequenceDiagram
     autonumber
     participant EP as Exoscale Portal
-    participant VCA as VSHN OSB API
-    participant CCP as Central Control Plane
+    participant VCA as Servala OSB API
+    participant CCP as Servala Portal
     participant VSHNEER as VSHNeer
 
     EP->>VCA: OSB API "PATCH"
     Note over EP, VCA: Set suspension Plan
-    VCA->>CCP: Update "ProvidedService"
+    VCA->>CCP: Disable Service
     CCP->>VSHNEER: Send E-Mail
     VCA->>EP: OSB API Confirmation
     Note over VCA,EP: see return codes below
@@ -224,7 +218,7 @@ PATCH http://exo-osbapi.vshn.net/v2/service_instances/:instance_id
 
 https://github.com/openservicebrokerapi/servicebroker/blob/master/spec.md#response-5[HTTP response codes^]:
 
-* `200`: `ProvidedService` updated
+* `200`: Service is disabled
 
 Sources:
 
@@ -233,8 +227,6 @@ Sources:
 
 When the suspension plan is triggered, we send an E-Mail to customers@vshn.ch with all the information we have, so that we can check back with Exoscale what to do.
 No service is automatically suspended. If it has to happen, we'll do it manually.
-
-Also, the annotation `exoscale.com/planId` in the affected `ProvidedService` of the `instance_id` is updated with the `plan_id`.
 
 === Offboarding
 
@@ -250,17 +242,19 @@ sequenceDiagram
     autonumber
     actor EU as Exoscale User
     participant EP as Exoscale Portal
-    participant VCA as VSHN OSB API
-    participant CCP as Central Control Plane
+    participant VCA as Servala OSB API
+    participant CCP as Servala Portal
+    participant CP as Control Plane
     
     EU->>EP: Disable VSHN Service
     EP->>VCA: OSB API "DELETE"
-    VCA->>CCP: Set deletionTimestamp<br />in ProvidedService
+    VCA->>CCP: Disable Service
     CCP->>EU: Send Deletion Confirmation Mail
+    CCP->>VCA: Confirmation
     VCA->>EP: OSB API Confirmation
     Note over VCA,EP: see return codes below
     EP->>EU: Confirmation
-    CCP->>CCP: Delete service instances<br />after grace period
+    CCP->>CP: Delete service instances<br />after grace period
 ....
 
 [source,json]
@@ -270,16 +264,16 @@ DELETE http://exo-osbapi.vshn.net/v2/service_instances/:instance_id?service_id=s
 
 https://github.com/openservicebrokerapi/servicebroker/blob/master/spec.md#response-10[HTTP response codes^]:
 
-* `200`: `ProvidedService` updated with deletionTimestamp
+* `200`: Service disabled
 
 Sources:
 
 * https://community.exoscale.com/documentation/vendor/marketplace-managed-services-provision/#deprovisioning[Exoscale docs - Deprovisioning^]
 * https://github.com/openservicebrokerapi/servicebroker/blob/master/spec.md#deprovisioning[OSB API Spec^]
 
-When all `ProvidedService` objects are deleted (none exists anymore), an email is sent to customer@vshn.ch for the final closure of the organization.
+When all services are deleted (none exists anymore), an email is sent to customer@vshn.ch for the final closure of the organization.
 
-Also, there is a monitoring check which triggers when no `ProvidedService` is available, but service instances are still there and the deletion grace period is over.
+Also, there is a monitoring check which triggers when no service is available, but service instances are still there and the deletion grace period is over.
 This means something failed in cleaning up.
 
 See also <<Deprovisioning>>, which details the single service deprovisioning.
@@ -297,49 +291,19 @@ ____
 === Provisioning
 
 Instances aren't directly provisioned via the OSB API.
-Instead, a `ProvidedService` is stored which enables access to the enabled service in the VSHN Portal.
+Instead, the service is enabled in the Servala Portal for the organization.
 
-See <<Onboarding>> for more details, as it's mostly the same flow.
-
-.Example
-[source,yaml]
-----
-apiVersion: appcat.vshn.io/v1
-kind: ProvidedService
-metadata:
-  name: $instance_id <1>
-  namespace: $organization <2>
-  labels:
-    exoscale.com/serviceId: $service_id <3>
-    exoscale.com/planId: $plan_id <4>
-    exoscale.com/email: $email <5>
-spec:
-  compositionSelector: <6>
-    metadata.appcat.vshn.io/serviceprovider: exoscale
-    metadata.appcat.vshn.io/servicename: VSHNPostgreSQL
-----
-<1> From OSB API `:instance_id`
-<2> From <<Onboarding>>
-<3> From OSB API `.service_id`
-<4> From OSB API `.plan_id`
-<5> From OSB API `.parameters.users[0].email`
-<6> From OSB API static configuration, mapping of `service_id`
-
-An E-Mail is sent to the address in the annotation `exoscale.com/email` with a well-crafted link to the portal to actually provision the instance.
+An E-Mail is sent with a well-crafted link to the portal to actually provision the instance.
 
 The portal link encodes:
 
-* The Organization GUID (`exo-$UUID`)
+* The Organization GUID
 * The `service_id`
 * The `plan_id`
 
 When this portal link is opened, a pre-filled service ordering form is presented in the portal, ready for the user to actually provision the service.
 
 This flow allows an Exoscale user to have more than one instance per service per Exoscale organization.
-
-The actual service provisioning happens via the xref:reference/arch-control-plane.adoc[].
-
-E-Mail sending is handled the same way as in https://kb.vshn.ch/appuio-cloud/references/architecture/control-api-invitation.html#_invitation_messages[Invitation^].
 
 === Plan Change
 
@@ -352,9 +316,7 @@ One exception is the "suspension plan" which is described in the <<Suspension, s
 
 See also <<Offboarding>> which talks about Organization offboarding and the OSB API flow.
 
-The matching `ProvidedService` gets updated, storing the deletion intention in `spec.deletionTimestamp`.
-After a grace period, all service instances matching the service are deleted automatically by a custom controller.
-The `ProvidedService` gets updated with the information which service instances have been deleted.
+TODO
 
 We also send an E-Mail for each service instance which gets deleted that way, telling the customer that the service either has to be removed from the VSHN Portal or that it's automatically deleted after the deletion grace period.
 
