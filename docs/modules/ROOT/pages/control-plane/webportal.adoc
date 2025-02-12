@@ -1,0 +1,99 @@
+= Web Portal
+
+== Introduction
+
+For many crucial features of the VSHN Application Marketplace we need a webportal so that the end-user can order services.
+
+This is, for example, an essential part of the xref:app-catalog:ROOT:reference/exoscale-osbapi.adoc[integration into the Exoscale Marketplace^].
+
+Essentially, it will be a web frontend for the xref:app-catalog:ROOT:reference/arch-control-plane.adoc[] which is derived from the https://kb.vshn.ch/appuio-cloud/references/architecture/control-api.html[APPUiO Control API^].
+
+The plan is to reuse the https://github.com/appuio/cloud-portal[APPUiO Portal^], advance it into the VSHN Portal and integrate all the features needed for the VSHN Application Markteplace.
+
+High-level work that needs to be done:
+
+. Redesign the current APPUiO Portal into the VSHN Portal (visuals, strings, naming)
+. Refine the user experience in terms of menu structure and initial onboarding
+. Integrate necessary features for the VSHN Application Marketplace
+
+== Meta
+
+=== Navigation
+
+The navigation will be split in several parts:
+
+Top Level::
+The main navigation, consisting of the most important aspects of the portal:
+* <<APPUiO>>
+** Zones
+** Status ^
+** Documentation ^
+* <<Marketplace>>
+* <<Managed OpenShift>> (later)
+* <<Support>> (later)
+* <<Workspace>>
+** Organizations
+** Teams
+** Billing
+** Invitations
+
+User::
+* Settings
+* Account
+* Sign out
+
+Secondary::
+* Help
+* Feedback
+
+=== Design
+
+The design needs to be changed so that it is VSHN branded, according to the https://handbook.vshn.ch/brand_guide.html[Brand Guide^].
+
+=== Organization Context
+
+The Organization is a main concept and must be presented prominently.
+The user must choose in which Organization context the portal works and can switch between them, should access be available to multiple Organization.
+
+It must be prominently clear in which Organization context the user currently is.
+Depending on the Organization Origin, we display the logo of the origin right besides the Organization name.
+
+== Functionality
+
+=== Marketplace
+
+The Marketplace displays a list of available services in the Organizations context and allow to provision them.
+
+TODOs and notes:
+
+* This sections will need a clear definition how it should look like and behave.
+* Fields for the service configuration must be dynamically generated from the API spec of the XRD / XRD
+* The marketplace listing must be visually attractive and include service logos
+
+image::vamp-portal-mockup.drawio.svg[]
+
+=== APPUiO
+
+Under APPUiO we'll list the available Zones and link to the https://status.appuio.cloud/[APPUiO Status Page^].
+When navigating to this section, we prominently show the APPUiO logo and - depending on the design - change some colors to the APPUiO style.
+It should be clear that APPUiO is a product of VSHN with its own identity.
+
+=== Managed OpenShift
+
+NOTE: This comes later.
+
+We integrate Project Syn here with the "Tenant" and "Cluster" entities.
+Details will need to be refined.
+
+=== Support
+
+In a first iteration we'll have a support form which sends an E-Mail to the support address.
+The exact design of the form is to be defined.
+
+The page also includes the help links to documentation.
+
+Later we'll integrate the Jira flow we currently have in control.vshn.net.
+
+=== Workspace
+
+Here we combine the meta topics which allow managing functionality shared between multiple products.
