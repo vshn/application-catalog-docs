@@ -6,97 +6,115 @@ image::servala.png[]
 
 === Authentication & Access
 
+As a user, I want to:
+
 MVP::
-* As a user, I want to log in using my VSHN Account via OpenID Connect so that I can access the portal securely
-* As a user, I want to be automatically registered in the portal when I first log in with my VSHN Account so that I can start using the service immediately
-* As a user, I want to see which organizations I'm a member of so that I can switch between different contexts
+* log in using my VSHN Account via OpenID Connect so that I can access the portal securely
+* be automatically registered in the portal when I first log in with my VSHN Account so that I can start using the service immediately
+* see which organizations I'm a member of so that I can switch between different contexts
 
 Next::
-* As a user, I want to accept organization invitations so that I can join new organizations
-* As a user, I want to see my role and permissions within each organization so that I understand my access levels
+* accept organization invitations so that I can join new organizations
+* see my role and permissions within each organization so that I understand my access levels
 
 === Service Discovery & Management
 
+As a user, I want to:
+
 MVP::
-* As a user, I want to browse the service catalog without authentication so that I can explore available services before committing
-* As a user, I want to view detailed service descriptions, pricing, and features so that I can make informed decisions
-* As a user, I want to see service plans filtered based on my organization's context so that I only see relevant offerings
-* As a user, I want to order new service instances by selecting plans and configuring parameters so that I can provision instances
-* As a user, I want to view my existing service instances across all control planes so that I can manage my service instances
-* As a user, I want to access connection credentials for my service instances so that I can use the services
-* As a user, I want to update parameters of existing service instances so that I can adjust instances as needed
-* As a user, I want to delete service instances when they're no longer needed so that I don't incur unnecessary costs
-* As a user, I want to see the status and health of my service instances so that I can monitor their operation
-* As a user, I want to receive clear error messages and warnings when operations fail so that I can take appropriate action
+* browse the service catalog without authentication so that I can explore available services before committing
+* view detailed service descriptions, pricing, and features so that I can make informed decisions
+* see service plans filtered based on my organization's context so that I only see relevant offerings
+* order new service instances by selecting plans and configuring parameters so that I can provision instances
+* view my existing service instances across all control planes so that I can manage my service instances
+* access connection credentials for my service instances so that I can use the services
+* update parameters of existing service instances so that I can adjust instances as needed
+* delete service instances when they're no longer needed so that I don't incur unnecessary costs
+* see the status and health of my service instances so that I can monitor their operation
+* receive clear error messages and warnings when operations fail so that I can take appropriate action
 
 == Organization Admin Stories
 
 === Organization Management
 
+As an organization admin, I want to:
+
 MVP::
-* As an organization admin, I want to manage user access to my organization so that I can control who has access to resources
-* As an organization admin, I want to view and manage the organization's billing entity so that I can handle financial aspects
-* As an organization admin, I want to configure the organization's origin so that appropriate service providers and plans are available
+* manage user access to my organization so that I can control who has access to resources
+* view and manage the organization's billing entity so that I can handle financial aspects
+* configure the organization's origin so that appropriate service providers and plans are available
 
 Next::
-* As an organization admin, I want to assign different roles to users within my organization so that I can delegate responsibilities appropriately
-* As an organization admin, I want to send invitations to new users so that they can join the organization
+* assign different roles to users within my organization so that I can delegate responsibilities appropriately
+* send invitations to new users so that they can join the organization
 
 == Portal Admin Stories
 
 === System Configuration
 
+As a portal admin, I want to:
+
 MVP::
-* As a portal admin, I want to register and manage control planes so that they're available for service deployment
-* As a portal admin, I want to configure system-level service account credentials so that the portal can interact with control planes
-* As a portal admin, I want to manage service providers and their metadata so that users can discover available services
-* As a portal admin, I want to configure organization origins and their associated rules so that I can control service provider access
-* As a portal admin, I want to manage the service catalog including categories and hierarchies so that services are well-organized
-* As a portal admin, I want to customize field names and form behaviors so that the user interface is intuitive
+* register and manage control planes so that they're available for service deployment
+* configure system-level service account credentials so that the portal can interact with control planes
+* manage service providers and their metadata so that users can discover available services
+* configure organization origins and their associated rules so that I can control service provider access
+* manage the service catalog including categories and hierarchies so that services are well-organized
+* customize field names and form behaviors so that the user interface is intuitive
 
 === Content Management
 
+As a portal admin, I want to:
+
 MVP::
-* As a portal admin, I want to configure service plans and pricing so that offerings are current
-* As a portal admin, I want to manage service metadata including logos and external links so that service information is complete
+* configure service plans and pricing so that offerings are current
+* manage service metadata including logos and external links so that service information is complete
 
 Next::
-* As a portal admin, I want to manage the public website content so that I can keep service information up to date
+* manage the public website content so that I can keep service information up to date
 
 == System Stories
 
 === Service Discovery & Sync
 
+As the system, I want to:
+
 MVP::
-* As the system, I want to automatically discover service definitions (Crossplane XRDs) from control planes so that available services are current
-* As the system, I want to sync organization data with the APPUiO Control API so that organization information stays consistent
-* As the system, I want to validate service instance operations against control plane APIs so that only valid configurations are accepted
+* automatically discover service definitions (Crossplane XRDs) from control planes so that available services are current
+* sync organization data with the APPUiO Control API so that organization information stays consistent
+* validate service instance operations against control plane APIs so that only valid configurations are accepted
 
 Next::
-* As the system, I want to regularly update OpenAPI specs from control planes so that service parameters are current
+* regularly update OpenAPI specs from control planes so that service parameters are current
 
 === Authentication & Authorization
 
+As the system, I want to:
+
 MVP::
-* As the system, I want to handle OIDC token exchange for user operations on control planes so that actions are properly authenticated
-* As the system, I want to enforce organization context for all operations so that multi-tenancy is maintained
-* As the system, I want to validate user permissions against roles so that access control is maintained
-* As the system, I want to create organization namespaces in control planes on first use so that service instances can be deployed
+* handle OIDC token exchange for user operations on control planes so that actions are properly authenticated
+* enforce organization context for all operations so that multi-tenancy is maintained
+* validate user permissions against roles so that access control is maintained
+* create organization namespaces in control planes on first use so that service instances can be deployed
 
 === Error Handling & Monitoring
 
+As the system, I want to:
+
 MVP::
-* As the system, I want to gracefully handle upstream API failures so that the application remains stable
-* As the system, I want to provide appropriate error messages for failed operations so that users understand issues
-* As the system, I want to monitor control plane connectivity so that service availability can be maintained
-* As the system, I want to track failed operations and sync attempts so that issues can be investigated
+* gracefully handle upstream API failures so that the application remains stable
+* provide appropriate error messages for failed operations so that users understand issues
+* monitor control plane connectivity so that service availability can be maintained
+* track failed operations and sync attempts so that issues can be investigated
 
 == API Consumer Stories
 
 === API Integration
 
+As an API consumer, I want to:
+
 Next::
-* As an API consumer, I want to authenticate with the portal API so that I can access resources programmatically
-* As an API consumer, I want to manage service instances via REST API so that I can automate infrastructure provisioning
-* As an API consumer, I want to retrieve service catalog information via API so that I can display available services
-* As an API consumer, I want to manage organization instances via API so that I can integrate with other systems
+* authenticate with the portal API so that I can access resources programmatically
+* manage service instances via REST API so that I can automate infrastructure provisioning
+* retrieve service catalog information via API so that I can display available services
+* manage organization instances via API so that I can integrate with other systems
