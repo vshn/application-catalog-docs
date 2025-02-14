@@ -1,13 +1,13 @@
-= Web Portal
+= Servala Web Portal
 
 image::servala.png[]
 
 image::web-portal-arch.drawio.svg[]
 
-The Web Portal is the central multi-tenant multi-service-provider aggregation and self-service main entrypoint for Servala - The Cloud Native Service Hub.
+The Servala Web Portal is the central multi-tenant multi-service-provider aggregation and self-service main entrypoint for Servala - The Cloud Native Service Hub.
 Servala is the brand for the product also known as "VSHN Application Marketplace".
 
-It offers self-service provisioning, multi-tenancy via organizations, access control, and gives a central view over multi cloud providers and the instances running this way.
+It offers self-service provisioning, multi-tenancy via organizations, access control, and provides central management access over multi cloud providers and the instances running this way.
 The portal is a web application consuming various third party APIs to provide an aggregated and opinionated view.
 
 External resources to read about it:
@@ -62,7 +62,7 @@ A complete reasoning for this stack is available in https://vshnwiki.atlassian.n
 
 == Development Paradigms
 
-Keep usage of dependencies low::
+Keep usage of third-party dependencies low::
 Every external dependency adds a burden on the maintenance of the application.
 Adding a dependency must be done with care:
 * Is the dependency well maintained and adopted in the ecosystem?
@@ -70,10 +70,10 @@ Adding a dependency must be done with care:
 * What happens if the dependency is abandoned?
 * Document the reason for each dependency, why it has been chosen and why we can't live without it.
 
-Graceful Degradation::
+Graceful degradation::
 The application will connect to various upstream APIs which we can't control.
-Should issues arise with one of these APIs, gracefully degrade the feature set and inform accordingly ("This service is currently not availabe - we're working on it").
-Never must the application crash because and upstream API is not reachable, has slow response time or reacts in a undefined way.
+Should issues arise with one of these APIs, gracefully degrade the feature set and inform accordingly ("This service is currently not available - we're working on it").
+Never must the application crash because and upstream API not being reachable, has slow response time or react in an undefined way.
 
 Use database and caches wisely::
 External systems like databases, caches or queues add additional complexity and burden to the application operations.
@@ -84,18 +84,19 @@ Business logic vs. views::
 Whenever possible, split business logic from views.
 This allows to progress the application in the future to allow for different views (For example APIs or other alternative frontends).
 
-Django Specifics::
+Django specifics::
 * We use class based views by default, exceptions can be made
-* Dynamic configuration happens via enviroment variables
+* Dynamic configuration happens via environment variables
 * Different environments (dev / test / prod) must be clearly separated inside the application
 
 Testing::
-TODO (pytest, ..)
+Business functionality must be https://docs.djangoproject.com/en/5.1/topics/testing/[tested^] with code.
+We preferrably use https://docs.pytest.org/[pytest^].
 
 == Homepage / Website
 
-The application will be used as the website of Servala as well, so there must be some CMS functionality incorporated.
-For that we might use https://wagtail.org/[Wagtail^] or https://www.django-cms.org/[Django CMS].
+The application will serve the website of Servala, therefore some CMS functionality must be incorporated.
+For that we might use https://wagtail.org/[Wagtail^] or https://www.django-cms.org/[Django CMS^].
 
 The service directory, offerings, service providers and consulting partner listing will be publicly available.
 See https://poc.serva.la/[Servala PoC^] for an idea what that means.
@@ -103,21 +104,24 @@ See https://poc.serva.la/[Servala PoC^] for an idea what that means.
 == Multi-Tenancy and Organizations
 
 The portal is fully multi-tenant aware. Everything happens in the context of an "Organization".
-Users of the platform must be part of one or multiple organizations and can have different access rights inside an organization.
+This context dictates multiple parameters, for example which service providers or service offerings are available to the organization.
 
-Some parts of the portal are global objects:
+Users of the platform must be part of one or multiple organizations and can have different access rights in different organizations.
+
+Some parts of the portal are global:
 
 * Organizations
 * Users
 
 Everything else happens in the context of an organization.
-Therefore, organizations are a main part of the user interface and will need to be prominently displayed and enforced.
+Therefore, organizations are a main part of the user interface and will be prominently displayed and enforced.
 
-Users can either be manually granted access to an organization by an organization admin or they can get an invitation which allows them to join the organization.
+Users can either be manually granted access to an organization by an organization admin, or they can get an invitation which allows them to join the organization with a certain role.
 
 Potential candidates to implement this functionality:
 
 * https://django-organizations.readthedocs.io/[django-organizations: multi-user accounts^] (Has some https://django-organizations.readthedocs.io/en/latest/reference/backends.html[invitation^] functionality)
+* https://github.com/dfunckt/django-rules[`rules`^] to realze object-level permissions
 * https://docs.saaspegasus.com/teams/[SaaS Pegasus Teams^]
 
 === Source of Truth of Organizations
@@ -139,7 +143,7 @@ Should we decide to do so, we would need to have a proper migration path.
 As organizations must also be available in the portal, we must keep the APPUiO Control API and the portal database in sync: Creating, updating and deleting an organization in the Portal must do the same in the APPUiO Control API, and vice versa.
 This will imply some form of synchronization mechanism, with all its downsides of data consistency.
 
-The main source of truth is the APPUiO Control API and has precedence over the data in the portal.
+The main source of truth is the APPUiO Control API and has precedence over the data in the portal (at least from now, that's subject to future changes).
 This includes the https://kb.vshn.ch/appuio-cloud/references/architecture/control-api-billing-entity.html[BillingEntity^] as well.
 
 === Organization Origin
@@ -156,38 +160,37 @@ The organization origin configuration specifies certain behavior:
 
 * Which control planes and plans are available to the organization
 * Default billing entity
-* Only show enabled services
 
 == User Authentication / Login
 
 Authentication to the portal happens via OpenID Connect, the so called VSHN Account.
 This IdP is provided by Keycloak at https://id.vshn.net/[id.vshn.net].
-We use https://docs.allauth.org/[Django Allauth] for this.
+We use https://docs.allauth.org/[Django Allauth] to properly integrate into Django.
 
-There is no user registration, password reset or other account management possibility in the portal.
-All these tasks are provided by the VSHN Account system.
+There is no user registration, password reset or other account management functionality in the portal.
+All these processes are provided by the VSHN Account Keycloak system.
 
-A user which can authenticate with a VSHN Account automatically gets access to the portal.
-If no user exists in the portal yet, it will get created.
+A user who can authenticate with a VSHN Account automatically gets access to the portal.
+If no user exists in the portal yet, it will get automatically created and linked to the VSHN Account.
 
 == Service Provider Control Planes
 
-Control Planes are Kubernetes API endpoints, reachable directly from the Web Portal. It represents a datacenter of a Service Provider.
-A Service Provider can have with multiple datacenters (zones).
+Control Planes are Kubernetes API endpoints, reachable directly from the Web Portal. It represents a datacenter ("Zone") of a Service Provider.
+A Service Provider can have with multiple zones.
 
-The portal connects to these Kubernetes API endpoints by using the official https://github.com/kubernetes-client/python[Python Kubernetes Client].
+The portal connects to these Kubernetes API endpoints by using the official https://github.com/kubernetes-client/python[Python Kubernetes Client^].
 
 Every control plane is registered in the portal database with connection details, names and other metadata (description, location, service provider, zone, logo, etc.).
 
 Authentication happens via different mechanisms, depending on the task at hand:
 
 System Connections::
-Certain operations are initiated by the portal, for example retrieving the available service definitions (XRDs).
+Certain operations are initiated directly by the portal, for example retrieving the available service definitions (XRDs).
 This is done via a dedicated Service Account token, having stringent RBAC rules on the cluster.
 
 User Connections::
 Tasks like creating, listing, updating, or deleting service instances is done in the users context.
-For that we use https://www.keycloak.org/securing-apps/token-exchange[OIDC Token Exchange] to get a token to authenticate in the users context agains the control plane API.
+For that we use https://www.keycloak.org/securing-apps/token-exchange[OIDC Token Exchange] to get a token to authenticate in the users context against the control plane API.
 On the Kubernetes API, we take appropriate measure to secure the access.
 
 Not all users and organizations have access to all control planes, therefore we implement access control on a user and organization level to control planes.
@@ -212,7 +215,7 @@ Services are made available through plans (zero, or more). A plan consists of:
 All Control Planes expose the service definition of the GVK via Kubernetes APIs (Crossplane XRDs).
 The Web Portal discovers these APIs and loads the definition from the https://kubernetes.io/docs/concepts/overview/kubernetes-api/#openapi-interface-definition[OpenAPI spec^] into the database (updated regularly).
 With this OpenAPI spec, the fields of the service spec are dynamically built.
-As the OpenAPI spec doesn't contain nice field names, we might want to be able to edit the service spec for the presentation in the web ui, or we add some heuristics to make them look nice.
+As the OpenAPI spec doesn't contain nice field names, we might want to be able to edit the service spec for the presentation in the web UI, or we add some heuristics to make them look nice.
 
 If a plan doesn't link to a Control Plane or a service doesn't belong to a plan, the service or plan is "available on request".
 This means we show a contact form for a customer to show interest.
@@ -289,3 +292,112 @@ The API is following the RESTful API principle and makes use of the OpenAPI v3 s
 
 We will either use https://django-ninja.dev/[Django Ninja^] or https://www.django-rest-framework.org/[Django REST framework^] to build the API.
 Throughout the development, it's crucial to differentiate between views and business logic, so that we can reuse the same business logic for the web portal, as well as for the API.
+
+== Database Diagram
+
+[mermaid.offboarding,png]
+....
+erDiagram
+    User ||--o{ OrganizationMember : "is member of"
+    OrganizationMember {
+        string role
+    }
+    Organization ||--o{ OrganizationMember : has
+    Organization }|--|| BillingEntity : "belongs to"
+    Organization ||--|| OrganizationOrigin : "has"
+    
+    BillingEntity {
+        string name
+        string description
+        string erp_reference
+    }
+    
+    OrganizationOrigin {
+        string name
+        string description
+    }
+    OrganizationOrigin ||--o{ OrganizationOriginServiceProvider : "can filter"
+    ServiceProvider ||--o{ OrganizationOriginServiceProvider : "is filtered by"
+    
+    Service {
+        string name
+        string description
+        string logo
+        json external_links
+    }
+    
+    Service ||--o{ ServiceCategory : "belongs to"
+    ServiceCategory {
+        string name
+        string description
+        string logo
+    }
+    ServiceCategory ||--o| ServiceCategory : "has parent"
+    
+    ServiceProvider {
+        string name
+        string description
+        string logo
+        json external_links
+    }
+    ServiceProvider ||--o{ ControlPlane : "has"
+    
+    ControlPlane {
+        string name
+        string description
+        string k8s_api_endpoint
+        json api_credentials
+    }
+    
+    ServiceOffering {
+        string description
+    }
+    ServiceOffering ||--|| Service : "offers"
+    ServiceOffering ||--|| ServiceProvider : "provided by"
+    ServiceOffering ||--o{ ControlPlane : "deployed on"
+    
+    Plan {
+        string name
+        string description
+        json features
+        json pricing
+        string term
+    }
+    
+    ServiceOffering ||--o{ ServiceOfferingPlan : "has"
+    Plan ||--o{ ServiceOfferingPlan : "included in"
+    ServiceOfferingPlan {
+        json pricing
+    }
+....
+
+User and Organization Structure::
+Users can be members of multiple organizations, and organizations can have multiple members. This relationship is managed through an OrganizationMember junction table that stores the specific role each user has within each organization. A user's role can differ between organizations.
+
+Organizations::
+Each organization is required to have exactly one billing entity and one organization origin. Billing entities, which contain name, description, and ERP reference information, can be shared across multiple organizations. Similarly, organization origins (containing name and description) can be associated with multiple organizations.
+
+Organization Origins and Service Providers::
+Organization origins can be linked to service providers through a filtering mechanism. This relationship allows controlling which service offerings are available to organizations based on their origin.
+
+Services and Categories::
+Services are defined with basic information (name, description, logo) and external links. Each service can belong to multiple service categories. Service categories themselves can be nested, meaning a category can have a parent category, enabling a hierarchical categorization structure. Categories include name, description, and logo attributes.
+
+Service Providers and Control Planes::
+Service providers are entities with name, description, logo, and external links. Each service provider can operate zero or more control planes. A control plane belongs to exactly one service provider and contains configuration details including name, description, Kubernetes API endpoint, and API credentials.
+
+Service Offerings and Plans::
+Service offerings connect services with service providers. Each service offering:
+
+* Must be associated with exactly one service and one service provider
+* Can be deployed on multiple control planes
+* Includes multiple plans with customized pricing
+
+Plans are reusable across different service offerings and include:
+
+* Basic information (name, description)
+* Feature specifications
+* Multi-currency pricing options
+* Term details
+
+The relationship between service offerings and plans is managed through a ServiceOfferingPlan junction table, which allows the same plan to have different pricing depending on the specific service offering.
