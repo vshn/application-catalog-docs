@@ -114,6 +114,7 @@
 
 * Control Plane
 ** xref:control-plane/web-portal.adoc[]
+** xref:control-plane/web-portal-user-stories.adoc[]
 ** xref:control-plane/central-control-plane-arch.adoc[]
 ** xref:control-plane/split-architecture.adoc[]
 ** xref:control-plane/split-sli-prober.adoc[]
