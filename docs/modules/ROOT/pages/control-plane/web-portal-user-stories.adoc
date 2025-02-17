@@ -4,14 +4,18 @@ image::servala.png[]
 
 == End User Stories
 
+The end user is a person using the portal to discover and order managed services on behalf of an organization,
+manage service instances on multiple managed service providers and do administrative stuff like updating user details.
+
 === Authentication & Access
 
 As a user, I want to:
 
 MVP::
-* log in using my VSHN Account via OpenID Connect so that I can access the portal securely
-* be automatically registered in the portal when I first log in with my VSHN Account so that I can start using the service immediately
-* see which organizations I'm a member of so that I can switch between different contexts
+* P1: log in using my VSHN Account via OpenID Connect so that I can access the portal securely
+* P1: be automatically registered in the portal when I first log in with my VSHN Account so that I can start using the portal immediately
+* P1: see which organizations I'm a member of so that I can switch between different organization contexts
+* P1: be guided to the VSHN Account portal to update my account details like the password or two-factor authentication
 
 Next::
 * accept organization invitations so that I can join new organizations
@@ -22,67 +26,92 @@ Next::
 As a user, I want to:
 
 MVP::
-* browse the service catalog without authentication so that I can explore available services before committing
-* view detailed service descriptions, pricing, and features so that I can make informed decisions
-* see service plans filtered based on my organization's context so that I only see relevant offerings
-* order new service instances by selecting plans and configuring parameters so that I can provision instances
-* view my existing service instances across all control planes so that I can manage my service instances
-* access connection credentials for my service instances so that I can use the services
-* update parameters of existing service instances so that I can adjust instances as needed
-* delete service instances when they're no longer needed so that I don't incur unnecessary costs
-* see the status and health of my service instances so that I can monitor their operation
-* receive clear error messages and warnings when operations fail so that I can take appropriate action
+* P1: see service plans filtered based on my organization's context so that I only see relevant offerings
+* P1: order new service instances by selecting plans, and configuring parameters so that I can provision instances
+* P1: view my existing service instances across all control planes so that I can manage my service instances
+* P1: access connection credentials for my service instances so that I can use the services
+* P1: update parameters of existing service instances so that I can adjust instances as needed
+* P1: delete service instances when they're no longer needed so that I don't incur unnecessary costs
+* P1: receive clear error messages and warnings when operations fail so that I can take appropriate action
+* P2: see the status and health of my service instances so that I can monitor their operation
+* P2: browse the service catalog without authentication so that I can explore available services before committing
+* P2: view detailed service descriptions, pricing, and features so that I can make informed decisions
+
+Next::
+* access service metrics in a pre-configured dashboard-like view with timerange selection
+* access service logs, search for terms in the logs and select a timerange
+* list available backups and select one to restore from
+* restart a service instance
+* clone a service instance
+* manage access control to a service instance
+* see service usage for cost-control
+* upgrade a service instance (plan, software version)
+* configure backup details (time, retention)
+* configure maintenance policies
+* configure pre-defined alert rules and add custom alert destinations
 
 == Organization Admin Stories
+
+An organization admin does administrative tasks like managing access control in the organization, downloads invoices or updates billing details.
 
 === Organization Management
 
 As an organization admin, I want to:
 
 MVP::
-* manage user access to my organization so that I can control who has access to resources
-* view and manage the organization's billing entity so that I can handle financial aspects
-* configure the organization's origin so that appropriate service providers and plans are available
+* P1: manage user access to my organization so that I can control who has access to resources
+* P2: view and manage the organization's billing entity so that I can handle financial aspects
 
 Next::
 * assign different roles to users within my organization so that I can delegate responsibilities appropriately
 * send invitations to new users so that they can join the organization
+* administer billing details
+* list invoices, see their status and download them as PDF
+* directly pay invoices with online billing
 
 == Portal Admin Stories
+
+The portal admin is the "root" of the system and does backend administrative tasks.
+It also includes managing the content.
 
 === System Configuration
 
 As a portal admin, I want to:
 
 MVP::
-* register and manage control planes so that they're available for service deployment
-* configure system-level service account credentials so that the portal can interact with control planes
-* manage service providers and their metadata so that users can discover available services
-* configure organization origins and their associated rules so that I can control service provider access
-* manage the service catalog including categories and hierarchies so that services are well-organized
-* customize field names and form behaviors so that the user interface is intuitive
+* P1: register and manage control planes so that they're available for service deployment
+* P1: configure system-level service account credentials so that the portal can interact with control planes
+* P1: configure organization origins and their associated rules so that I can control service provider access
+* P2: customize field names and form behaviors so that the user interface is intuitive
+
+Next::
+* access audit logs to see what's going on in the portal
 
 === Content Management
 
 As a portal admin, I want to:
 
 MVP::
-* configure service plans and pricing so that offerings are current
-* manage service metadata including logos and external links so that service information is complete
+* P1: manage service providers and their metadata so that users can discover available services
+* P1: manage the service catalog including categories and hierarchies so that services are well-organized
+* P2; configure service plans and pricing so that offerings are current
+* P2: manage service metadata including logos and external links so that service information is complete
 
 Next::
 * manage the public website content so that I can keep service information up to date
 
 == System Stories
 
+This is the system itself doing administrative tasks.
+
 === Service Discovery & Sync
 
 As the system, I want to:
 
 MVP::
-* automatically discover service definitions (Crossplane XRDs) from control planes so that available services are current
-* sync organization data with the APPUiO Control API so that organization information stays consistent
-* validate service instance operations against control plane APIs so that only valid configurations are accepted
+* P1: automatically discover service definitions (Crossplane XRDs) from control planes so that available services are current
+* P1: sync organization data with the APPUiO Control API so that organization information stays consistent
+* P2: validate service instance operations against control plane APIs so that only valid configurations are accepted
 
 Next::
 * regularly update OpenAPI specs from control planes so that service parameters are current
@@ -92,20 +121,22 @@ Next::
 As the system, I want to:
 
 MVP::
-* handle OIDC token exchange for user operations on control planes so that actions are properly authenticated
-* enforce organization context for all operations so that multi-tenancy is maintained
+* P1: enforce organization context for all operations so that multi-tenancy is maintained
+* P1: create organization namespaces in control planes on first use so that service instances can be deployed
+* P2: handle OIDC token exchange for user operations on control planes so that actions are properly authenticated
+
+Next::
 * validate user permissions against roles so that access control is maintained
-* create organization namespaces in control planes on first use so that service instances can be deployed
 
 === Error Handling & Monitoring
 
 As the system, I want to:
 
 MVP::
-* gracefully handle upstream API failures so that the application remains stable
-* provide appropriate error messages for failed operations so that users understand issues
-* monitor control plane connectivity so that service availability can be maintained
-* track failed operations and sync attempts so that issues can be investigated
+* P1: gracefully handle upstream API failures so that the application remains stable
+* P1: provide appropriate error messages for failed operations so that users understand issues
+* P1: track failed operations and sync attempts so that issues can be investigated
+* P2: monitor control plane connectivity so that service availability can be maintained
 
 == API Consumer Stories
 
