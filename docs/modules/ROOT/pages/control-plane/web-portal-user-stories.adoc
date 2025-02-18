@@ -69,6 +69,28 @@ Next::
 * list invoices, see their status and download them as PDF
 * directly pay invoices with online billing
 
+== Managed Service Provider Stories
+
+A managed service provider manages their content and service instances.
+
+=== Content Management
+
+As a managed service provider, I want to:
+
+Next::
+* manage my service offering
+* manage plans and pricing
+* update my company details
+
+=== Instance Management
+
+As a managed service provider, I want to:
+
+Next::
+* see all instances running on my infrastructure
+* get access to customer information for customers running instances on my infrastructure
+* see service instance usage details for billing purposes
+
 == Portal Admin Stories
 
 The portal admin is the "root" of the system and does backend administrative tasks.
