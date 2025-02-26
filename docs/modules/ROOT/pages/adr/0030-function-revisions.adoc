@@ -1,0 +1,187 @@
+= ADR 0030 - Function Revisions
+:adr_author:    Simon Beck
+:adr_owner:     Schedar
+:adr_reviewers:
+:adr_date:      2025-01-29
+:adr_upd_date:  2025-01-29
+:adr_status:    draft
+:adr_tags:      comp-functions,crossplane
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+In order to make rollouts easier, we want to make sure any changes will only be applied to existing instances during their respective maintenance window.
+
+This ADR assumes that you've read: https://docs.crossplane.io/latest/concepts/composition-revisions
+====
+
+PoC URL: https://github.com/vshn/component-appcat/pull/612
+
+== Context
+Currently, if we have changes that trigger restarts, then we have either to:
+
+* time them during the cluster maintenance
+* disable ArgoCD and manually apply Maintenance hooks to re-enable it again
+
+Both of these solutions are manual and prone to error. Additionally, the first approach breaks our Renovate process that deploys a change on test clusters for a week before its rolled out everywhere.
+
+Crossplane has a concept called https://docs.crossplane.io/latest/concepts/composition-revisions/#using-composition-revisions[Composition Revisions]. They are automatically created each time a change in a composition is applied. By default, any claim or composite deployed will automatically point to the most recent revision as soon as they are available. AppCat currently doesn't make any use of composition revisions at all. This ADR will introduce and extend this concept to AppCat and its Compositon Functions.
+
+The behaviour can be switched to `Manual`, which means that a claim or composite won't automatically update to the latest revision. They are effectively pinned to a version. If a claim or composite gets created with the `Manual` policy, it will point to the latest available revision at the time of creation.
+
+Unfortunately these revisions don't work natively with https://docs.crossplane.io/latest/guides/write-a-composition-function-in-go/[Compostion Functions]. Even though there are `functionRevisions` similar to the `compositionRevisions` they can't be used for anything at the moment. There's an open feature request about this https://github.com/crossplane/crossplane/issues/6139[on Crossplane's github].
+
+== DIY Function Revisions
+It is possible to leverage the current Compositon Revisions together with Composition Functions, however some changes are necessary.
+
+We have to make sure ourselves that the right functions are deployed. For example the most current version plus the last 4 versions. Also, they have to be deployed with distinct name, so that they can be referenced directly in the composition.
+
+.Example: Function with a version suffix for the name
+[source, yaml]
+----
+apiVersion: pkg.crossplane.io/v1beta1
+kind: Function
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    argocd.argoproj.io/sync-wave: '-40'
+  name: function-appcat-v4-120-2 <1>
+spec:
+  package: ghcr.io/vshn/appcat:v4.120.2-func <1>
+  runtimeConfigRef:
+    name: function-appcat
+  skipDependencyResolution: true
+----
+<1> The numbers in the package tag and the name of the function must match
+
+Then it can directly be referenced in the composition:
+
+[source, yaml]
+----
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: vshnkeycloak.vshn.appcat.vshn.io
+  labels:
+    metadata.appcat.vshn.io/revision: v4.120.2 <2>
+spec:
+  compositeTypeRef:
+    apiVersion: vshn.appcat.vshn.io/v1
+    kind: XVSHNKeycloak
+  mode: Pipeline
+  pipeline:
+    - functionRef:
+        name: function-appcat-v4-120-2 <1>
+      input:
+----
+<1> Reference to the function
+<2> Label that can be used to reference a Composition Revision in a claim or composite via a selector
+
+Once `function-appcat:v4.120.3-func` gets released and the composition changes, then there will still be the old revision that explicitly references the old function. Each claim and composite that point to that revision will reconcile against the old function, not against the new one.
+
+This emulates the same behavior as standard Composition Revisions. If at any point in the future Crossplane implements a proper support for function revision, our own solution should be sunset and instead be switched to Crossplanes solution.
+
+== High level flow
+The following flowchart shows how some additional logic in the maintenance logic for each service can enable a transition from one revision to the next.
+
+This is independent on whether we use our DIY function revisions
+
+[mermaid,flow,png]
+....
+flowchart TD
+    start[Claim/Composite created] --> test{Test OpenShift Cluster?}
+    test --> |Yes| testcluster[Always use latest revision]
+    testcluster --> stop
+    test --> |No| prod[Set revision policy to manual]
+    prod --> maint[Maintenance Cronjob triggers]
+    maint --> first{Is policy set to manual?}
+    first --> |Yes| autpolicy[Set revision policy to auto]
+    first --> |No| selector[Set revision selector to most current revision]
+    selector --> changes[Instance reconciles against latest function and receives changes]
+    autpolicy --> selector
+    changes --> stop
+....
+
+For production clusters the default revision policy will be set to manual. This will ensure that newly created instances will have the most current revision at the time of creation and are pinned to that. Test cluster will get the default policy automatic, so they get changes immediately. This will help detect issues faster on test clusters.
+
+Setting the policy to manual by default is necessary, because Crossplane won't allow us to set the revision selector on creation. It has to be done from a 3rd party mechanism (for example our instance maintenance).
+
+During the very first maintenance for any given instance, the maintenance job will switch the revision policy over to automatic. It will then also set the revision to the most current using a `selector` for production OpenShift clusters. The policy has to be set back to automatic in order for the selector to actually apply otherwise it will still keep using the old revision. Test clusters will skip this, as they have the automatic policy and will immediately go to the latest revision.
+
+=== Testing branches
+
+This feature can also be used to test multiple branches on the lab. For that add the ability to specify a list of branches to the component. The component will then deploy functions from these branches in addition to the normal list of tags.
+
+This will solve many issues with our single lab cluster. However, there are still some limitations to this:
+
+* Only one branch of the component can currently be rolled out. If multiple people want to test changes to the component, it still won't work without rebasing the changes ontop of eachother.
+* Only one version of the XRDs can be active. So again without rebasing onto each other's branches, it won't be possible to test more than one change to the XRDs at the same time.
+
+=== Hotfixes
+Not every patch release is urgent. But sometimes there is a bug that needs to be corrected immediately, also called a hotfix.
+
+To handle this an additional job will be specified in the component. This job will have a parameter which contains the explicit version that should be applied to all claims or components.
+
+Once deployed the job will check the current selector of each claim against the version it got via the parameter. If the current selector is below the hotfix version, then the job will patch the selector and point to the version containing the hotfix. If the current selector points to a more recent version, the job will skip the instance.
+
+Let's assume we have these versions:
+
+- v1.0.0 -> Initial Release
+- v1.0.1 -> Important, but not urgent bugfix
+- v1.0.2 -> Hotfix
+- v1.2.0 -> Feature
+- v1.2.1 -> Important, but not urgent bugfix
+- v1.2.2 -> Hotfix
+
+`Component-appcat` will contain a new parameter. Let's call it `hotfixVersion`. This is the parameter for the job that will switch the revisions immediately.
+
+.Example defaults.yaml in component
+[source,yaml]
+----
+...
+# No hotfixes for the initial release.
+namespace: syn-appcat
+hotFixversion: ""
+...
+----
+
+It starts with an empty string for the initial release. Also for `v1.0.1` it won't be set, as it's not a hotfix. If the string is empty, the component won't deploy the hotfix job.
+
+However, for `v1.0.2` the engineer who does the rollout will have to set the field to `v1.0.2` in order for the job to be generated by jsonnet.
+
+.Example logic to generate hotfixjob
+[source,jsonnet]
+----
+// Pseudocode
+local hotfixJob =
+kube.Job("hotfixer") {
+  metadata+: {
+    name: 'hotfixer',
+    namespace: params.namespace,
+  },
+  spec+: {},
+};
+
+{
+  [if params.hotfixVersion != '' then '10_hotfixer']: hotfixJob,
+}
+----
+
+The job will be generated by the component and deployed to all clusters.
+
+Next version is `v1.2.0`. The `hotfixVersion` variable can either be set to empty string again, or left as is. Because the job logic should never, ever downgrade the revision. Same for `v1.2.1`.
+
+For `v1.2.2` the engineer who deploys it, has to set `hotfixVersion` to `v1.2.2` again.
+
+== Pitfalls
+For this to work, we need to be mindful about the API between functions. Generally, adding new fields should not be problematic. However, changes to existing fields might break an older function.
+
+If there are breaking changes in the API, then there has to be a multistep migration process:
+
+. A version of the API that contains the new fields alongside the old fields is deployed. As Crossplane can currently only handle one active version for the API, it will be active immediately. The corresponding version of function-appcat will also be deployed.
+. That version of function-appcat needs to be able to handle the old and the new version of the API.
+. Once all instances point to the lastest function, a mutatingwebhook alongside a new version of function-appcat is deployed. The mutatingwebhook will seamlessly migrate the old API to the new one. The lastest version of function-appcat will remove the legacy logic to handle the old fields.
+
+

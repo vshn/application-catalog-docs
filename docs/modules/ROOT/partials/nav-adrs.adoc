@@ -27,3 +27,4 @@
 ** xref:adr/0027-keycloak-deployment-with-helm-chart.adoc[]
 ** xref:adr/0028-sli-prober-for-object-storage.adoc[]
 ** xref:adr/0029-converged-service-provisioning-implementation.adoc[]
+** xref:adr/0030-function-revisions.adoc[]

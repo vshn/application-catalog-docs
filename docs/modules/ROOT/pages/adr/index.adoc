@@ -121,4 +121,8 @@
 
 `framework`
 |obsolete |2022-03-24 |2022-11-25
+|xref:adr/0030-function-revisions.adoc[]
+
+`comp-functions,crossplane`
+|draft | |2025-01-29
 |===
