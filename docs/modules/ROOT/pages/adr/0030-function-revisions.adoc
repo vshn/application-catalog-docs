@@ -106,9 +106,18 @@ flowchart TD
 
 For production clusters the default revision policy will be set to manual. This will ensure that newly created instances will have the most current revision at the time of creation and are pinned to that. Test cluster will get the default policy automatic, so they get changes immediately. This will help detect issues faster on test clusters.
 
-Setting the policy to manual by default is necessary, because Crossplane won't allow us to set the revision selector on creation. It has to be done from a 3rd party mechanism (e.g. our instance maintenance).
+Setting the policy to manual by default is necessary, because Crossplane won't allow us to set the revision selector on creation. It has to be done from a 3rd party mechanism (for example our instance maintenance).
 
 During the very first maintenance for any given instance, the maintenance job will switch the revision policy over to automatic. It will then also set the revision to the most current using a `selector` for production OpenShift clusters. The policy has to be set back to automatic in order for the selector to actually apply otherwise it will still keep using the old revision. Test clusters will skip this, as they have the automatic policy and will immediately go to the latest revision.
+
+=== Testing branches
+
+This feature can also be used to test multiple branches on the lab. For that add the ability to specify a list of branches to the component. The component will then deploy functions from these branches in addition to the normal list of tags.
+
+This will solve many issues with our single lab cluster. However, there are still some limitations to this:
+
+* Only one branch of the component can currently be rolled out. If multiple people want to test changes to the component, it still won't work without rebasing the changes ontop of eachother.
+* Only one version of the XRDs can be active. So again without rebasing onto each other's branches, it won't be possible to test more than one change to the XRDs at the same time.
 
 === Hotfixes
 Not every patch release is urgent. But sometimes there is a bug that needs to be corrected immediately, also called a hotfix.
