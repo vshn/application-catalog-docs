@@ -1,6 +1,8 @@
 = Cloud Based AppCat Services
 :page-aliases: reference/cloud-usage-reporting.adoc
 
+IMPORTANT: This is only applicable for APPUiO Cloud! APPUiO Managed cloud resources get directly passed through to the customer.
+
 This page explains how cloud based services handle usage reporting.
 
 == Data Flow Overview
