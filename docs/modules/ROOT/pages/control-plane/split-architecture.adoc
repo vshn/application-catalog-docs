@@ -17,7 +17,7 @@ To make provisioning the kubeconfigs easier, the component will pre-provision se
 * On the control-plane: there's a service account named `appcat-service-cluster`, which service clusters can use to connect to the control-plane
 * On service-clusters: there's a service account named `appcat-control-plane` which the control-plane can use to connect to each service-cluster.
 
-Due to the nature of SYN, we can't create the kubeconfigs during compilation time. So each time a new service-cluster gets added to a control-plane, the kubeconfig has to generated and put into Vault manually.
+Due to the nature of SYN, we can't create the kubeconfigs during compilation time. So each time a new service-cluster gets added to a control-plane, the kubeconfig has to be generated and put into Vault manually.
 
 The steps how to generate a kubeconfig from a srevice-account are documented in the https://docs.appuio.cloud/user/how-to/connect-gitlab.html#_configuring_appuio_cloud_as_a_kubernetes_cluster_in_gitlab_without_the_agent[APPUiO Docs].
 
