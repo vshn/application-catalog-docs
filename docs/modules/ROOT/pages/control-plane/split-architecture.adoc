@@ -1,7 +1,7 @@
 = Crossplane Split Architecture
 :page-aliases: reference/control-plane-pitfalls.adoc
 
-This page contains descriptions about how we can operate services in a split archictecture.
+This page contains descriptions about how we can operate services in a split architecture.
 
 .Overview AppCat Architecture
 image::appcat_control_cluster.drawio.svg[]
