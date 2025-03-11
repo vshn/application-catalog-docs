@@ -1,6 +1,8 @@
 = Central Control Plane (CCP)
 :page-aliases: reference/arch-control-plane.adoc
 
+NOTE: This concept is deprecated and has been replaced by the https://docs.servala.com/web-portal.html[Servala Web Portal^].
+
 image::universal-control-plane.drawio.svg[]
 
 The Central Control Plane (CCP) provides the multi-tenant multi-service-provider aggregation and central entry-point.
