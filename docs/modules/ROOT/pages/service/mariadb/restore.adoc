@@ -1,0 +1,53 @@
+= Restore
+
+VSHNMariadb backups are performed using k8up.
+ 
+To restore a VSHNMariaDB backup the following tools are needed:
+
+* https://github.com/mfuentesg/ksd[GitHub - mfuentesg/ksd: kubernetes secret decoder] 
+* https://k8up.io/[K8up]
+* https://restic.net/[Restic]
+* `alias k=kubectl` && `alias ka='kubectl --as cluster-admin`
+
+== Acquiring VSHNMariaDB backup
+
+Locate instance namespace of VSHNMariaDB You want to backup:
+`k -n vshn-test get vshnmariadbs.vshn.appcat.vshn.io vshn-testing -o yaml | grep instanceNamespace` and for convinience use `kubens` using new namespace
+Depending on a cluster configuration it might be necessary for You to use all other commands using `kubectl --as cluster-admin` especially on Appuio Cloud
+There are two important secrets in instance namespace:
+* backup-bucket-credentials
+* k8up-repository-password
+
+Both of them can be used to combine Restic .env file, like in the example:
+
+[source,bash]
+----
+$ cat restic.env
+export RESTIC_REPOSITORY=s3:http://minio.127.0.0.1.nip.io:8088/vshn-testing-wzdmf-backup
+export RESTIC_PASSWORD="RGXsQ}4yp1aJwmSafOxzYCOVyqqvnRGpXWZp/OFhjwqzj2d&vfJk7J@A(dEJc1kr"
+export AWS_ACCESS_KEY_ID=vshn-testing-wzdmf-backup
+export AWS_SECRET_ACCESS_KEY=MotzUnnQkTrLSqMcpGBUggw7GyNKQ8fM6CykXqqSItbpSIA2Jw6caFanOmJQpKEX
+----
+
+**Remember to provide the correct S3 URL, for MinIO working inside of a cluster, you need to port-forward its service**
+
+Once configured, test if everything works by sourcing the env file: `source restic.env` and run `restic snapshots`. That should give You a list of available snapshots.
+
+== Restoring VSHNMariaDB backup
+
+To restore locally and check the files, You can use:
+[source,bash]
+----
+`mbstream -x < ../vshn-mariadb-vshn-testing-wzdmf-mariadb-galera.xb` 
+----
+It will create a local directory called restore. You can afterward test the dump locally using `docker` or `mariadb` itself.
+Perform actual restore:
+[source,bash]
+----
+`k cp restore widera-testing-wzdmf-0:/tmp/ -c mariadb-galera`
+`k exec -ti pods/widera-testing-wzdmf-0 -- bash`
+`rsync -av /tmp/restore/ /bitnami/mariadb/data/`
+`rm -rf /tmp/restore`
+`k rollout restart sts widera-testing-wzdmf`
+`watch -n 0.5 kubectl get pods` to verify if You databse is back again
+----
