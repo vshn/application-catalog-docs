@@ -1,0 +1,141 @@
+= Disaster Recovery for AppCat Services backed up by K8up
+:listing-caption: Listing
+
+This runbook is about disaster recovery in case of complete loss of the service cluster.
+It only applies to services that have encrypted backups via K8up.
+
+== icon:glasses[] Overview
+
+The disaster restore process consists of these high level steps:
+
+. Restore the K8up encryption keys and bucket credentials
+. Create the AppCat service instances again
+. Restore the data via restic
+
+
+== icon:search[] Restore necessary objects
+
+Please consult https://kb.vshn.ch/oc4/how-tos/recover-from-backup.html[this documentation] for restoring the objects.
+
+. Use the backup to identify all the AppCat instances that need to be restored.
+To get the backup credentials the instance namespace of each service has to be considered.
+. Each service claim contains the instance namespace in the `.status.instanceNamespace` field.
+. Once the instance namespace is identified restore its secrets. The K8up information is usually contained in:
+* `k8up-repository-passwor`
+* `backup-bucket-credentials`
+. Save the secrets and the claims for further steps
+
+== icon:plus[] Create AppCat service instances again
+
+. Use the saved claim to create the instance again. Create a copy of the claim and only populate `.spec.parameters` from the restored version. Otherwise Crossplane might get confused.
+. Be aware that that new instances will have a new instance namespace as it's auto generated!
+. In case of nested services that rely on PostgreSQL please consult http://localhost:2020/app-catalog/service/postgresql/runbooks/howto-manual-restore.html[the manual restore docs] to make it ready for restore as well.
+* PostgreSQL's restore settings can be set via `.spec.parameters.service.postgreSQLParameters.restore`.
+
+== icon:umbrella[] Restore the data via restic
+
+The usual self-service restores assume that there's another claim to reference the backups from.
+However, in a complete loss of the OpenShift cluster scenario there isn't one, so a manual approach needs to be
+
+. Use the field `.data.password` from `k8up-repository-password` to get the encryption key.
+. Use the fields in `backup-bucket-credentials` to get the bucket credentials.
++
+[,bash]
+----
+export RESTIC_REPOSITORY="s3:$(cat backup-bucket-credentials.yaml | yq -r '.data.ENDPOINT_URL' | base64 -d)$(cat backup-bucket-credentials.yaml | yq -r '.data.BUCKET_NAME' | base64 -d)"
+export RESTIC_PASSWORD="$(cat k8up-repository-password.yaml | yq -r '.data.password' | base64 -d)"
+export AWS_ACCESS_KEY_ID="$(cat backup-bucket-credentials.yaml | yq -r '.data.AWS_ACCESS_KEY_ID' | base64 -d)"
+export AWS_SECRET_ACCESS_KEY="$(cat backup-bucket-credentials.yaml | yq -r '.data.AWS_SECRET_ACCESS_KEY' | base64 -d)"
+----
+. List the available backups and choose the most appropriate one
++
+[,bash]
+----
+restic snapshots
+repository 711ad4d6 opened (version 2, compression level auto)
+created new cache in /Users/simonbeck/Library/Caches/restic
+ID        Time                 Host                      Tags        Paths
+--------------------------------------------------------------------------------------------------------
+b74d5fcf  2025-04-10 09:55:08  vshn-redis-beckdis-rpbg5              /vshn-redis-beckdis-rpbg5-redis.tar
+--------------------------------------------------------------------------------------------------------
+1 snapshots
+----
++
+. Scale down the instance
++
+[,bash]
+----
+kubectl -n vshn-redis-beckdis-rpbg5 scale sts redis-master --replica 0
+----
+. Create a K8up restore from that information
++
+[,yaml]
+----
+apiVersion: k8up.io/v1
+kind: Restore
+metadata:
+  name: redis-restore
+  namespace: vshn-redis-beckdis-rpbg5 <1>
+spec:
+  restoreMethod:
+    folder:
+      claimName: redis-data-redis-master-0 <2>
+  backend:
+    repoPasswordSecretRef:
+      name: k8up-repository-password
+      key: password
+    s3:
+      endpoint: http://minio-server.minio.svc:9000 <3>
+      bucket: beckdis-rpbg5-backup <4>
+      accessKeyIDSecretRef:
+        name: backup-bucket-credentials
+        key: AWS_ACCESS_KEY_ID
+      secretAccessKeySecretRef:
+        name: backup-bucket-credentials
+        key: AWS_SECRET_ACCESS_KEY
+----
+<1> Set to the new instance namespace
+<2> Get the name of the new `kubectl -n instanceNamespace get pvc`
+<3> Get from the `backup-bucket-credentials` secret
+<4> Get from the `backup-bucket-credentials` secret
++
+. Extract the data in the pvc
++
+[,yaml]
+----
+apiVersion: v1
+kind: Pod
+metadata:
+  name: busybox
+  namespace: vshn-redis-beckdis-rpbg5 <1>
+spec:
+  containers:
+  - image: busybox
+    command:
+      - sleep
+      - infinite
+    imagePullPolicy: IfNotPresent
+    name: busybox
+    volumeMounts:
+      - mountPath: /data
+        name: data
+  volumes:
+    - name: data
+      persistentVolumeClaim:
+        claimName: redis-data-redis-master-0 <2>
+  restartPolicy: Always
+----
+<1> Set to instance namespace
++
+[,bash]
+----
+kubectl -n instancenamespace exec -it busybox -- sh
+cd /data
+tar xvf vshn-redis-beckdis-rpbg5-redis.tar
+mv data/dump.rdb .
+rm vshn-redis-beckdis-rpbg5-redis.tar
+rmdir data/
+ls
+----
++
+. Scale the service up again `kubectl -n instanceNamespace scale sts redis-master --replicas 1`

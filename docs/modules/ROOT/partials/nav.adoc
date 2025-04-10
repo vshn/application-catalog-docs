@@ -30,6 +30,7 @@
 * CSP: APPUiO
 ** Runbooks
 *** xref:csp/appuio/runbooks/appuio-quotas.adoc[]
+*** xref:csp/appuio/runbooks/disaster-recover-appcat.adoc[]
 
 * CSP: SPKS
 ** xref:csp/spks/investigate_service_instances.adoc[]
