@@ -19,7 +19,7 @@ With the launch of Servala we will have multiple clusters running on different c
 
 === Cluster names
 
-We have two different kind of clusters for servala:
+We have two different kind of clusters for Servala:
 * Control-plane clusters: Those run Crossplane and contain all the Crossplane resources like functions, composites, api-server etc.
 * Service clusters: Those run the workloads that are managed by Crossplane.
 
