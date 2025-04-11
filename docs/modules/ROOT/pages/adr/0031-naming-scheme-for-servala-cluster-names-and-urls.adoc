@@ -12,7 +12,7 @@ include::partial$adr-meta.adoc[]
 [NOTE]
 .Summary
 ====
-With the launch of Servala we will have multiple clusters running on different cloud providers and on different regions. To ensure consistency and ease of management, it is important to establish a naming scheme for these clusters. This ADR outlines the proposed naming scheme for servala cluster names and URLs.
+With the launch of Servala we will have multiple clusters running on different cloud providers and on different regions. To ensure consistency and ease of management, it is important to establish a naming scheme for these clusters. This ADR outlines the proposed naming scheme for Servala cluster names and URLs.
 ====
 
 == Context
