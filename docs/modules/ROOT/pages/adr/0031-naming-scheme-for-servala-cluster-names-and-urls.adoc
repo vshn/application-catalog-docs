@@ -53,7 +53,7 @@ Putting all the information above together we propose the following naming schem
 
 TYPE:: The type of the cluster. `control` or `service`
 CSP:: The CSP where the cluster is running. cloudscale, exoscale, etc.
-REGION:: The region on the CSP where the cluster is running. `ch-gva-2`, `lpg1`, etc.
+REGION:: The region on the CSP where the cluster is running. `ch-gva-2`, `lpg1`, etc. Use the same naming as the CSP.
 STAGE:: The stage of the cluster. `test`, `prod`, etc
 COUNTER:: A unique counter for each cluster
 
