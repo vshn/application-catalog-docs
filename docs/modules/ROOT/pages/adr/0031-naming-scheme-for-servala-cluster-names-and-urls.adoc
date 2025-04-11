@@ -30,7 +30,7 @@ To properly distinguish and identify each cluster, the cluster name should conta
 * The stage of the cluster: `test`, `prod`
 * A counter for each cluster to ensure uniqueness.
 
-Lieutenant already gives us part of the naming scheme. Each cluster should be prefixed with `c-` followed by the tenant, so that it can easily identify which tenant owns the cluster.
+Lieutenant already gives us part of the naming scheme. Each cluster should be prefixed with `c-` followed by the tenant, so that it's easy for users to identify which tenant owns the cluster.
 
 === URLs
 
