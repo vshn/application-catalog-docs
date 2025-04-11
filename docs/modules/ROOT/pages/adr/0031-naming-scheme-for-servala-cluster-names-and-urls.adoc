@@ -34,9 +34,9 @@ Lieutenant already gives us part of the naming scheme. Each cluster should be pr
 
 === URLs
 
-We have to differnt URLs that are important:
-* The clusters API endpoint
-* The apps endpoint of Openshift for applications on the service clusters
+We have two different URLs that are important:
+* The Kubernetes API endpoint
+* The apps endpoint of OpenShift for applications on the service clusters
 
 The defaults for Openshift are:
 
