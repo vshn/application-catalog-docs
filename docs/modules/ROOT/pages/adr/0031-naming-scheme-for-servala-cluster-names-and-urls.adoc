@@ -1,4 +1,4 @@
-= ADR 0031 - Naming scheme for servala cluster names and URLs
+= ADR 0031 - Naming scheme for Servala cluster names and URLs
 :adr_author:    Nicolas Bigler
 :adr_owner:     Schedar
 :adr_reviewers: 
