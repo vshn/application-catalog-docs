@@ -69,7 +69,7 @@ The apps domain for the services should be: `*.apps.[csp]-[region]-[stage][count
 
 Examples:
 
-* First production control-plane cluster running on cloudscale in the lgp1 region:
+* First production control-plane cluster running on Cloudscale in the lpg1 region:
 `api.cloudscale-lpg1-prod1.control.servala.com`
 * Second test service cluster running on exoscale in the ch-gva-2 region:
 `api.exoscale-ch-gva-2-test2.control.servala.com`
