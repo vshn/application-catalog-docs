@@ -38,7 +38,7 @@ We have two different URLs that are important:
 * The Kubernetes API endpoint
 * The apps endpoint of OpenShift for applications on the service clusters
 
-The defaults for Openshift are:
+The defaults in OpenShift are:
 
 * `api.[clustername].domain.tld`
 * `*.apps.[clustername].domain.tld`
