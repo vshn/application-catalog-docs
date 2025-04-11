@@ -56,7 +56,7 @@ Examples:
 * First production control-plane cluster running on cloudscale in the lgp1:
 `c-servala-control-cloudscale-lpg1-prod1`
 
-* Second test service cluster running on exoscale in the ch-gva-2 region:
+* Second test service cluster running on Exoscale in the ch-gva-2 region:
 `c-servala-service-exoscale-ch-gva-2-test2`
 
 === URLs
