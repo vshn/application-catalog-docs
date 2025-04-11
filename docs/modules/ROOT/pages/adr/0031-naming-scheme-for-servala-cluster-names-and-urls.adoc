@@ -59,7 +59,7 @@ COUNTER:: A unique counter for each cluster
 
 Examples:
 
-* First production control-plane cluster running on cloudscale in the lgp1:
+* First production control-plane cluster running on Cloudscale in the lpg1 zone:
 `c-servala-control-cloudscale-lpg1-prod1`
 
 * Second test service cluster running on Exoscale in the ch-gva-2 region:
