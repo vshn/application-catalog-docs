@@ -47,7 +47,7 @@ The defaults in OpenShift are:
 
 === Cluster names
 
-Putting all the information above together we propose the following naming scheme for servala cluster names:
+Putting all the information above together we propose the following naming scheme for Servala cluster names:
 
 `c-servala-[type]-[csp]-[region]-[stage][counter]`
 
