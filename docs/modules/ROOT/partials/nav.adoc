@@ -12,6 +12,7 @@
 * xref:service/redis/index.adoc[]
 
 * xref:service/mariadb/index.adoc[]
+** xref:service/mariadb/restore.adoc[]
 
 * xref:service/minio/index.adoc[]
 
