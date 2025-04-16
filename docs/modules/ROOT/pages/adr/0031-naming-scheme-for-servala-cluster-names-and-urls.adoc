@@ -1,0 +1,81 @@
+= ADR 0031 - Naming scheme for Servala cluster names and URLs
+:adr_author:    Nicolas Bigler
+:adr_owner:     Schedar
+:adr_reviewers: 
+:adr_date:      2025-04-11
+:adr_upd_date:  2025-04-11
+:adr_status:    draft
+:adr_tags:      servala,naming,scheme,cluster
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+With the launch of Servala we will have multiple clusters running on different cloud providers and on different regions. To ensure consistency and ease of management, it is important to establish a naming scheme for these clusters. This ADR outlines the proposed naming scheme for Servala cluster names and URLs.
+====
+
+== Context
+
+=== Cluster names
+
+We have two different kind of clusters for Servala:
+* Control-plane clusters: Those run Crossplane and contain all the Crossplane resources like functions, composites, api-server etc.
+* Service clusters: Those run the workloads that are managed by Crossplane.
+
+To properly distinguish and identify each cluster, the cluster name should contain the following information:
+* The CSP where the cluster is running: Cloudscale, Exoscale, etc.
+* The region where the cluster is running: `ch-gva-2`, `lpg1`, etc.
+* The type of cluster: `control` or `service`
+* The stage of the cluster: `test`, `prod`
+* A counter for each cluster to ensure uniqueness.
+
+Lieutenant already gives us part of the naming scheme. Each cluster should be prefixed with `c-` followed by the tenant, so that it's easy for users to identify which tenant owns the cluster.
+
+=== URLs
+
+We have two different URLs that are important:
+* The Kubernetes API endpoint
+* The apps endpoint of OpenShift for applications on the service clusters
+
+The defaults in OpenShift are:
+
+* `api.[clustername].domain.tld`
+* `*.apps.[clustername].domain.tld`
+
+== Decision
+
+=== Cluster names
+
+Putting all the information above together we propose the following naming scheme for Servala cluster names:
+
+`c-servala-[TYPE]-[CSP]-[REGION]-[STAGE][COUNTER]`
+
+TYPE:: The type of the cluster. `control` or `service`
+CSP:: The CSP where the cluster is running. cloudscale, exoscale, etc.
+REGION:: The region on the CSP where the cluster is running. `ch-gva-2`, `lpg1`, etc. Use the same naming as the CSP.
+STAGE:: The stage of the cluster. `test`, `prod`, etc
+COUNTER:: A unique counter for each cluster
+
+Examples:
+
+* First production control-plane cluster running on Cloudscale in the lpg1 zone:
+`c-servala-control-cloudscale-lpg1-prod1`
+
+* Second test service cluster running on Exoscale in the ch-gva-2 region:
+`c-servala-service-exoscale-ch-gva-2-test2`
+
+=== URLs
+
+We have a dedicated domain for servala clusters: servala.com and will use that domain for all clusters
+
+The control-plane clusters API should be reachable under the following URL: `api.[csp]-[region]-[stage][counter].control.servala.com`
+
+The apps domain for the services should be: `*.apps.[csp]-[region]-[stage][counter].servala.com`
+
+Examples:
+
+* First production control-plane cluster running on Cloudscale in the lpg1 region:
+`api.cloudscale-lpg1-prod1.control.servala.com`
+* Second test service cluster running on Exoscale in the ch-gva-2 region:
+`api.exoscale-ch-gva-2-test2.control.servala.com`
