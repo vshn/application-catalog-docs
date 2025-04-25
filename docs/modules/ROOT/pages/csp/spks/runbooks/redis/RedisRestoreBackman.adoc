@@ -1,0 +1,79 @@
+= Restore Backman Backup
+
+
+== icon:glasses[] Overview
+
+Backman can backup Redis, but it can't automatically restore the backups.
+So the restore is a manual process.
+
+== icon:bug[] Steps for Restoring
+
+=== Get Access to the bucket
+
+Backman saves the backups in S3 object storage.
+The first step is to get access to the bucket where the backups reside.
+This is provided by the user, as we don't have access to their backman configuration.
+
+=== Restore dump
+
+[source,bash]
+----
+INSTANCE=<instance_id>
+kubectl -n $INSTANCE scale sts redis-node --replicas=0
+
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: minio-client
+  namespace: $INSTANCE
+spec:
+  containers:
+  - command:
+    - bash
+    - -ec
+    - sleep 36000
+    image: remote-docker.artifactory.swisscom.com/bitnami/minio-client:latest
+    imagePullPolicy: IfNotPresent
+    name: mc
+    resources:
+      limits:
+        cpu: "1"
+        memory: 2560Mi
+      requests:
+        cpu: 100m
+        memory: 100Mi
+    volumeMounts:
+    - mountPath: /restore
+      name: data-0
+  dnsPolicy: ClusterFirst
+  restartPolicy: Never
+  serviceAccount: default
+  serviceAccountName: default
+  terminationGracePeriodSeconds: 30
+  volumes:
+  - name: data-0
+    persistentVolumeClaim:
+      claimName: redis-data-redis-node-0
+EOF
+----
+
+Then use the minio client to connect to the bucket and restore:
+
+[source,bash]
+----
+kubectl -n $INSTANCE exec -it minio-client -- bash
+mc alias set bucket $endpoint $accesskey $secretkey
+# check the specific path in the bucket
+mc ls bucket/...
+mc cp bucket/.../dump.gzip /restore
+cd /restore
+gunzip dump.gzip
+----
+
+Delete the minio client pod and scale up the Redis instance:
+[source,bash]
+----
+kubectl -n $INSTANCE delete pod minio-client
+kubectl -n $INSTANCE scale sts redis-node --replicas=3
+----
