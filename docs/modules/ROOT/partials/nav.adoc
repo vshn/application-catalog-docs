@@ -53,6 +53,7 @@
 **** xref:csp/spks/runbooks/redis/RedisOutOfMemory.adoc[]
 **** xref:csp/spks/runbooks/redis/RedisReplicationBroken.adoc[]
 **** xref:csp/spks/runbooks/redis/RedisTooManyMasters.adoc[]
+**** xref:csp/spks/runbooks/redis/RedisRestoreBackman.adoc[]
 ** xref:csp/spks/mariadb_galera.adoc[]
 *** xref:csp/spks/mariadb_galera_lb_with_haproxy.adoc[]
 *** xref:csp/spks/mariadb_haproxy_stats.adoc[]
