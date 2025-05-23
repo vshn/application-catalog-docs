@@ -29,3 +29,4 @@
 ** xref:adr/0029-converged-service-provisioning-implementation.adoc[]
 ** xref:adr/0030-function-revisions.adoc[]
 ** xref:adr/0031-naming-scheme-for-servala-cluster-names-and-urls.adoc[]
+** xref:adr/0032-ci-pipeline.adoc[]
