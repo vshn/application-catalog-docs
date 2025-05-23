@@ -1,0 +1,100 @@
+= ADR 0032 - CI Pipeline
+:adr_author:    Gabriel Saratura
+:adr_owner:     Schedar
+:adr_reviewers: 
+:adr_date:      2025-05-22
+:adr_upd_date:  2025-05-22
+:adr_status:    draft
+:adr_tags:      ci,pipeline,cd,github
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+Our current CI system no longer aligns with the updated release process, particularly in supporting independent handling of hotfixes and feature requests.
+The Gitflow workflow has been selected as the branching model for our CI pipeline.
+====
+
+== Problem Statement
+
+=== Hotfix Release Cycle
+
+Currently, hotfix pull requests are often entangled with new feature development in the `master` branch.
+This results in the unintended deployment of new features alongside urgent hotfixes.
+While this was previously manageable, the recent need to minimize downtime has made this practice unsustainable.
+
+We need a solution that enables hotfixes to be deployed independently, while deferring feature releases to scheduled maintenance windows.
+
+== Existing Workflow: Trunk-Based Development
+
+Trunk-based development encourages small, frequent changes merged directly into a central `master` branch.
+This model promotes rapid integration and minimizes merge conflicts, which aligns well with continuous integration goals.
+
+However, the current approach is proving problematic for handling hotfix releases under our new xref:ROOT:adr/0030-function-revisions.adoc[CD process].
+
+=== Attempted Hotfix Solutions
+
+*Forking hotfixes from tags instead of `master`:*
+
+- No change needed to current CI.
+- Ensures hotfixes are isolated from ongoing feature work.
+- Requires hotfixes to be merged back into `master` later.
+- Tags can be difficult to track and manage effectively.
+- Risk of deploying a tag that lacks the latest hotfix.
+
+*Using feature flags in AppCat:*
+
+- High implementation cost.
+- Adds complexity to the AppCat framework.
+- Treats a CI pipeline problem as an application concern—violates separation of concerns.
+
+== Proposed Workflow: Gitflow
+
+Gitflow is a branching strategy that separates feature development, hotfixes, and production releases. It introduces distinct branches for features, releases, and hotfixes, which better supports controlled deployments.
+
+=== `master` Branch
+
+- Represents production-ready code.
+- All production tags originate here.
+- No direct development occurs on this branch.
+- Hotfixes and release-ready features are merged into `master`.
+
+image::adr-0032-master-develop.png[Master-Develop example]
+
+=== `develop` and Feature Branches
+
+- All new features branch off from `develop`.
+- Once a feature is complete and tested, it is merged back into `develop`.
+- Features are promoted to `master` only during planned releases.
+
+image::adr-0032-develop-fr.png[Develop-FeatureRequest example]
+
+=== `hotfix` Branches
+
+- Created directly from `master` to address urgent production issues.
+- Merged into both `master` (for immediate deployment) and `develop` (to preserve history).
+- Provides an isolated path for emergency changes.
+
+image::adr-0032-hotfix.png[Hotfix example]
+
+=== Benefits of Gitflow for Hotfixes
+
+- Hotfixes are isolated from feature development.
+- Releases become predictable and manageable.
+- Enables CI/CD to support both rapid patches and stable, scheduled deployments.
+
+== Decision
+
+Adopt the Gitflow model and update the CI pipeline accordingly:
+
+. Create hotfix branches from `master` as needed.
+. Merge hotfixes into both `master` and `develop`.
+. Use `develop` for all ongoing feature work.
+. Merge `develop` into `master` only during release cycles.
+
+*Trade-offs:*
+
+- More complex CI configuration.
+- Clean separation of emergency and planned releases.
+- Solves current pain point with minimal risk of feature leakage during hotfixes.
