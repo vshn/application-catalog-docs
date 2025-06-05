@@ -1,0 +1,100 @@
+= ADR 0034 - Redis High Availability /  Clustering
+:adr_author:    Nicolas Bigler
+:adr_owner:     Schedar
+:adr_reviewers: 
+:adr_date:      2025-06-04
+:adr_upd_date:  2025-06-04
+:adr_status:    draft
+:adr_tags:      redis,ha
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+This ADR evaluates different Redis HA deployment options on Kubernetes to support a production-grade, fault-tolerant Redis setup. The goal is to ensure high availability, resilience to node failures, and ease of management/operations.
+====
+
+== Context
+
+Requirements to the Redis HA architecture:
+
+* Minimizes downtime during failover
+* Supports Kubernetes-native patterns
+* Is operationally manageable
+* Is compatible with our existing infrastructure and client usage patterns
+
+=== Considered Options
+
+Option 1:  Redis Sentinel + Redis Master/Replica::
+
+image::adr-0034-redis-sentinel.png[Redis Master/Replica & Sentinel Example]
+
+* Description: Traditional Redis HA using Sentinel to monitor and promote replicas when the master fails.
+* Pros:
+  ** Well-established model
+  ** Supported by Redis directly
+  ** Easy to deploy and manage with the Bitnami Helm chart
+  ** Supports Kubernetes-native patterns
+* Cons:
+  ** Requires client that supports sentinel
+  ** Can't be used when exposing Redis outside of Kubernetes (for example Loadbalancer service) and therefore can't be used by Servala.
+
+Option 2: Redis Cluster Mode::
+
+* Description: Redis Cluster offers built-in sharding and high availability with multiple masters and replicas.
+* Pros:
+  ** Native Redis HA and scalability
+  ** No need for Sentinel
+* Cons:
+  ** Requires client-side cluster awareness
+  ** Higher operational complexity: need to manage multiple masters and replicas
+
+Option 3: Redis Master/Replica with TCP Proxy in Front (for example HAProxy, Envoy)::
+
+image::adr-0034-redis-sentinel-haproxy.png[Redis Master/Replica & Sentinel & HAProxy Example]
+
+* Description: Deploy Redis in master-replica mode, expose the Redis master behind a TCP load balancer or proxy that can detect failure and route to the promoted master.
+* Pros:
+  ** No need for Sentinel
+  ** Client remains unaware of master failover; proxy handles redirection
+  ** Greater flexibility in failover and health checks
+  ** Can be exposed outside of Kubernetes (for example Loadbalancer service) and therefore be used by Servala
+* Cons:
+  ** Requires custom failover scripts or integration with Sentinel to update routes
+  ** Slight increase in latency due to proxy hop
+  ** Operational complexity: proxy config must track Redis role changes
+
+Option 4: Redis Master/Replica with Label-based Service Selector and Custom Controller::
+
+image::adr-0034-redis-sentinel-controller.png[Redis Master/Replica & Sentinel & Custom Controller Example]
+* Description: Deploy Redis in master-replica mode, expose the Redis master using a Kubernetes Service that selects pods based on a label indicating the master role. A custom controller watches Redis Sentinel to identify the current master and updates pod labels accordingly.
+* Pros:
+  ** Kubernetes-native solution using native Service abstraction
+  ** No additional proxy layer, fully transparent for clients
+  ** Stable DNS name always points to the master node
+  ** Simplifies failover for clients that are not Sentinel-aware
+  ** Can be exposed outside of Kubernetes (for example Loadbalancer service) and therefore be used by Servala
+* Cons:
+  ** Requires development and maintenance of a custom controller
+  ** Controller needs robust error handling to maintain correct labels during Sentinel failover events
+  ** Slight failover lag depending on Sentinel detection + label update speed
+  ** Complexity shifts from proxy configuration to controller logic
+
+
+== Decision
+
+Option 1 and 3: They are simpler alternatives that can be implemented more easily.
+We can even use both options at the same time by using a flag if we want to enable a proxy in front of Redis.
+
+This gives us the flexibility to support users that have sentinel support in their application as well as the users that don't.
+Furthermore, with Option 3 we ensure that the service is also usable with Servala, where the service is exposed publicly.
+
+Last but not least, Options 1 and 3 make it also easy to migrate from HA to non-HA and vice versa. With Option 2 this is not easily doable, as the data is spread across different masters.
+
+Option 2: Redis Cluster Mode is too complex for our use case at the moment as it requires multiple masters and replicas. It's also not straight-forward to switch between non-clustered and clustered mode.
+
+== Consequences
+
+* We need an additional flag to enable a proxy in front of Redis.
+* We need to develop and test failover detection and dynamic re-routing logic in the proxy.
