@@ -65,36 +65,40 @@ image::adr-0034-redis-sentinel-haproxy.png[Redis Master/Replica & Sentinel & HAP
   ** Slight increase in latency due to proxy hop
   ** Operational complexity: proxy config must track Redis role changes
 
-Option 4: Redis Master/Replica with Label-based Service Selector and Custom Controller::
+Option 4: Redis Master/Replica with label-selector on the Service::
 
 image::adr-0034-redis-sentinel-controller.png[Redis Master/Replica & Sentinel & Custom Controller Example]
-* Description: Deploy Redis in master-replica mode, expose the Redis master using a Kubernetes Service that selects pods based on a label indicating the master role. A custom controller watches Redis Sentinel to identify the current master and updates pod labels accordingly.
+* Description: Deploy Redis in master-replica mode, expose the Redis master using a Kubernetes Service that selects pods based on a label indicating the master role. A custom deployment/sidecar watches Redis Sentinel to identify the current master and updates pod labels accordingly.
 * Pros:
   ** Kubernetes-native solution using native Service abstraction
   ** No additional proxy layer, fully transparent for clients
   ** Stable DNS name always points to the master node
   ** Simplifies failover for clients that are not Sentinel-aware
+  ** The bitnami helm chart already supports additing sidecars. So we can easily add it as a sidecar instead of a separate deployment.
   ** Can be exposed outside of Kubernetes (for example Loadbalancer service) and therefore be used by Servala
 * Cons:
-  ** Requires development and maintenance of a custom controller
-  ** Controller needs robust error handling to maintain correct labels during Sentinel failover events
+  ** Requires development and maintenance of a custom controller or an operator
+  ** Deployment/sidecar needs robust error handling to maintain correct labels during Sentinel failover events
   ** Slight failover lag depending on Sentinel detection + label update speed
   ** Complexity shifts from proxy configuration to controller logic
+  ** We don't have much experience with this yet.
 
 
 == Decision
 
-Option 1 and 3: They are simpler alternatives that can be implemented more easily.
-We can even use both options at the same time by using a flag if we want to enable a proxy in front of Redis.
+Option 1 and 4: Option 1 is the easiest solution to implement and doesn't require much engineering effort. However, we still need a solution for all the clients that don't have sentinel support. For that we will go with the Kubernetes native approach by levering label selectors on the service.
+Option 4 is slightly more work to setup as we don't have any experience with this yet. However, we should try to leverage Kubernetes native solutions if they are available and make sense.
+
+We can even use both options at the same time by using a flag if we want to expose redis via separate service using a label selector on the service.
 
 This gives us the flexibility to support users that have sentinel support in their application as well as the users that don't.
-Furthermore, with Option 3 we ensure that the service is also usable with Servala, where the service is exposed publicly.
+Furthermore, with Option 4 we ensure that the service is also usable with Servala, where the service is exposed publicly.
 
-Last but not least, Options 1 and 3 make it also easy to migrate from HA to non-HA and vice versa. With Option 2 this is not easily doable, as the data is spread across different masters.
+Last but not least, Options 1 and 4 make it also easy to migrate from HA to non-HA and vice versa. With Option 2 this is not easily doable, as the data is spread across different masters.
 
 Option 2: Redis Cluster Mode is too complex for our use case at the moment as it requires multiple masters and replicas. It's also not straight-forward to switch between non-clustered and clustered mode.
 
 == Consequences
 
-* We need an additional flag to enable a proxy in front of Redis.
-* We need to develop and test failover detection and dynamic re-routing logic in the proxy.
+* We need an additional flag to enable the additional master service and the additional deployment/sidecar for labeling the pods.
+* We need to develop and test a software fo master/replica detection and pod labeling in a side-car or deployment. We can get some inspiration from this existing (but archieved) project: https://github.com/riptl/redis-k8s-election
