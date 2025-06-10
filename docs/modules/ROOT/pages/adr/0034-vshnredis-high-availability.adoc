@@ -1,4 +1,4 @@
-= ADR 0034 - VSHNRedis High Availability
+= ADR 0034 - Redis High Availability /  Clustering
 :adr_author:    Nicolas Bigler
 :adr_owner:     Schedar
 :adr_reviewers: 
