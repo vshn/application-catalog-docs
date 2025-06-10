@@ -24,7 +24,7 @@ Requirements to the Redis HA architecture:
 * Is operationally manageable
 * Is compatible with our existing infrastructure and client usage patterns
 
-=== Concidered Options
+=== Considered Options
 
 **Option 1:  Redis Sentinel + Redis Master/Replica**
 
