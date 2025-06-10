@@ -17,7 +17,7 @@ This ADR evaluates different Redis HA deployment options on Kubernetes to suppor
 
 == Context
 
-We must select a Redis HA architecture that:
+Requirements to the Redis HA architecture:
 
 * Minimizes downtime during failover
 * Supports Kubernetes-native patterns
