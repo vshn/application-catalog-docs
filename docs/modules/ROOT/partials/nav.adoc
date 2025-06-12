@@ -15,6 +15,7 @@
 ** xref:service/mariadb/restore.adoc[]
 
 * xref:service/minio/index.adoc[]
+** xref:service/minio/install.adoc[]
 
 * xref:service/forgejo-codey/index.adoc[]
 ** xref:service/forgejo-codey/architecture.adoc[]

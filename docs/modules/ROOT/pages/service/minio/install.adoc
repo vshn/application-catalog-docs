@@ -1,0 +1,67 @@
+= Installation
+
+Minio installation and provider configuration are managed via the component.
+This setup consists of several key parts:
+
+* Provider
+* Composition Functions
+* Deployments via Composition Functions
+
+== Provider
+
+The `appcat.provider.minio` section supports multiple types of provider configurations:
+
+* Referencing an existing provider config by name
+* Creating additional configs using the `additionalProviderConfigs` field
+* Automatically injecting configs from the `appcat.services.vshn.minio.instance` field
+
+== Composition Functions
+
+This setup uses a minimal composition approach—compositions are entirely generated via functions.
+Each composition handles exactly one provider config, allowing users to select between different Minio instances.
+
+This mechanism is already used to select between various cloud providers for `ObjectBuckets`.
+A default composition can be specified to define which instance should be used by default.
+
+== Deployment
+
+You can deploy any number of Minio instances to a cluster via the `appcat.services.vshn.minio.instance` field.
+As described above, provider configs are injected automatically, and new compositions are generated accordingly.
+
+== Example Configuration
+
+[source,yaml]
+----
+appcat:
+  providers:
+    minio:
+      enabled: true
+  services:
+    generic:
+      objectstorage:
+        enabled: true
+        defaultComposition: my-minio <1>
+        compositions:
+          minio:
+            enabled: true
+    vshn:
+      minio:
+        enabled: true
+        instances:
+          - name: my-minio
+            namespace: myns
+            spec:
+              parameters:
+                service:
+                  mode: standalone <2>
+                size:
+                  disk: 1Gi
+              writeConnectionSecretToRef:
+                name: my-minio-creds
+----
+
+<1> Name of the default composition reference. Use the name of any instance listed in `appcat.services.vshn.minio.instances`.
+NOTE: Do not use the fully qualified composition name (FQDN); the component automatically resolves it.
+
+<2> Deploys a single Minio instance in standalone mode.
+
