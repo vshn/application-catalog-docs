@@ -4,7 +4,7 @@
 :adr_reviewers: 
 :adr_date:      2025-04-11
 :adr_upd_date:  2025-04-11
-:adr_status:    draft
+:adr_status:    accepted
 :adr_tags:      servala,naming,scheme,cluster
 
 include::partial$adr-meta.adoc[]
@@ -49,13 +49,13 @@ The defaults in OpenShift are:
 
 Putting all the information above together we propose the following naming scheme for Servala cluster names:
 
-`c-servala-[TYPE]-[CSP]-[REGION]-[STAGE][COUNTER]`
+`c-sv-[TYPE]-[CSP]-[REGION]-[STAGE][COUNTER]`
 
-TYPE:: The type of the cluster. `control` or `service`
-CSP:: The CSP where the cluster is running. cloudscale, exoscale, etc.
-REGION:: The region on the CSP where the cluster is running. `ch-gva-2`, `lpg1`, etc. Use the same naming as the CSP.
+TYPE:: The type of the cluster. `ctr` or `svc`
+CSP:: The CSP where the cluster is running, abbreviated to 3 chars. cls (cloudscale), exo (exoscale), etc.
+REGION:: The region on the CSP where the cluster is running, abbreviated to 5 chars. `gva-2`, `lpg-1`, etc. Use the same naming as the CSP if possible.
 STAGE:: The stage of the cluster. `test`, `prod`, etc
-COUNTER:: A unique counter for each cluster
+COUNTER:: A unique two digit counter for each cluster
 
 Examples:
 
