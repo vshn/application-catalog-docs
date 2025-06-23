@@ -1,0 +1,242 @@
+= ADR 0033 - Event-Based Billing
+:adr_author:    Gabriel Saratura
+:adr_owner:     Schedar
+:adr_reviewers:
+:adr_date:      2025-06-02
+:adr_upd_date:  2025-06-02
+:adr_status:    draft
+:adr_tags:      billing,odoo
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+For sending billing events to Odoo (https://docs.central.vshn.ch/event-billing.html[Event Based Billing^]), will use the existing AppCat controller to manage billing events and Kubernetes CRDs as the persistence mechanism.
+====
+
+== Requirements
+
+. Reuse existing tools and/or components of AppCat to build a resilient event-based billing solution.
+. Make data resending to Odoo possible in case it's required (historical record retention is required).
+. Persist the state of each billing request.
+. Do not block service creation, deletion, or update due to errors in the billing system.
+. [[odoo-sync-state]] Provide a way to verify sync state between Odoo and the Kubernetes cluster.
+. Do not lose any event (created, deleted, scaled), as this has a direct financial impact.
+
+
+== Solution Options
+
+After careful evaluation, the two most promising solutions for implementing event-based billing are:
+
+. <<AppCat Controller>>
+. <<Runtime Library via Crossplane Composition Functions>>
+
+=== AppCat Controller
+
+Transitioning from metered to event-based billing requires leveraging Kubernetes controllers more extensively.
+Our existing AppCat controller already handles event forwarding and webhooks, making it a natural candidate for integrating billing logic.
+
+Pros::
+
+* Full control over the lifecycle of VSHN custom resource services.
+* Customizable retry logic.
+* Clear separation of concerns between billing and service management.
+* Flexible support for different persistence backends.
+
+
+=== Runtime Library via Crossplane Composition Functions
+
+We can embed billing logic into our existing runtime library for Crossplane Composition Functions, thereby coupling service lifecycle events directly with billing logic.
+
+Pros::
+
+* Reconciliation happens directly during create, update, or delete operations.
+* Billing logic is treated as a first-class part of provisioning/deprovisioning.
+
+Cons::
+
+* Persistence integration becomes more complex.
+* No clear separation between billing and service logic.
+* Unclear where billing actually occurs, which can reduce maintainability.
+* We can't actually react on deletion events. Crossplane doesn't propagate them to the functions.
+
+== Persistence Options
+
+Based on past experience, we anticipate the need to resend older data to Odoo due to potential issues either in AppCat or Odoo.
+A lightweight, reliable mechanism to store and replay billing data is essential.
+
+Required capabilities:
+
+* Filtering and querying historical events.
+* Manual replay.
+* Partial delivery of historical events.
+* Operational simplicity
+
+=== SQLite
+
+SQLite is a simple, embedded SQL database engine suitable for local persistence needs.
+
+Pros::
+
+* Minimal setup; no external infrastructure required.
+* Fast for local and sequential read/write operations.
+* Full SQL support.
+* ACID-compliant (supports WAL mode).
+* Self-contained `.db` file that's easy to handle and back up.
+* Supports pagination and filtering by retry state or timestamp.
+
+Cons::
+
+* Not suitable for concurrent writes across multiple pods.
+* Requires manual effort for backups, failover, and compaction.
+* Not distributed or highly available.
+* Lacks integration with Kubernetes tools like `kubectl`.
+* Not inherently event-driven.
+
+=== Custom Kubernetes CRDs
+
+Custom Resource Definitions (CRDs) can be used to model billing events as native Kubernetes objects.
+
+Pros::
+
+* Native integration with Kubernetes and observable via `kubectl`.
+* Supports event-driven architectures through controllers.
+* State tracking via `.status` fields.
+* Reusable by other tools/controllers within the cluster.
+* Scales horizontally (no single-writer limitation).
+
+Cons::
+
+* Excessive CR volume may cause etcd bloat, impacting cluster performance.
+* Increased API server traffic.
+* Requires boilerplate for CRD definitions and status handling.
+* No native support for complex queries (unlike SQL).
+* Manual schema migration is necessary.
+* No built-in audit trail beyond resource versioning.
+
+== Decision
+
+=== Use Controller + Custom Kubernetes CRD
+
+The recommendation is to extend the existing AppCat controller to manage event-based billing and using Kubernetes CRDs as the persistence mechanism.
+
+*Justification:*
+
+* A controller is the natural place for billing, as it sits adjacent to service lifecycle management without coupling to it.
+* CRDs integrate well into our Kubernetes-native toolset and align with GitOps principles.
+* Data inspection and interaction via `kubectl` is simple and consistent with existing workflows.
+* While CRs are harder to query than SQL databases, we can mitigate this by providing predefined `kubectl` query templates for common tasks.
+* Kubernetes retry mechanisms can be leveraged for automatic re-delivery of failed events.
+* By using `patch` operations on CRs, we can flag specific events for manual resending to Odoo.
+* With careful CRD schema design (example: using one CR per service instead of one per event), we can avoid overwhelming etcd.
+* If detailed auditing is needed, it can be delegated to an external logging or database system.
+
+This hybrid approach gives us robust control, observability, and operational flexibility for event-based billing with minimal compromise.
+
+=== Billing Custom Resource (CR)
+
+Each Billing Custom Resource (CR) describes a single service instance and its full lifecycle - from creation to deletion.
+
+It consists of two main sections:
+
+1. **Static data** - Defined under `.spec.odoo`. These values remain constant throughout the service's lifecycle.
+2. **Dynamic data** - Defined under `.status.events`. This section evolves over time, reflecting lifecycle changes such as scaling actions or SLA updates.
+
+All lifecycle events (creation, scaling, deletion) are recorded within the same resource, enabling full event history reconstruction.
+This also allows operations such as **resending** events via annotations.
+
+The `.status.events` array must be ordered in **descending** order by `timestamp`, with the most recent event listed first.
+
+Event resending is supported automatically and includes an **exponential backoff retry mechanism**.
+
+All CRs will be created within a single, dedicated namespace.
+
+This design provides better isolation and aligns with the Kubernetes and Crossplane direction of deprecating cluster-scoped resources.
+Scoping CRs to a namespace offers several advantages:
+
+* Enables referencing other namespaced resources like ConfigMaps, if required in the future.
+* Simplifies access control and resource lifecycle management.
+* Keeps CRs co-located with their controller, which also runs in the same namespace.
+
+Centralizing CRs in one namespace enhances organization, improves security, and promotes operational simplicity.
+
+A resource is considered `Synced` only when **all** `.status.events[].state` values are `sent`.
+
+There is currently no need to limit the number of stored events, as the expected volume per CR is low and manageable.
+
+==== Billing CR Example
+
+[source,yaml]
+----
+apiVersion: appcat.vshn.io/v1
+kind: BillingService
+metadata:
+  annotations:
+    appcat.vshn.io/resend: "all|not-sent|failed" #<1>
+  name: <instance-xrd>                           #<2>
+  namespace: syn-appcat                          #<3>
+  finalizers:
+  - delete-protection                            #<4>
+spec:
+  keepAfterDeletion: 365                         #<5>
+  odoo:                                          #<6>
+    instanceID: "a"
+    salesOrderID: "SO0042"
+    itemDescription: "Human readable description"
+    itemGroupDescription: "My Item Group"
+    unitID: "vshn_event_billing.uom_instance_hour"
+status:
+  events:                                        #<7>
+    - type: "deleted"
+      productId: "Y"
+      size: "3"
+      timestamp: "2025-06-20T13:00:00Z"
+      state: "sent|pending|failed"               #<8>
+    - type: "scaled"
+      productId: "Y"
+      size: "3"
+      timestamp: "2025-05-20T13:00:00Z"
+      state: "sent|pending|failed"
+    - type: "scaled"
+      productId: "Y"
+      size: "2"
+      timestamp: "2025-04-20T13:00:00Z"
+      state: "sent|pending|failed"
+    - type: "created"
+      productId: "X"
+      size: "1"
+      timestamp: "2025-03-20T13:00:00Z"
+      state: "sent|pending|failed"
+  conditions:
+    - lastTransitionTime: "2024-05-25T15:35:02Z"
+      reason: ReconcileSuccess
+      status: "True"
+      type: Synced
+    - lastTransitionTime: "2023-05-25T18:45:38Z"
+      reason: Available
+      status: "True"
+      type: Ready
+----
+
+<1> An on-demand trigger to resend events from the `status.events` list based on their `state`.
+<2> Unique name of the composite - serves as the identifier for the Billing CR.
+<3> All Billing CRs reside in the `syn-appcat` - framework's management namespace.
+<4> A finalizer from the controller to protect from accidental deletion.
+<5> The field defines after how many days the CR should be deleted after the service is removed.
+<6> The `spec.odoo` section contains static metadata, consistent across all events.
+<7> The `status.events` array holds dynamic billing event fields, typically following lifecycle changes.
+<8> The `state` field tracks event delivery status to Odoo: `sent`, `pending`, or `failed`.
+
+[NOTE]
+====
+For a complete reference of all fields in this CR, see the https://docs.central.vshn.ch/event-billing-ingestion.html[Odoo documentation].
+====
+
+[NOTE]
+.xref:odoo-sync-state[Odoo Sync State]
+====
+Odoo currently provides REST API endpoints that can be used to check sync status between Billing CRs and Odoo.
+
+This will be addressed in a future iteration of the AppCat Billing System.
+====
