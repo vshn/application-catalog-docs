@@ -1,0 +1,98 @@
+= ADR 0035 - iKube 2.0 Migration AppCat
+:adr_author:    Simon Beck
+:adr_owner:     Schedar
+:adr_reviewers:
+:adr_date:      2025-07-02
+:adr_upd_date:  2025-07-02
+:adr_status:    draft
+:adr_tags:      appcat, spks
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+This ADR compares various strategies how we want to handle the migration to iKube 2.0.
+The opportinity is used to address a few pain points we have with the current setup.
+This ADR is NOT about iKube 2.0, only about the Crossplane part of SPKS.
+====
+
+== Context
+SPKS will migrate to a new platform called iKube 2.0.
+This is a good time to homogenize AppCat with the SPKS offering where it makes sense.
+
+Currently SPKS is completely separate from AppCat and based on PnT compositions.
+SPKS' requirements are a lot more static than AppCat's:
+
+* There's no configuration of the services possible.
+* User management is solved via separate compositions.
+* The system pre-dates comp-functions by quite a bit. Everything is done via PnT, jsonnet and permutations. Different configurations are selected via `compositionRefs`
+
+Additionally SPKS runs on their own vanilla Kubernetes within their own network.
+We only have limitted access to the infastructure.
+
+The users provision the services via a custom GUI which talks to a custom service broker implementation.
+
+The biggest pain points with the current system are:
+
+* Deployment of new versions. It's cumbersome and a manual, thus prone to errors
+* A large portion of the composition configuration is hard-coded as yaml for the component. Making it hard do changes
+
+=== Considered Options
+
+Option 1: Port everything as is::
+
+We simply take what we already have and adjust it to the iKube 2.0.
+No other changes are made to the system.
+
+* Pros:
+  ** Least effort
+  ** Provision and deprovisioning is very stable and reliable
+  ** Complexity relatively low. Everything is just PnT and jsonnet.
+* Cons:
+  ** We keep our current pain points
+  ** Porting back learnings from AppCat or vice-versa more complicated due to different stacks (PnT vs comp-functions)
+
+Option 2: Port everything to AppCat::
+
+All logic for SPKS will be ported to AppCat.
+We get rid of all the PnT and consequently most of the jsonnet generators for the compositions.
+
+* Pros:
+  ** Only a single implementation to manage
+  ** Getting rid of the hard-coded yaml for the jsonnet generators
+  ** Leverage AppCat's automations for deployments
+* Cons:
+  ** Very high effort to port everything
+  ** The slow maintenance cycle for SPKS can lead to very huge change sets when SPKS gets updated
+  ** There are already a lot specific implementations baked into AppCat. APPUiO Managed, APPUiO Cloud, converged mode, split mode, plain Kubernetes. Adding another specific implementation will only increase the complexity.
+
+Option 3: Modernize selectively::
+
+We specifically address the greatest pain points we have with the current implementation and modernize those:
+
+* Automate rollouts of new version
+  ** Decrease the ammount of manual steps for rolling out changes
+  ** Use composition revisions and other learnings from AppCat and port them to SPKS
+* Get rid of hardcoded yaml configuration
+  ** Move the hard-coded yaml compositions into the component
+  ** Leverage jsonnet instead to dynamically generate the compositions, reducing the amount of hardcoded yaml
+
+* Pros:
+  ** Pain points get addressed
+* Cons:
+  ** The management of SPKS is still separate and porting AppCat learnings will require separate implemenations
+
+== Decision
+
+**Option 3.**
+
+This option is the most sensible mix of effort and value.
+While SPKS will still be something separate from AppCat, we'll add learnings and automations concerning deployment to the system.
+
+Reducing the amount of hardcoded yaml configuration also makes the whole system a lot more maintainable than the current implementation.
+
+== Consequences
+
+* Large parts of the SPKS component need to be re-written
+* We completely change how we deploy SPSK changes and add a lot more automation

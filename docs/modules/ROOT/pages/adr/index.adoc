@@ -125,4 +125,24 @@
 
 `comp-functions,crossplane`
 |draft | |2025-01-29
+|xref:adr/0031-naming-scheme-for-servala-cluster-names-and-urls.adoc[]
+
+`servala,naming,scheme,cluster`
+|draft | |2025-04-11
+|xref:adr/0032-ci-pipeline.adoc[]
+
+`ci,pipeline,cd,github`
+|draft | |2025-05-22
+|xref:adr/0033-event-based-billing-oddo.adoc[]
+
+`billing,odoo`
+|draft | |2025-06-02
+|xref:adr/0034-vshnredis-high-availability.adoc[]
+
+`redis,ha`
+|draft | |2025-06-04
+|xref:adr/0035-ikube-2-0-migration-appcat.adoc[]
+
+`appcat, spks`
+|draft | |2025-07-02
 |===
