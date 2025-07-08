@@ -13,7 +13,7 @@ include::partial$adr-meta.adoc[]
 .Summary
 ====
 This ADR compares various strategies how we want to handle the migration to iKube 2.0.
-The opportinity is used to address a few pain points we have with the current setup.
+The opportunity is used to address a few pain points we have with the current setup.
 This ADR is NOT about iKube 2.0, only about the Crossplane part of SPKS.
 ====
 
