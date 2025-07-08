@@ -32,5 +32,5 @@
 ** xref:adr/0032-ci-pipeline.adoc[]
 ** xref:adr/0033-event-based-billing-oddo.adoc[]
 ** xref:adr/0034-vshnredis-high-availability.adoc[]
-
 ** xref:adr/0035-ikube-2-0-migration-appcat.adoc[]
+** xref:adr/0036-revisiting-postgresql-operators.adoc[]

@@ -1,0 +1,64 @@
+= ADR 036 - Revisiting PostgreSQL Operators
+:adr_author:    Simon Beck
+:adr_owner:     Schedar
+:adr_reviewers:
+:adr_date:      2025-07-07
+:adr_upd_date:  2025-07-07
+:adr_status:    draft
+:adr_tags:      appcat,postgresql
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+TBD
+====
+
+== Problem
+
+We're using StackGres as our current PostgreSQL solution.
+Unfortunately we're facing quite heavy scaling issues and bugs.
+
+So we're re-evaluating the Operators again to determine the best solution for a new PostgreSQL AppCat product.
+
+== Evaluated Operators
+
+[cols="1,1,1,1,1,1"]
+|===
+|Requirements |https://docs.percona.com/percona-operator-for-postgresql/index.html[Percona] |https://cloudnative-pg.io/[CloudnativePG] |https://github.com/zalando/postgres-operator[Zalando] |https://access.crunchydata.com/documentation/postgres-operator/v5/[Crunchydata] |https://github.com/bitnami/charts/tree/master/bitnami/postgresql-ha[Bitnami Helmchart]
+|Superuser Access |✅ |✅ |✅ |✅ |✅
+
+|Database Management |✅ |✅ |✅ |✅ |❌
+
+|User Management |✅ |✅ |✅ |✅ |✅
+
+|Service Metrics |✅ |✅ |❌ |✅ |✅
+
+|Maintenance Schedule |❌ |❌ |❌ |❌ |❌
+
+|Backup Schedule |✅ |✅ |✅ |✅ |❌
+
+|Self Service Backup Restore |✅ |✅ |✅ |✅ |❌
+
+|Encryption at rest footnote:encryption[This is a platform feature, APPUiO Cloud provides this.]|✅ |✅ |✅ |✅ |✅
+
+|Extension Management |✅ |✅ |✅ |✅ |✅
+
+|Custom PostgreSQL Settings |✅ |✅ |✅ |✅ |✅
+
+|In-Place Major Upgrade |✅ |✅ |✅ |✅ |❌
+
+|License |Apache License 2.0 |Apache License 2.0 |MIT |Apache License 2.0 | Apache License 2.0
+
+|Upstream Support |Some support available not clear if for operators |✅ (EDB wants to partner with us) |❌ |✅ |❌
+|===
+
+Most operators now have more or less feature paratiy with each other.
+So it comes down on how their UX is and how they can scale with a larger workload.
+
+== Decision
+
+
+
+== Consequences
