@@ -12,8 +12,9 @@ include::partial$adr-meta.adoc[]
 [NOTE]
 .Summary
 ====
-This ADR compares various strategies how we want to handle the migration to iKube 2.0.
-The opportunity is used to address a few pain points we have with the current setup.
+SPKS gets a new platform called iKube 2.0.
+We will use this opportunity to address the biggest pain points we have with the current setup.
+We will not completely switch over to an AppCat based solution, but rather take the learnings from there and put them into the SPKS solution.
 This ADR is NOT about iKube 2.0, only about the Crossplane part of SPKS.
 ====
 
