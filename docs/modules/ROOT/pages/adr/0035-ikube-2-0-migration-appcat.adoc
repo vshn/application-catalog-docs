@@ -95,4 +95,4 @@ Reducing the amount of hardcoded yaml configuration also makes the whole system 
 == Consequences
 
 * Large parts of the SPKS component need to be re-written
-* We completely change how we deploy SPSK changes and add a lot more automation
+* We completely change how we deploy SPKS changes and add a lot more automation
