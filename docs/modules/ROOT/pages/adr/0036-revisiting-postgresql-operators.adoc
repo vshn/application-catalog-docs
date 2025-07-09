@@ -12,7 +12,9 @@ include::partial$adr-meta.adoc[]
 [NOTE]
 .Summary
 ====
-TBD
+StackGres is one of the major pain points we currently struggle with.
+CNPG provides a good alternative, even though some features are not quite on par yet.
+It has the best UX of the tested operators and EDB wants to partner with us.
 ====
 
 == Problem
@@ -57,8 +59,336 @@ So we're re-evaluating the Operators again to determine the best solution for a 
 Most operators now have more or less feature paratiy with each other.
 So it comes down on how their UX is and how they can scale with a larger workload.
 
+Additionally these extenions are currently in use with AppCat PostgreSQL:
+
+* pg_trgm
+* postgis
+* timescale
+* tablefunc
+* postgres_fdq
+* unaccent
+* btree_gist
+* btree_gin
+* plpgsql
+* uuid-ossp
+* citext
+* pg_repack
+
+=== Extension pg_repack
+
+* AWS article about pg_repack: https://docs.aws.amazon.com/prescriptive-guidance/latest/postgresql-maintenance-rds-aurora/pg-repack.html
+* Percona: https://www.percona.com/blog/understanding-pg_repack-what-can-go-wrong-and-how-to-avoid-it/
+* EDB's alternative: https://www.enterprisedb.com/blog/Release_Radar_Reducing_Bloat_Improving_Query_Performance_EDB_Support_pg_squeeze
+
+Pg_repack is a more thorough `VACUUM` it can clean up the database of old data and free up storage space.
+In comparison with `VACUUM` it doesn't have to lock the databases and thus doesn't have such a high impact on uptime as `VACUUM`.
+Percona recommends the use of `pg_repack` whener possible.
+But it should be run during low traffic times to reduce the risk of data corruption.
+
+EDB provides an alternative in the EDB operator called `pg_squeeze` which is a more reliable and simple alternative to `pg_repack`.
+
+However, while investigating `pg_repack` it was found that the way we currently do the automated repack during the maintenance won't actually trigger any compaction.
+
+It's just a noop. For `pg_repack` to trigger properly it has to be enabled explicitly on each database.
+
+Given this fact, we can just omit any kind of compaction for the time being for the new implementation.
+
+== Comparison
+
+Most of the operators have basically feature parity now.
+Although StackGres still has some advanced features that others are lacking.
+Like the automated security maintenance for instance.
+
+So in this in-depth comparison some additional features relevant for AppCat will be evaluated:
+
+* Maintenance (and how to detect new images)
+* Extension management
+* Installation (helm, olm, OpenShift compatibility)
+* Database and user management
+** The current implementation via `provider-sql` is prone to race conditions
+* Scaling (can it manage 100+ instances)
+
+=== CNPG
+
+==== Maintenance
+
+CNPG has a concept of `ImageCatalog`. Each instance can reference such a catalog.
+The catalog specifies the specific image for each of the major versions.
+Each cluster can reference such a catalog.
+As soon as the images in the referenced catalog change, then CNPG will switch over the instance to that image.
+CNPG maintans a list of official catalogs, but they also support bring your own.
+The official catalogs are here:
+
+.Example Catalog
+[source,yaml]
+----
+apiVersion: postgresql.cnpg.io/v1
+kind: ImageCatalog
+metadata:
+  name: postgresql
+spec:
+  images:
+    - major: 15
+      image: ghcr.io/cloudnative-pg/postgresql:15.6
+    - major: 16
+      image: ghcr.io/cloudnative-pg/postgresql:16.8
+    - major: 17
+      image: ghcr.io/cloudnative-pg/postgresql:17.5
+----
+
+* Vanilla: https://raw.githubusercontent.com/cloudnative-pg/postgres-containers/main/Debian/ClusterImageCatalog-bookworm.yaml
+* PostGIS: https://raw.githubusercontent.com/cloudnative-pg/postgis-containers/main/PostGIS/ClusterImageCatalog.yaml
+
+The official catalogs contain hashes and a more granular version slug, probably to indicate newer builds of the same version.
+
+This concept can be leveraged during the security maintenance to update an instance to the latest available image.
+
+Major upgrades are simply triggered by changing the `major` field in the `cluster` resource. It also works with HA instances. However it's not a rolling process, there will be some downtime.
+
+==== Extensions
+
+By default these extensions are available in the official images:
+
+.Default Extensions
+[source]
+----
+ pg_trgm            | 1.6             |                   | text similarity measurement and index searching based on trigrams
+ intarray           | 1.5             |                   | functions, operators, and index support for 1-D arrays of integers
+ pgcrypto           | 1.3             |                   | cryptographic functions
+ file_fdw           | 1.0             |                   | foreign-data wrapper for flat file access
+ lo                 | 1.1             |                   | Large Object maintenance
+ isn                | 1.2             |                   | data types for international product numbering standards
+ btree_gist         | 1.7             |                   | support for indexing common datatypes in GiST
+ pg_freespacemap    | 1.2             |                   | examine the free space map (FSM)
+ amcheck            | 1.4             |                   | functions for verifying relation integrity
+ tsm_system_time    | 1.0             |                   | TABLESAMPLE method which accepts time in milliseconds as a limit
+ pgrowlocks         | 1.2             |                   | show row-level locking information
+ intagg             | 1.1             |                   | integer aggregator and enumerator (obsolete)
+ pg_walinspect      | 1.1             |                   | functions to inspect contents of PostgreSQL Write-Ahead Log
+ hstore             | 1.8             |                   | data type for storing sets of (key, value) pairs
+ sslinfo            | 1.2             |                   | information about SSL certificates
+ btree_gin          | 1.3             |                   | support for indexing common datatypes in GIN
+ xml2               | 1.1             |                   | XPath querying and XSLT
+ citext             | 1.6             |                   | data type for case-insensitive character strings
+ fuzzystrmatch      | 1.2             |                   | determine similarities and distance between strings
+ seg                | 1.4             |                   | data type for representing line segments or floating-point intervals
+ dblink             | 1.2             |                   | connect to other PostgreSQL databases from within a database
+ pg_surgery         | 1.0             |                   | extension to perform surgery on a damaged relation
+ moddatetime        | 1.0             |                   | functions for tracking last modification time
+ pgstattuple        | 1.5             |                   | show tuple-level statistics
+ bloom              | 1.0             |                   | bloom access method - signature file based index
+ plpgsql            | 1.0             | 1.0               | PL/pgSQL procedural language
+ tablefunc          | 1.0             |                   | functions that manipulate whole tables, including crosstab
+ earthdistance      | 1.2             |                   | calculate great-circle distances on the surface of the Earth
+ autoinc            | 1.0             |                   | functions for autoincrementing fields
+ uuid-ossp          | 1.1             |                   | generate universally unique identifiers (UUIDs)
+ cube               | 1.5             |                   | data type for multidimensional cubes
+ pg_buffercache     | 1.5             |                   | examine the shared buffer cache
+ pg_visibility      | 1.2             |                   | examine the visibility map (VM) and page-level visibility info
+ pg_prewarm         | 1.2             |                   | prewarm relation data
+ refint             | 1.0             |                   | functions for implementing referential integrity (obsolete)
+ tsm_system_rows    | 1.0             |                   | TABLESAMPLE method which accepts number of rows as a limit
+ dict_xsyn          | 1.0             |                   | text search dictionary template for extended synonym processing
+ tcn                | 1.0             |                   | Triggered change notifications
+ ltree              | 1.3             |                   | data type for hierarchical tree-like structures
+ insert_username    | 1.0             |                   | functions for tracking who changed a table
+ pageinspect        | 1.12            |                   | inspect the contents of database pages at a low level
+ pg_stat_statements | 1.11            |                   | track planning and execution statistics of all SQL statements executed
+ postgres_fdw       | 1.1             |                   | foreign-data wrapper for remote PostgreSQL servers
+ dict_int           | 1.0             |                   | text search dictionary template for integers
+ unaccent           | 1.1             |                   | text search dictionary that removes accents
+ vector             | 0.8.0           |                   | vector data type and ivfflat and hnsw access methods
+ pgaudit            | 17.1            |                   | provides auditing functionality
+----
+
+Except for `pg_repack` all of the currently used extensions are already available.
+Unfortunately the alternative to repack called `pg_squeeze` isn't available either.
+
+TimescaleDB can be installed via 3rd party images: https://github.com/clevyr/docker-cloudnativepg-timescale
+
+To use extensions that are not available in the default image, CNPG provides inofficial instructions how to fork and build custom images: https://github.com/cloudnative-pg/postgres-containers/issues/115#issuecomment-2563173289
+
+There are plans to add dynamic extension installations on the roadmap: https://github.com/cloudnative-pg/cloudnative-pg/issues/7188
+
+==== Installation
+
+The community maintained image aren't explicitly tested against OpenShift: https://cloudnative-pg.io/documentation/1.24/supported_releases/#support-status-of-cloudnativepg-releases
+
+However EDB maintains a certified image for OpenShift in the RedHat Image Catalog: https://catalog.redhat.com/software/container-stacks/detail/653fd4035eece8598f66d97b
+
+The helm chart installs with ArgoCD, but `server-side-apply` has to be enabled.
+
+==== User and Database Management
+
+CNPG has native user and database management.
+
+Users can be specified in the `cluster` objects, while databases have a dedicated CRD.
+
+Extensions can only be enabled via a `database` CR.
+Also the user management doesn't handle passwords, they need to be generated separately.
+
+==== Scaling
+
+The operator handles 100 `cluster` objects without sweat on a local dev installation.
+For StackGres that's already enough to go into an endless reconcile loop.
+
+=== Percona/Crunchy
+
+The latest Percona operator is a fork of Crunchy, so I bundle them into one.
+
+==== Maintenance
+
+The instances require specific images that match the operator version and the PostgreSQL version.
+
+Each sidecar has to be adjusted seperately and then patched for an minorupgrade. The sidecar images also need to match the PostgreSQL version and the operator version as well.
+
+.Patching an Instance
+[source]
+----
+kubectl -n postgres-operator patch pg cluster1 --type=merge --patch '{
+"spec": {
+"crVersion":"2.6.0",
+"image": "percona/percona-postgresql-operator:2.6.0-ppg17.4-postgres",
+"proxy": { "pgBouncer": { "image": "percona/percona-postgresql-operator:2.6.0-ppg17.4-pgbouncer1.24.0" } },
+"backups": { "pgbackrest":  { "image": "percona/percona-postgresql-operator:2.6.0-ppg17.4-pgbackrest2.54.2" } }
+}}'
+----
+
+For security updates a similar approach like for helm based services can be used.
+
+Major upgrades are handled via a specific `PerconaPGUpgrade` CR. Also here the image versions have to be specified exactly.
+
+.Major Upgrade
+[source,yaml]
+----
+apiVersion: pgv2.percona.com/v2
+kind: PerconaPGUpgrade
+metadata:
+  name: cluster1-15-to-16
+spec:
+  postgresClusterName: cluster1
+  image: percona/percona-postgresql-operator:2.6.0-upgrade
+  fromPostgresVersion: 15
+  toPostgresVersion: 16
+  toPostgresImage: percona/percona-postgresql-operator:2.6.0-ppg16.8-postgres
+  toPgBouncerImage: percona/percona-postgresql-operator:2.6.0-ppg16.8-pgbouncer1.24.0
+  toPgBackRestImage: percona/percona-postgresql-operator:2.6.0-ppg16.8-pgbackrest2.54.2
+----
+
+==== Extension management
+
+.Default Extensions
+[source]
+----
+ pg_trgm              | 1.6             |                   | text similarity measurement and index searching based on trigrams
+ percona_pg_telemetry | 1.1             |                   | Extension for Percona telemetry data collection
+ intarray             | 1.5             |                   | functions, operators, and index support for 1-D arrays of integers
+ pg_stat_monitor      | 2.1             | 2.1               | The pg_stat_monitor is a PostgreSQL Query Performance Monitoring tool, based on PostgreSQL contrib module pg_stat_statements. pg_stat_monitor provides aggregated statisti
+cs, client information, plan details including plan, and histogram information.
+ pgcrypto             | 1.3             |                   | cryptographic functions
+ file_fdw             | 1.0             |                   | foreign-data wrapper for flat file access
+ lo                   | 1.1             |                   | Large Object maintenance
+ jsonb_plperlu        | 1.0             |                   | transform between jsonb and plperlu
+ isn                  | 1.2             |                   | data types for international product numbering standards
+ btree_gist           | 1.7             |                   | support for indexing common datatypes in GiST
+ pg_freespacemap      | 1.2             |                   | examine the free space map (FSM)
+ amcheck              | 1.3             |                   | functions for verifying relation integrity
+ old_snapshot         | 1.0             |                   | utilities in support of old_snapshot_threshold
+ tsm_system_time      | 1.0             |                   | TABLESAMPLE method which accepts time in milliseconds as a limit
+ hstore_plperlu       | 1.0             |                   | transform between hstore and plperlu
+ pgrowlocks           | 1.2             |                   | show row-level locking information
+ intagg               | 1.1             |                   | integer aggregator and enumerator (obsolete)
+ pg_walinspect        | 1.1             |                   | functions to inspect contents of PostgreSQL Write-Ahead Log
+ hstore               | 1.8             |                   | data type for storing sets of (key, value) pairs
+ sslinfo              | 1.2             |                   | information about SSL certificates
+ btree_gin            | 1.3             |                   | support for indexing common datatypes in GIN
+ xml2                 | 1.1             |                   | XPath querying and XSLT
+ jsonb_plperl         | 1.0             |                   | transform between jsonb and plperl
+ citext               | 1.6             |                   | data type for case-insensitive character strings
+ fuzzystrmatch        | 1.2             |                   | determine similarities and distance between strings
+ set_user             | 4.1.0           |                   | similar to SET ROLE but with added logging
+ seg                  | 1.4             |                   | data type for representing line segments or floating-point intervals
+ dblink               | 1.2             |                   | connect to other PostgreSQL databases from within a database
+ pg_surgery           | 1.0             |                   | extension to perform surgery on a damaged relation
+ moddatetime          | 1.0             |                   | functions for tracking last modification time
+ pgstattuple          | 1.5             |                   | show tuple-level statistics
+ bloom                | 1.0             |                   | bloom access method - signature file based index
+ plpgsql              | 1.0             | 1.0               | PL/pgSQL procedural language
+ tablefunc            | 1.0             |                   | functions that manipulate whole tables, including crosstab
+ earthdistance        | 1.2             |                   | calculate great-circle distances on the surface of the Earth
+ autoinc              | 1.0             |                   | functions for autoincrementing fields
+ uuid-ossp            | 1.1             |                   | generate universally unique identifiers (UUIDs)
+ cube                 | 1.5             |                   | data type for multidimensional cubes
+ pg_buffercache       | 1.4             |                   | examine the shared buffer cache
+ pg_visibility        | 1.2             |                   | examine the visibility map (VM) and page-level visibility info
+ pg_prewarm           | 1.2             |                   | prewarm relation data
+ refint               | 1.0             |                   | functions for implementing referential integrity (obsolete)
+ tsm_system_rows      | 1.0             |                   | TABLESAMPLE method which accepts number of rows as a limit
+ dict_xsyn            | 1.0             |                   | text search dictionary template for extended synonym processing
+ tcn                  | 1.0             |                   | Triggered change notifications
+ ltree                | 1.2             |                   | data type for hierarchical tree-like structures
+ adminpack            | 2.1             |                   | administrative functions for PostgreSQL
+ insert_username      | 1.0             |                   | functions for tracking who changed a table
+ pageinspect          | 1.12            |                   | inspect the contents of database pages at a low level
+ hstore_plperl        | 1.0             |                   | transform between hstore and plperl
+ pgaudit              | 16.0            | 16.0              | provides auditing functionality
+ pg_stat_statements   | 1.10            |                   | track planning and execution statistics of all SQL statements executed
+ postgres_fdw         | 1.1             |                   | foreign-data wrapper for remote PostgreSQL servers
+ dict_int             | 1.0             |                   | text search dictionary template for integers
+ pg_repack            | 1.5.2           |                   | Reorganize tables in PostgreSQL databases with minimal locks
+ unaccent             | 1.1             |                   | text search dictionary that removes accents
+ vector               | 0.8.0           |                   | vector data type and ivfflat and hnsw access methods
+----
+
+The selection of default extensions is pretty similar to CNPG, however Persona includes `pg_repack`.
+
+Percona also has support for PostGIS. But there's no mention about TimescaleDB in their docs.
+
+The operator supports downloading and installing pre-packaged extensions dynamically: https://docs.percona.com/percona-operator-for-postgresql/2.0/custom-extensions.html?h=extension#adding-custom-extensions
+
+However they don't have a repository for those and the user is responsible with packaging them themselves.
+
+==== Installation
+
+Installation via helm also needs `server-side-apply`.
+Percona supports installations on OpenShift.
+
+==== Database and user management
+
+Percona supports Databases and User management. Their API is surprisingly close to our own in AppCat: https://docs.percona.com/percona-operator-for-postgresql/2.0/users.html?h=user#custom-users-and-databases
+
+In contrast to CNPG it generates and handles the passwords for the users.
+
+==== Scaling
+
+The operator seems somewhat slow. It took about 30 seconds for the pods to actually show up.
+
+Also applying any subsequent other instances will just do nothing, without any indication about what's wrong.
+
+=== Zalando
+
+Wasn't looked at in detail for the lack of upstream support.
+In our experience the upstream support is a very important part for stable operations.
+
+=== Features missing from all competitors
+
+* Simplified ops via CRDs (security maintenance, scripts, etc.)
+* Async restarts of instances (although CNPG has the concept of supervised restarts, similar but not quite the same)
+
 == Decision
 
+We go with CNPG.
 
+* EDB wants to partner with us
+** Opens up opportunity to later also provider EDB Operator based PostgreSQL
+* The UX is much better than StackGres or Percona/Crunchy
+** Percona/Crunchy has pretty convoluted CRs
+* Dynamic Extension management is on the roadmap
+** Additionally it simplifies PostgreSQL version management via their `ImageCatalog`, if we ever decide to provider custom images with specific extensions
+* They provide detailed release cycles and EOL dates: https://cloudnative-pg.io/documentation/1.26/supported_releases/#support-status-of-cloudnativepg-releases
 
 == Consequences
+
+A new VSHNPostgreSQL service has to be developed that superseeds the old one.
+StackGres based instances still need to be supported for the forseeable future.
+We should provide a seamless migrationpath between both implementations.
