@@ -12,14 +12,18 @@ include::partial$adr-meta.adoc[]
 [NOTE]
 .Summary
 ====
-StackGres is one of the major pain points we currently struggle with.
-CNPG provides a good alternative, even though some features are not quite on par yet.
-It has the best UX of the tested operators and EDB wants to partner with us.
+In xref:adr/0003-stackgres-operator-for-postgresql.adoc[] we compared different Kubernetes operators for managing PostgreSQL.
+By the time of ADR 0003, https://stackgres.io/[StackGres^] was the best option available to power our managed PostgreSQL offering.
+Meanwhile, we learned the hard way, that StackGres doesn't scale well when having to manage a huge amount of PostreSQL instances, and also offers from bad bugs over and over again.
+
+That's why we had a look again, taking all the learnings into consideration, and came to the conclusion that https://cloudnative-pg.io/[CloudNativePG^] (CNPG) is a viable and promising alternative for powering our managed PostgreSQL offering.
+
+In addition, the company https://www.enterprisedb.com/[EDB^] offers commercial support and a hardened enterprise version of CloudNativePG, which allow us to provide a more secure and robust product.
 ====
 
 == Problem
 
-We're using StackGres as our current PostgreSQL solution.
+As of mid 2025, we're using StackGres to power our managed PostgreSQL product in AppCat..
 Unfortunately we're facing quite heavy scaling issues and bugs.
 
 So we're re-evaluating the Operators again to determine the best solution for a new PostgreSQL AppCat product.
@@ -76,12 +80,16 @@ Additionally these extenions are currently in use with AppCat PostgreSQL:
 
 === Extension pg_repack
 
-* AWS article about pg_repack: https://docs.aws.amazon.com/prescriptive-guidance/latest/postgresql-maintenance-rds-aurora/pg-repack.html
-* Percona: https://www.percona.com/blog/understanding-pg_repack-what-can-go-wrong-and-how-to-avoid-it/
-* EDB's alternative: https://www.enterprisedb.com/blog/Release_Radar_Reducing_Bloat_Improving_Query_Performance_EDB_Support_pg_squeeze
+`pg_repack` is the only extension not available out of the box in CloudNativePG.
 
-Pg_repack is a more thorough `VACUUM` it can clean up the database of old data and free up storage space.
-In comparison with `VACUUM` it doesn't have to lock the databases and thus doesn't have such a high impact on uptime as `VACUUM`.
+Articles explaining pg_repack and alternatives:
+
+* https://docs.aws.amazon.com/prescriptive-guidance/latest/postgresql-maintenance-rds-aurora/pg-repack.html[AWS article about pg_repack^]
+* https://www.percona.com/blog/understanding-pg_repack-what-can-go-wrong-and-how-to-avoid-it/[Percona^]
+* https://www.enterprisedb.com/blog/Release_Radar_Reducing_Bloat_Improving_Query_Performance_EDB_Support_pg_squeeze[EDB's alternative^]
+
+The extension `pg_repack` is a more thorough `VACUUM`. It can clean up the database of old data and free up storage space.
+In comparison with `VACUUM`, it doesn't have to lock the databases and thus doesn't have such a high impact on uptime as `VACUUM`.
 Percona recommends the use of `pg_repack` whener possible.
 But it should be run during low traffic times to reduce the risk of data corruption.
 
@@ -96,8 +104,7 @@ Given this fact, we can just omit any kind of compaction for the time being for 
 == Comparison
 
 Most of the operators have basically feature parity now.
-Although StackGres still has some advanced features that others are lacking.
-Like the automated security maintenance for instance.
+Although StackGres still has some advanced features that others are lacking, for example automated security maintenance.
 
 So in this in-depth comparison some additional features relevant for AppCat will be evaluated:
 
@@ -108,7 +115,7 @@ So in this in-depth comparison some additional features relevant for AppCat will
 ** The current implementation via `provider-sql` is prone to race conditions
 * Scaling (can it manage 100+ instances)
 
-=== CNPG
+=== CloudNativePG
 
 ==== Maintenance
 
@@ -204,19 +211,19 @@ By default these extensions are available in the official images:
 Except for `pg_repack` all of the currently used extensions are already available.
 Unfortunately the alternative to repack called `pg_squeeze` isn't available either.
 
-TimescaleDB can be installed via 3rd party images: https://github.com/clevyr/docker-cloudnativepg-timescale
+TimescaleDB can be installed via 3rd party images, e.g. https://github.com/clevyr/docker-cloudnativepg-timescale[clevyr/docker-cloudnativepg-timescale^].
 
-To use extensions that are not available in the default image, CNPG provides inofficial instructions how to fork and build custom images: https://github.com/cloudnative-pg/postgres-containers/issues/115#issuecomment-2563173289
+To use extensions that are not available in the default image, CNPG provides inofficial instructions https://github.com/cloudnative-pg/postgres-containers/issues/115#issuecomment-2563173289[how to fork and build custom images^].
 
-There are plans to add dynamic extension installations on the roadmap: https://github.com/cloudnative-pg/cloudnative-pg/issues/7188
+There are plans to add dynamic extension installations https://github.com/cloudnative-pg/cloudnative-pg/issues/7188[on the roadmap^].
 
 ==== Installation
 
-The community maintained image aren't explicitly tested against OpenShift: https://cloudnative-pg.io/documentation/1.24/supported_releases/#support-status-of-cloudnativepg-releases
+The community maintained image aren't explicitly https://cloudnative-pg.io/documentation/1.24/supported_releases/#support-status-of-cloudnativepg-releases[tested against OpenShift^].
 
-However EDB maintains a certified image for OpenShift in the RedHat Image Catalog: https://catalog.redhat.com/software/container-stacks/detail/653fd4035eece8598f66d97b
+However EDB maintains a certified image for OpenShift in the https://catalog.redhat.com/software/container-stacks/detail/653fd4035eece8598f66d97b[Red Hat Image Catalog^].
 
-The helm chart installs with ArgoCD, but `server-side-apply` has to be enabled.
+The Helm Chart installs with ArgoCD, but `server-side-apply` has to be enabled.
 
 ==== User and Database Management
 
@@ -344,18 +351,18 @@ The selection of default extensions is pretty similar to CNPG, however Persona i
 
 Percona also has support for PostGIS. But there's no mention about TimescaleDB in their docs.
 
-The operator supports downloading and installing pre-packaged extensions dynamically: https://docs.percona.com/percona-operator-for-postgresql/2.0/custom-extensions.html?h=extension#adding-custom-extensions
+The operator supports https://docs.percona.com/percona-operator-for-postgresql/2.0/custom-extensions.html?h=extension#adding-custom-extensions[downloading and installing pre-packaged extensions dynamically^].
 
 However they don't have a repository for those and the user is responsible with packaging them themselves.
 
 ==== Installation
 
-Installation via helm also needs `server-side-apply`.
+Installation via Helm also needs `server-side-apply`.
 Percona supports installations on OpenShift.
 
 ==== Database and user management
 
-Percona supports Databases and User management. Their API is surprisingly close to our own in AppCat: https://docs.percona.com/percona-operator-for-postgresql/2.0/users.html?h=user#custom-users-and-databases
+Percona supports Databases and User management. Their API is https://docs.percona.com/percona-operator-for-postgresql/2.0/users.html?h=user#custom-users-and-databases[surprisingly close^] to our own in AppCat.
 
 In contrast to CNPG it generates and handles the passwords for the users.
 
@@ -377,15 +384,15 @@ In our experience the upstream support is a very important part for stable opera
 
 == Decision
 
-We go with CNPG.
+We'll use CloudNativePG in the future to at one point replace StackGres as the operator powering our managed PostgreSQL service.
 
-* EDB wants to partner with us
+* EDB offers a commercially supported version of CloudNativePG
 ** Opens up opportunity to later also provide EDB Operator based PostgreSQL
 * The UX is much better than StackGres or Percona/Crunchy
 ** Percona/Crunchy has pretty convoluted CRs
 * Dynamic Extension management is on the roadmap
 ** Additionally it simplifies PostgreSQL version management via their `ImageCatalog`, if we ever decide to provide custom images with specific extensions
-* They provide detailed release cycles and EOL dates: https://cloudnative-pg.io/documentation/1.26/supported_releases/#support-status-of-cloudnativepg-releases
+* They provide https://cloudnative-pg.io/documentation/1.26/supported_releases/#support-status-of-cloudnativepg-releases[detailed release cycles and EOL dates^]
 
 == Consequences
 
