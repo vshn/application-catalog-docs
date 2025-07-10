@@ -240,7 +240,7 @@ The latest Percona operator is a fork of Crunchy, so I bundle them into one.
 
 The instances require specific images that match the operator version and the PostgreSQL version.
 
-Each sidecar has to be adjusted seperately and then patched for an minorupgrade. The sidecar images also need to match the PostgreSQL version and the operator version as well.
+Each sidecar has to be adjusted seperately and then patched for a minorupgrade. The sidecar images also need to match the PostgreSQL version and the operator version as well.
 
 .Patching an Instance
 [source]
