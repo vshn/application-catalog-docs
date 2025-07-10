@@ -211,7 +211,7 @@ By default these extensions are available in the official images:
 Except for `pg_repack` all of the currently used extensions are already available.
 Unfortunately the alternative to repack called `pg_squeeze` isn't available either.
 
-TimescaleDB can be installed via 3rd party images, e.g. https://github.com/clevyr/docker-cloudnativepg-timescale[clevyr/docker-cloudnativepg-timescale^].
+TimescaleDB can be installed via 3rd party images, for example https://github.com/clevyr/docker-cloudnativepg-timescale[clevyr/docker-cloudnativepg-timescale^].
 
 To use extensions that are not available in the default image, CNPG provides inofficial instructions https://github.com/cloudnative-pg/postgres-containers/issues/115#issuecomment-2563173289[how to fork and build custom images^].
 
