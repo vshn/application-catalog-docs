@@ -380,7 +380,7 @@ In our experience the upstream support is a very important part for stable opera
 We go with CNPG.
 
 * EDB wants to partner with us
-** Opens up opportunity to later also provider EDB Operator based PostgreSQL
+** Opens up opportunity to later also provide EDB Operator based PostgreSQL
 * The UX is much better than StackGres or Percona/Crunchy
 ** Percona/Crunchy has pretty convoluted CRs
 * Dynamic Extension management is on the roadmap
