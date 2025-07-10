@@ -384,7 +384,7 @@ We go with CNPG.
 * The UX is much better than StackGres or Percona/Crunchy
 ** Percona/Crunchy has pretty convoluted CRs
 * Dynamic Extension management is on the roadmap
-** Additionally it simplifies PostgreSQL version management via their `ImageCatalog`, if we ever decide to provider custom images with specific extensions
+** Additionally it simplifies PostgreSQL version management via their `ImageCatalog`, if we ever decide to provide custom images with specific extensions
 * They provide detailed release cycles and EOL dates: https://cloudnative-pg.io/documentation/1.26/supported_releases/#support-status-of-cloudnativepg-releases
 
 == Consequences
