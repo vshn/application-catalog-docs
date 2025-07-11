@@ -145,4 +145,8 @@
 
 `appcat, spks`
 |draft | |2025-07-02
+|xref:adr/0036-revisiting-postgresql-operators.adoc[]
+
+`appcat,postgresql`
+|draft | |2025-07-07
 |===
