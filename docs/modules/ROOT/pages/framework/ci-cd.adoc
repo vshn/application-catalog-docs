@@ -12,21 +12,34 @@ In order to streamline our development process, we improved the CI/CD with follo
 * Merging a PR will automatically create a release, according to the labels it will detect what version increment it needs to do
 * The auto release is not active on the component repository
 
-== How to do a change in an AppCat repository
-
-For this example we change something in AppCat itself.
-
-. Create a new branch and implement your feature
-. Push your branch and open a PR
-. Select a label before you click "create PR"
-. Once the PR is created it opens a PR in `component-appcat` and also builds all necessary images and packages, this takes a few minutes
-. After the main PR has been reviewed and approved, just merge it. All necessary steps to release the new version are done automatically
-. Check the PR in `component-appcat`, if it's just a version bump, approve it and merge. If more changes are needed, implement them and let someone else approve the PR
-. The `component-appcat` does not have automatic release on merge. Create a tag as usual.
-
 == How to manage the CI/CD pipelines
 
 All the files that specify the process are managed via cruft and cookiecutter.
 The repository is: https://github.com/vshn/appcat-cookiecutter.
 Each of the AppCat repos contains a cronjob that checks for changes every 60 minutes.
 If there are changes it will open a new PR.
+
+== Automated AppCat CI
+
+There are automated workflows in place in AppCat repository that should streamline our development between AppCat and Component repositories.
+
+IMPORTANT: Color purple shows user action
+
+=== Releases from AppCat
+
+The release has to be manually dispatched, usually before the end of the sprint, on Tuesday.
+The following is the lifecycle of the release process:
+
+image::release.svg[Release Diagram]
+
+=== Automated Feature Requests from AppCat
+
+All feature requests starting from AppCat repository have the following lifecycle:
+
+image::feature-request.svg[Feature Request Diagram]
+
+=== Automated Hotfix from AppCat
+
+All hotfixes requests starting from AppCat repository have the following lifecycle:
+
+image::hotfix.svg[Hotfix Diagram]
