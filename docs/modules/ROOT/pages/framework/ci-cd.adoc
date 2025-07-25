@@ -19,6 +19,52 @@ The repository is: https://github.com/vshn/appcat-cookiecutter.
 Each of the AppCat repos contains a cronjob that checks for changes every 60 minutes.
 If there are changes it will open a new PR.
 
+== AppCat Deployment
+
+Deployment of AppCat is not the same as releasing a new version of the framework to services.
+
+With Crossplane composition functions, multiple versions can be deployed simultaneously in the cluster.
+
+* These functions run in parallel and remain mostly idle until a composite (service) uses them.
+* This enables a fine-grained release process at the level of each individual instance.
+* Each instance can run any of the available AppCat versions present in the cluster at that time.
+
+A new version is deployed when a new tag is created in the `component-appcat` repository.
+
+* In test clusters, deployment happens instantly.
+* In production, it occurs after a one-week delay.
+* The dependency is updated automatically via the `commodore-defaults` repository using Renovate.
+
+== AppCat Release
+
+The release process refers to a service starting to use a newer composition revision with a higher revision number.
+
+* The upgrade is triggered automatically during a service maintenance window.
+* The latest available revision is selected during maintenance, even if intermediate versions exist.
+* An upgrade can also be triggered manually by running the maintenance job for a specific instance.
+
+== AppCat Rollback
+
+Currently, rollback must be performed manually for each service instance.
+
+* This involves updating the claim’s `spec.compositionRevisionRef.name` field to the desired AppCat version.
+* The process is manual.
+* In the near future, **Schedar** will implement automatic rollback capabilities:
+** Per service instance
+** Per service type
+** Per cluster
+
+== Hotfix
+
+Hotfixes are special jobs that update the composition revision reference in composites.
+
+* A hotfix is triggered for a specific version in the `component-appcat` repository using the format:
++
+`appcat.deploymentManagementSystem.hotfix=<component-version>-<appcat-version>`
++
+* The specified version must match an existing composition revision.
+* If no match is found, the hotfix jobs will not apply any changes.
+
 == Automated AppCat CI
 
 There are automated workflows in place in AppCat repository that should streamline our development between AppCat and Component repositories.
