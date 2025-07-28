@@ -19,7 +19,62 @@ The repository is: https://github.com/vshn/appcat-cookiecutter.
 Each of the AppCat repos contains a cronjob that checks for changes every 60 minutes.
 If there are changes it will open a new PR.
 
-== AppCat Deployment
+== Continuous Integration
+
+There are automated workflows in place in AppCat repository that should streamline our development between AppCat and Component repositories.
+
+IMPORTANT: Color purple shows user action
+
+=== Releases from AppCat repository
+
+Example of engineer steps:
+
+. Trigger the GitHub Action for a pre-release.
+. Check and merge the `component` PR that was opened in step 1.
+. Tag a new version.
+
+The release has to be manually dispatched, usually before the end of the sprint, on Tuesday.
+The following is the lifecycle of the release process:
+
+image::release.svg[Release Diagram]
+
+=== Feature Requests from AppCat repository
+
+Example of engineer steps:
+
+. Create a pull request (PR) with base branch `develop`.
+. Label the PR with either `patch` or `minor`.
+. Perform development work.
+. Approve related PRs in the `component` and `appcat` repositories.
+. Merge the PR by commenting `/merge` in the `appcat` repository.
+. Check the workflow link in the next comment to ensure all jobs succeeded.
+. Confirm that the `develop` branch has been updated.
+
+All feature requests starting from AppCat repository have the following lifecycle:
+
+image::feature-request.svg[Feature Request Diagram]
+
+=== Hotfix from AppCat
+
+Example of engineer steps:
+
+. Create a pull request (PR) with base branch `master`.
+. Label the PR with `hotfix`.
+. Perform development work.
+. Approve related PRs in the `component/appcat` repository.
+. Merge the PR by commenting `/merge` in the `appcat` repository.
+. Check the workflow link in the next comment to ensure all jobs succeeded.
+. Confirm that the `master` branch has been updated.
+. Confirm PR from `master` into `develop` was merged.
+. Tag a new version.
+
+All hotfixes requests starting from AppCat repository have the following lifecycle:
+
+image::hotfix.svg[Hotfix Diagram]
+
+== Continuous Deployment
+
+=== AppCat Deployment
 
 Deployment of AppCat is not the same as releasing a new version of the framework to services.
 
@@ -35,15 +90,15 @@ A new version is deployed when a new tag is created in the `component-appcat` re
 * In production, it occurs after a one-week delay.
 * The dependency is updated automatically via the `commodore-defaults` repository using Renovate.
 
-== AppCat Release
+=== AppCat Rollout
 
-The release process refers to a service starting to use a newer composition revision with a higher revision number.
+The rollout process refers to a service starting to use a newer composition revision with a higher revision number.
 
 * The upgrade is triggered automatically during a service maintenance window.
 * The latest available revision is selected during maintenance, even if intermediate versions exist.
 * An upgrade can also be triggered manually by running the maintenance job for a specific instance.
 
-== AppCat Rollback
+=== AppCat Rollback
 
 Currently, rollback must be performed manually for each service instance.
 
@@ -54,38 +109,14 @@ Currently, rollback must be performed manually for each service instance.
 ** Per service type
 ** Per cluster
 
-== Hotfix
+=== Hotfix
 
 Hotfixes are special jobs that update the composition revision reference in composites.
 
-* A hotfix is triggered for a specific version in the `component-appcat` repository using the format:
+* A hotfix is triggered for a specific version from the `component-appcat` repository using the format:
 +
 `appcat.deploymentManagementSystem.hotfix=<component-version>-<appcat-version>`
 +
 * The specified version must match an existing composition revision.
 * If no match is found, the hotfix jobs will not apply any changes.
 
-== Automated AppCat CI
-
-There are automated workflows in place in AppCat repository that should streamline our development between AppCat and Component repositories.
-
-IMPORTANT: Color purple shows user action
-
-=== Releases from AppCat
-
-The release has to be manually dispatched, usually before the end of the sprint, on Tuesday.
-The following is the lifecycle of the release process:
-
-image::release.svg[Release Diagram]
-
-=== Automated Feature Requests from AppCat
-
-All feature requests starting from AppCat repository have the following lifecycle:
-
-image::feature-request.svg[Feature Request Diagram]
-
-=== Automated Hotfix from AppCat
-
-All hotfixes requests starting from AppCat repository have the following lifecycle:
-
-image::hotfix.svg[Hotfix Diagram]
