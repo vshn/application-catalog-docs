@@ -12,21 +12,80 @@ In order to streamline our development process, we improved the CI/CD with follo
 * Merging a PR will automatically create a release, according to the labels it will detect what version increment it needs to do
 * The auto release is not active on the component repository
 
-== How to do a change in an AppCat repository
-
-For this example we change something in AppCat itself.
-
-. Create a new branch and implement your feature
-. Push your branch and open a PR
-. Select a label before you click "create PR"
-. Once the PR is created it opens a PR in `component-appcat` and also builds all necessary images and packages, this takes a few minutes
-. After the main PR has been reviewed and approved, just merge it. All necessary steps to release the new version are done automatically
-. Check the PR in `component-appcat`, if it's just a version bump, approve it and merge. If more changes are needed, implement them and let someone else approve the PR
-. The `component-appcat` does not have automatic release on merge. Create a tag as usual.
-
 == How to manage the CI/CD pipelines
 
 All the files that specify the process are managed via cruft and cookiecutter.
 The repository is: https://github.com/vshn/appcat-cookiecutter.
 Each of the AppCat repos contains a cronjob that checks for changes every 60 minutes.
 If there are changes it will open a new PR.
+
+== AppCat Deployment
+
+Deployment of AppCat is not the same as releasing a new version of the framework to services.
+
+With Crossplane composition functions, multiple versions can be deployed simultaneously in the cluster.
+
+* These functions run in parallel and remain mostly idle until a composite (service) uses them.
+* This enables a fine-grained release process at the level of each individual instance.
+* Each instance can run any of the available AppCat versions present in the cluster at that time.
+
+A new version is deployed when a new tag is created in the `component-appcat` repository.
+
+* In test clusters, deployment happens instantly.
+* In production, it occurs after a one-week delay.
+* The dependency is updated automatically via the `commodore-defaults` repository using Renovate.
+
+== AppCat Release
+
+The release process refers to a service starting to use a newer composition revision with a higher revision number.
+
+* The upgrade is triggered automatically during a service maintenance window.
+* The latest available revision is selected during maintenance, even if intermediate versions exist.
+* An upgrade can also be triggered manually by running the maintenance job for a specific instance.
+
+== AppCat Rollback
+
+Currently, rollback must be performed manually for each service instance.
+
+* This involves updating the claim’s `spec.compositionRevisionRef.name` field to the desired AppCat version.
+* The process is manual.
+* In the near future, **Schedar** will implement automatic rollback capabilities:
+** Per service instance
+** Per service type
+** Per cluster
+
+== Hotfix
+
+Hotfixes are special jobs that update the composition revision reference in composites.
+
+* A hotfix is triggered for a specific version in the `component-appcat` repository using the format:
++
+`appcat.deploymentManagementSystem.hotfix=<component-version>-<appcat-version>`
++
+* The specified version must match an existing composition revision.
+* If no match is found, the hotfix jobs will not apply any changes.
+
+== Automated AppCat CI
+
+There are automated workflows in place in AppCat repository that should streamline our development between AppCat and Component repositories.
+
+IMPORTANT: Color purple shows user action
+
+=== Releases from AppCat
+
+The release has to be manually dispatched, usually before the end of the sprint, on Tuesday.
+The following is the lifecycle of the release process:
+
+image::release.svg[Release Diagram]
+
+=== Automated Feature Requests from AppCat
+
+All feature requests starting from AppCat repository have the following lifecycle:
+
+image::feature-request.svg[Feature Request Diagram]
+
+=== Automated Hotfix from AppCat
+
+All hotfixes requests starting from AppCat repository have the following lifecycle:
+
+image::hotfix.svg[Hotfix Diagram]
