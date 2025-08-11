@@ -1,0 +1,383 @@
+= AppCat Rollback
+:page-aliases: how-tos/appcat/AppCatRollback.adoc
+
+For on-call engineers responding to an AppCat release issue.
+Use these scripts to quickly revert affected XRs to a previous CompositionRevision and restore them once the issue is resolved.
+
+== Before you start
+
+[IMPORTANT]
+====
+Make sure you can run `kubectl` against the cluster that runs AppCat/Crossplane.
+You'll need permissions to **get/list/patch** XRs/XRDs and CompositionRevisions.
+====
+
+[TIP]
+====
+If your user isn't a cluster admin, pass `--as-admin` to the scripts.
+They'll run all `kubectl` commands as `kubectl --as cluster-admin …` under the hood.
+====
+
+Copy the two scripts below into files named **rollback.sh** and **unpin.sh**, then make them executable:
+
+[source,bash]
+----
+# Copy/paste the contents from the "Scripts" section into these files:
+$EDITOR rollback.sh
+$EDITOR unpin.sh
+
+# Make them executable (either run in-place or move onto your PATH)
+chmod +x rollback.sh unpin.sh
+# optional:
+# sudo mv rollback.sh /usr/local/bin/
+# sudo mv unpin.sh /usr/local/bin/
+----
+
+== Scripts
+
+[%collapsible]
+.rollback.sh 
+====
+[source,bash]
+----
+#!/usr/bin/env bash
+
+set -euo pipefail
+AS_ADMIN_FLAG=""
+KUBECTL="${KUBECTL:-kubectl}"
+
+usage(){ cat <<'EOF'
+Usage: rollback.sh [options]
+  -t TYPE           XR type (CRD name). Comma-separated allowed.
+  -i NAME           Specific XR instance (only with a single -t).
+  --all-instances   Operate on all instances of the given TYPE(s).
+  --all-types       Operate on all instances across all XRD types.
+  -r REVISION       Explicit revision label (e.g. v3.52.0-v4.166.0).
+  --as-admin        Run kubectl commands as cluster-admin.
+  -h|--help         Show help.
+EOF
+}
+
+fatal(){ echo "ERROR: $*" >&2; exit 1; }
+warn(){ echo "WARN: $*" >&2; }
+
+kubectl_cmd() {
+  "$KUBECTL" $AS_ADMIN_FLAG "$@"
+}
+
+discover_all_types(){
+  kubectl_cmd get xrd -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' | sed '/^$/d'
+}
+
+list_instances(){
+  kubectl_cmd get "$1" -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' || return 1
+}
+
+autodetect_prev_label(){
+  local t="$1" n="$2" cur base prev lbl
+  cur="$(kubectl_cmd get "$t" "$n" -o jsonpath='{.spec.compositionRevisionRef.name}' || true)"
+  [ -n "$cur" ] || fatal "$t/$n lacks .spec.compositionRevisionRef.name"
+  base="$(printf '%s' "$cur" | sed -E 's/-[0-9a-f]{7,}$//')" || true
+  [ -n "$base" ] || fatal "Cannot derive base from '$cur' for $t/$n"
+  prev="$(
+    kubectl_cmd get compositionrevisions.apiextensions.crossplane.io \
+      --sort-by=.metadata.creationTimestamp -o name \
+    | sed 's|.*/||' \
+    | awk -v b="$base" -v c="$cur" 'index($0,b"-")==1{a[++n]=$0} END{for(i=1;i<=n;i++)if(a[i]==c&&i>1)print a[i-1]}'
+  )"
+  [ -n "$prev" ] || fatal "No previous CompositionRevision for base '$base' (current=$cur) on $t/$n"
+  lbl="$(kubectl_cmd get compositionrevision "$prev" \
+          -o go-template='{{ index .metadata.labels "metadata.appcat.vshn.io/revision" }}' 2>/dev/null || true)"
+  [ -n "$lbl" ] && [ "$lbl" != "<no value>" ] || fatal "Previous CR '$prev' missing revision label"
+  printf '%s\n' "$lbl"
+}
+
+patch_xr(){ 
+  echo "Patching $1/$2 revision=$3"
+  kubectl_cmd patch "$1" "$2" --type=merge \
+    -p "{\"spec\":{\"compositionRevisionSelector\":{\"matchLabels\":{\"metadata.appcat.vshn.io/revision\":\"$3\"}}}}"
+}
+
+# arg parsing
+[ $# -gt 0 ] || { usage; exit 1; }
+ALL_TYPES=0 ALL_INST=0 TYPES_CSV="" NAME="" REV=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -t) TYPES_CSV="${2:?}"; shift 2;;
+    -i) NAME="${2:?}"; shift 2;;
+    -r) REV="${2:?}"; shift 2;;
+    --all-instances) ALL_INST=1; shift;;
+    --all-types) ALL_TYPES=1; shift;;
+    --as-admin) AS_ADMIN_FLAG="--as cluster-admin"; shift;;
+    -h|--help) usage; exit 0;;
+    -*) fatal "Unknown option $1";;
+    *)  fatal "Unexpected argument $1";;
+  esac
+done
+
+# validations
+[ $ALL_TYPES -eq 1 ] && [ -n "$TYPES_CSV" ] && fatal "Do not combine -t with --all-types"
+[ $ALL_TYPES -eq 0 ] && [ -z "$TYPES_CSV" ] && fatal "-t is required when --all-types is not set"
+[ -n "$NAME" ] && [ $ALL_INST -eq 1 ] && fatal "-i cannot be used with --all-instances"
+[ -n "$NAME" ] && [ $ALL_TYPES -eq 1 ] && fatal "-i cannot be used with --all-types"
+[ $ALL_TYPES -eq 0 ] && [ $ALL_INST -eq 0 ] && [ -z "$NAME" ] && fatal "Use -i or --all-instances (or --all-types)"
+
+# build type list
+types=()
+if [ $ALL_TYPES -eq 1 ]; then
+  types=()
+  while IFS= read -r line; do
+    [ -n "$line" ] && types+=("$line")
+  done < <(discover_all_types)
+  [ ${#types[@]} -gt 0 ] || fatal "No Crossplane XRDs found"
+else
+  TYPES_CSV=${TYPES_CSV//[[:space:]]/}
+  IFS=',' read -r -a types <<<"$TYPES_CSV"
+  [ -n "$NAME" ] && [ ${#types[@]} -ne 1 ] && fatal "With -i NAME you must pass exactly one TYPE"
+fi
+
+FAILED=0
+for t in "${types[@]}"; do
+  instances=()
+  if [ -n "$NAME" ]; then
+    if ! kubectl_cmd get "$t" "$NAME" >/dev/null 2>&1; then
+      warn "Instance not found: $t/$NAME; skipping"
+      FAILED=1; continue
+    fi
+    instances+=("$NAME")
+  else
+    out="$(list_instances "$t" 2>/dev/null || true)"
+    if [ -z "${out:-}" ]; then
+      echo "No instances of $t; skipping."
+      continue
+    fi
+    instances=()
+    while IFS= read -r line; do
+      [ -n "$line" ] && instances+=("$line")
+    done <<<$out
+
+  fi
+
+  for n in "${instances[@]}"; do
+    [ -n "$n" ] || { warn "Empty name for $t; skipping"; FAILED=1; continue; }
+    rev="$REV"
+    if [ -z "$rev" ]; then
+      if ! rev="$(autodetect_prev_label "$t" "$n" 2>&1)"; then
+        warn "$rev"; FAILED=1; continue
+      fi
+    fi
+    if ! patch_xr "$t" "$n" "$rev"; then
+      warn "Failed to patch $t/$n"; FAILED=1
+    fi
+  done
+done
+
+[ $FAILED -eq 0 ] || exit 1
+echo "Done."
+----
+====
+
+[%collapsible]
+.unpin.sh 
+====
+[source,bash]
+----
+#!/usr/bin/env bash
+set -euo pipefail
+AS_ADMIN_FLAG=""
+KUBECTL="${KUBECTL:-kubectl}"
+
+usage(){ cat <<'EOF'
+Usage: unpin.sh [options]
+  -t TYPE           XR type (CRD name). Comma-separated allowed.
+  -i NAME           Specific XR instance (only with a single -t).
+  --all-instances   Operate on all instances of the given TYPE(s).
+  --all-types       Operate on all instances across all XRD types.
+  --as-admin        Run kubectl commands as cluster-admin.
+  -h|--help         Show help.
+EOF
+}
+
+fatal(){ echo "ERROR: $*" >&2; exit 1; }
+warn(){ echo "WARN: $*" >&2; }
+
+kubectl_cmd() {
+  "$KUBECTL" $AS_ADMIN_FLAG "$@"
+}
+
+discover_all_types(){
+  kubectl_cmd get xrd -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' | sed '/^$/d'
+}
+
+list_instances(){
+  kubectl_cmd get "$1" -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' || return 1
+}
+
+unpin_xr(){
+  echo "Unpinning $1/$2 (removing spec.compositionRevisionSelector)"
+  kubectl_cmd patch "$1" "$2" --type=merge \
+    -p '{"spec":{"compositionRevisionSelector":null}}'
+}
+
+# arg parsing
+[ $# -gt 0 ] || { usage; exit 1; }
+ALL_TYPES=0 ALL_INST=0 TYPES_CSV="" NAME=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -t) TYPES_CSV="${2:?}"; shift 2;;
+    -i) NAME="${2:?}"; shift 2;;
+    --all-instances) ALL_INST=1; shift;;
+    --all-types) ALL_TYPES=1; shift;;
+    --as-admin) AS_ADMIN_FLAG="--as cluster-admin"; shift;;
+    -h|--help) usage; exit 0;;
+    -*) fatal "Unknown option $1";;
+    *)  fatal "Unexpected argument $1";;
+  esac
+done
+
+# validations
+[ $ALL_TYPES -eq 1 ] && [ -n "$TYPES_CSV" ] && fatal "Do not combine -t with --all-types"
+[ $ALL_TYPES -eq 0 ] && [ -z "$TYPES_CSV" ] && fatal "-t is required when --all-types is not set"
+[ -n "$NAME" ] && [ $ALL_INST -eq 1 ] && fatal "-i cannot be used with --all-instances"
+[ -n "$NAME" ] && [ $ALL_TYPES -eq 1 ] && fatal "-i cannot be used with --all-types"
+[ $ALL_TYPES -eq 0 ] && [ $ALL_INST -eq 0 ] && [ -z "$NAME" ] && fatal "Use -i or --all-instances (or --all-types)"
+
+types=()
+if [ $ALL_TYPES -eq 1 ]; then
+  while IFS= read -r line; do
+    [ -n "$line" ] && types+=("$line")
+  done < <(discover_all_types)
+  [ ${#types[@]} -gt 0 ] || fatal "No Crossplane XRDs found"
+else
+  TYPES_CSV=${TYPES_CSV//[[:space:]]/}
+  IFS=',' read -r -a types <<<"$TYPES_CSV"
+  [ -n "$NAME" ] && [ ${#types[@]} -ne 1 ] && fatal "With -i NAME you must pass exactly one TYPE"
+fi
+
+FAILED=0
+for t in "${types[@]}"; do
+  instances=()
+  if [ -n "$NAME" ]; then
+    if ! kubectl_cmd get "$t" "$NAME" >/dev/null 2>&1; then
+      warn "Instance not found: $t/$NAME; skipping"
+      FAILED=1; continue
+    fi
+    instances+=("$NAME")
+  else
+    out="$(list_instances "$t" 2>/dev/null || true)"
+    if [ -z "${out:-}" ]; then
+      echo "No instances of $t; skipping."
+      continue
+    fi
+    while IFS= read -r line; do
+      [ -n "$line" ] && instances+=("$line")
+    done <<<$out
+  fi
+
+  for n in "${instances[@]}"; do
+    [ -n "$n" ] || { warn "Empty name for $t; skipping"; FAILED=1; continue; }
+    if ! unpin_xr "$t" "$n"; then
+      warn "Failed to unpin $t/$n"; FAILED=1
+    fi
+  done
+done
+
+[ $FAILED -eq 0 ] || exit 1
+echo "Done."
+----
+====
+ 
+== What the rollback does
+
+`rollback.sh` sets:
+
+[source,yaml]
+----
+spec:
+  compositionRevisionSelector:
+    matchLabels:
+      metadata.appcat.vshn.io/revision: <REV>
+----
+
+If `-r <REV>` is not given, it autodetects the previous `CompositionRevision` relative to the XR's current revision and uses that CR's label `metadata.appcat.vshn.io/revision`.
+
+It's idempotent: run it multiple times and it always picks "previous relative to current".
+
+== Usage examples
+
+*Single XR (autodetect previous)*
+[source,bash]
+----
+./rollback.sh -t xvshnnextclouds.vshn.appcat.vshn.io -i nextcloud-test-mg7hp
+----
+
+*Single XR (pin to an explicit revision label)*
+[source,bash]
+----
+./rollback.sh -t xvshnnextclouds.vshn.appcat.vshn.io -i nextcloud-test-mg7hp -r v3.52.0-v4.166.0
+----
+
+*All instances of one type (autodetect each)*
+[source,bash]
+----
+./rollback.sh -t xvshnnextclouds.vshn.appcat.vshn.io --all-instances
+----
+
+*All types across the cluster (autodetect each)*
+[source,bash]
+----
+./rollback.sh --all-types
+----
+
+*Return to automatic policy (remove the selector)*
+[source,bash]
+----
+./unpin.sh -t xvshnnextclouds.vshn.appcat.vshn.io -i nextcloud-test-mg7hp
+# or all instances of a type
+./unpin.sh -t xvshnnextclouds.vshn.appcat.vshn.io --all-instances
+# or all types
+./unpin.sh --all-types
+----
+
+== Verify after patch
+
+Check what the XR is pinned to and the currently referenced CR:
+
+[source,bash]
+----
+TYPE=xvshnnextclouds.vshn.appcat.vshn.io
+NAME=nextcloud-test-mg7hp
+
+echo "Selector (REV label) in XR:"
+kubectl get "$TYPE" "$NAME" -o jsonpath='{.spec.compositionRevisionSelector.matchLabels}'
+
+echo "Watch for reconciliation"
+kubectl get "$TYPE" "$NAME" -w
+----
+
+== Manually discover available revisions
+
+*List all CompositionRevisions for a given base, oldest to newest, with labels*
+[source,bash]
+----
+BASE=vshnnextcloud.vshn.appcat.vshn.io
+for r in $(
+  kubectl get compositionrevisions.apiextensions.crossplane.io \
+    --sort-by=.metadata.creationTimestamp -o name \
+  | sed 's|.*/||' \
+  | awk -v b="$BASE" 'index($0, b "-")==1 { print }'
+); do
+  printf "%-70s  " "$r"
+  kubectl get compositionrevision "$r" \
+    -o go-template='{{ .metadata.creationTimestamp }}  {{ index .metadata.labels "metadata.appcat.vshn.io/revision" }}{{"\n"}}'
+done
+----
+
+== Operational patterns
+
+* **Prefer autodetect:** Let the script find the previous revision relative to the current one. Works even after multiple prior rollbacks.
+* **Start small:** Roll back a single instance or all instances of a single type first to confirm the fix.
+* **Bulk rollback:** Use only for truly widespread incidents affecting many types at once.
+* **Pin explicitly:** When you already know the exact good revision label to apply across instances.
+* **Unpin after resolution:** Once the incident is fixed, run unpin.sh so healthy revisions roll out automatically again.
+
