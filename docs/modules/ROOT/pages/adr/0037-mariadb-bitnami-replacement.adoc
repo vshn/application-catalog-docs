@@ -12,76 +12,99 @@ include::partial$adr-meta.adoc[]
 [NOTE]
 .Summary
 ====
-Short and concise summary of the decision in this ADR.
+We are switching from the Bitnami MariaDB Helm Chart to the MariaDB Operator due to licensing cost changes and operational advantages.
 ====
 
 == Problem
 
-For our VSHNMariaDB offering we relied on the Bitnami helm chart. However, the https://github.com/bitnami/containers/issues/83267[announced changes to the Bitnami catalog] forces us to re-evaluate our options.
+For our VSHNMariaDB offering, we have relied on the Bitnami Helm Chart.
+However, the https://github.com/bitnami/containers/issues/83267[announced changes to the Bitnami catalog] force us to re-evaluate our options.
+The new licensing model introduces significant costs for accessing versioned container images.
 
-== Evaluated options
+== Evaluated Options
 
-[cols="1,1,1,1,1,1,1"]
+[cols="2,1,1,1,1,1,2", options="header"]
 |===
-| Name | Type | Galera Support | Recovery support | Active project? | Metrics | Notes
-| Bitnami | Helm chart | ✅ | ✅ (Manually) | ✅ | ✅ (as a sidecar per mariadb pod)| Very expensive (~50'000$/year)
-| Mariadb-operator | Operator | ✅ | ✅ (Fully automated via operator) | ✅ | ✅ | Very active project with very frequent releases
-| Codership/Galera | Helm chart | ✅ | ✅ (Manually) | ✅ Not much happing on the repo at the moment. Last release was ~6 months ago. | ❌ | It's designed for use with mysql rather then MariaDB. Documentation is limited.
+| Name | Type | Galera Support | Recovery Support | Active Project? | Metrics | Notes
+
+| Bitnami Helm Chart
+| Helm chart
+| ✅
+| ⚠️ Manual only
+| ✅
+| ✅ Sidecar per pod
+| Very expensive, no automated recovery
+
+| MariaDB Operator
+| Operator
+| ✅
+| ✅ Fully automated
+| ✅
+| ✅ Dedicated + operator
+| Official solution, active development, free
+
+| Codership/Galera
+| Helm chart
+| ✅
+| ⚠️ Manual only
+| ❌
+| ❌
+| Designed for MySQL, limited docs, stale project
 |===
 
 == Comparison
 
-=== Mariadb-operator
+=== MariaDB Operator
 
-The mariadb-operator is an excellent operator that fully supports galera including automated recovery from a cluster failure.
-It's the official operator by the MariadDB developers and is under heavy development with lots of updates regularely.
-Maintenance is as easy as changing the version tag.
-The operator also provides CRs for Backup and Restore. You can do a restore to an existing instance or bootstrap a new instance and provide the backed up data as source for the bootstrap.
-Backup and restore can be done to a PVC or to an S3 backend.
+The *MariaDB Operator* is the official solution for managing MariaDB clusters, including *Galera* with **automated recovery** from cluster failures.
+Developed and maintained by the MariaDB team, it is under *active development* with frequent updates.
 
-It's not possible to have metrics for every pod at the moment, as the mysqld-exporter is deployed as a separate deployment rather than as a sidecar to the individual pods. Therefore the metrics visiblity is limited to specific pod / cluster level metrics.
+*Key Features:*
 
+- Simple upgrades by updating version tags
+- Backup & restore Custom Resource Definitions (CRDs)
+- Restore to existing instances or bootstrap new instances from backups
+- Supported storage backends: PVC and S3
+- Dedicated metrics deployment per MariaDB instance
+- Operator provides its own metrics
+- Proven compatibility with OpenShift
 
-=== Bitnami
+=== Bitnami Helm Chart
 
-We have been using the Bitnami Helm charts for running MariaDB/Galera for some time.
-They are well-tested, widely adopted in the community, and generally reliable.
-However, there are notable caveats:
+We have been using the Bitnami Helm Charts for MariaDB/Galera deployments.
+They are well-tested, widely adopted, and generally reliable.
 
-* *No automated recovery* – The Helm chart is static and does not include runtime logic for active recovery. In the event of a cluster failure, the cluster must be manually bootstrapped.
-* *No built-in backup/restore* – The chart does not provide a backup and restore mechanism. This must be implemented and maintained by the end user.
-* *Restricted access to versioned image tags* – As of *2025-08-28*, version-specific image tags will no longer be freely available and will require a costly subscription.
+*Notable limitations:*
 
-We have attempted to build the https://github.com/vshn/bitnami-containers/pull/3[Docker image] ourselves.
-This process involves retrieving two components from the Bitnami source:
+- *No automated recovery* - Requires manual intervention for cluster failures
+- *No built-in backup/restore* - Must be implemented separately
+- *Expensive access* - Version-specific image tags require costly subscription as of 2025-08-28
 
-[source]
-----
-downloads.bitnami.com/files/stacksmith
-----
+*Self-build attempt:*
+We explored building our own images using Bitnami source components from `downloads.bitnami.com/files/stacksmith`:
 
-* `ini-file`
-* `mariadb-galera`
+- `ini-file` - Can be built from source
+- `mariadb-galera` - Complex prebuilt component requiring significant reverse-engineering
 
-While the `ini-file` can be built directly from source within a Dockerfile, the `mariadb-galera` component is more complex.
-The Bitnami source contains a prebuilt MariaDB with Galera, along with a Dockerfile disguised as a `.txt` file.
-This Dockerfile serves as a reference for building the component but cannot be used directly—significant modifications were required to make it functional.
-
-Due to the complexity of reverse-engineering this image, there is a high risk that the resulting Galera setup may not behave as expected.
-While the build was successful, no functional tests have been performed to validate the image.
-
+The complexity and risk of reverse-engineering the `mariadb-galera` component make this approach unreliable.
+While we achieved a successful build, no functional validation was performed, creating **high risk** of unexpected behavior.
 
 == Decision
 
-The Mariadb-Operator is the most promising solution for us right now for the following reasons:
+*We choose the MariaDB Operator* for the following reasons:
 
-* Official solution from MariaDB itself
-* Under active and heavy development
-* Automated cluster recovery support
-* Integrated backup and restore support
-* Open-source and free to use.
-
+- Official MariaDB solution with guaranteed long-term support
+- Active development with frequent releases
+- Automated cluster recovery eliminates manual intervention
+- Integrated backup and restore capabilities
+- Open-source and free, eliminating licensing costs
+- Proven OpenShift compatibility
 
 == Consequences
 
-With the decision to migrate away from Bitnami to the Mariadb-Operator, we need to refactor the MariaDB service in our Appcat and SPKS offering. Also a migration path for existinging instances needs to be properly evaluated and implemented. This is rather time consuming. However, it's still justified as the price for the bitnami images is too high.
+With the decision to migrate from Bitnami to the MariaDB Operator, we need to:
+
+* Refactor the MariaDB service in our Appcat and SPKS offerings
+* Properly evaluate and implement a migration path for existing instances
+
+This is a time-consuming effort, but justified given the high cost of Bitnami images.
