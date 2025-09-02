@@ -40,6 +40,7 @@
 *** xref:csp/spks/redis-details.adoc[]
 *** xref:csp/spks/redis_sentinel_lb_with_haproxy.adoc[]
 *** xref:csp/spks/redis_fake_sentinel.adoc[]
+*** xref:csp/spks/automated_rollout.adoc[]
 *** Runbooks
 **** xref:csp/spks/runbooks/redis/debug_sentinel.adoc[]
 **** xref:csp/spks/runbooks/redis/manual_failover.adoc[]

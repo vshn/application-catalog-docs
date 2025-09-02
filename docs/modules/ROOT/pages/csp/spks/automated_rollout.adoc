@@ -1,0 +1,105 @@
+= How to rollout new revisions
+
+With the new infrastructure, there will also be more automation with rolling out changes.
+
+This will only apply to changes to the compositions. Anything else like Crossplane itself will still affect all instances at once and should be done by disabling ArgoCD first.
+
+== Update instances
+
+These instructions will update by plans. It will update all services that match the plan. So `xsmall` would update all MariaDB and Redis instances that have that plan.
+
+.Control Cluster: get list of all plans
+[source,shell]
+----
+# Standard
+kubectl get compositions -l service.syn.tools/sla=standard -o=jsonpath='{range .items[*]}{.metadata.labels.service\.syn\.tools/plan}{"\n"}{end}' | sort | uniq
+
+# Premium
+kubectl get compositions -l service.syn.tools/sla=premium -o=jsonpath='{range .items[*]}{.metadata.labels.service\.syn\.tools/plan}{"\n"}{end}' | sort | uniq
+----
+
+Then create jobs according to this template to trigger rollouts:
+
+.Control Cluster: get list of all plans
+[source,shell]
+----
+APPCATVERSION=v4.165.0
+PLAN=xsmall
+
+cat <<EOF | kubectl apply -f -
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  annotations: {}
+  labels:
+    name: crossplane-appcat-job-hotfixer-crossplane-edit
+  name: crossplane:appcat:job:hotfixer:crossplane:edit
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: crossplane-edit
+subjects:
+  - kind: ServiceAccount
+    name: appcat-hotfixer-sa
+    namespace: syn-appcat
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations: {}
+  labels:
+    name: appcat-hotfixer-sa
+  name: appcat-hotfixer-sa
+  namespace: syn-appcat
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  annotations: {}
+  labels:
+    name: appcat-hotfixer-xsmall
+  name: appcat-hotfixer-xsmall
+  namespace: syn-appcat
+spec:
+  completions: 1
+  parallelism: 1
+  template:
+    metadata:
+      labels:
+        name: appcat-hotfixer-xsmall
+    spec:
+      containers:
+        - args:
+            - hotfixer
+            - --serviceIDLabel
+            - service.syn.tools/id
+            - --plan
+            - $PLAN
+            - --planLabel
+            - service.syn.tools/plan
+          env:
+            - name: RELEASE_MANAGEMENT_ENABLED
+              value: 'true'
+          image: ghcr.io/vshn/appcat:$APPCATVERSION
+          imagePullPolicy: IfNotPresent
+          name: hotfixer
+          ports: []
+          resources:
+            limits:
+              cpu: 100m
+              memory: 300Mi
+            requests:
+              cpu: 10m
+              memory: 200Mi
+          stdin: false
+          tty: false
+          volumeMounts: []
+      imagePullSecrets: []
+      initContainers: []
+      restartPolicy: OnFailure
+      serviceAccountName: appcat-hotfixer-sa
+      terminationGracePeriodSeconds: 30
+      volumes: []
+EOF
+
+----
