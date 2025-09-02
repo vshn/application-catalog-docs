@@ -36,6 +36,7 @@
 
 * CSP: SPKS
 ** xref:csp/spks/investigate_service_instances.adoc[]
+** xref:csp/spks/automated_rollout.adoc[]
 ** xref:csp/spks/redis.adoc[]
 *** xref:csp/spks/redis-details.adoc[]
 *** xref:csp/spks/redis_sentinel_lb_with_haproxy.adoc[]
