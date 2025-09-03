@@ -1,0 +1,182 @@
+= Alert rules: VSHNRedis
+:page-aliases: how-tos/appcat/AppCatRedis.adoc
+
+== icon:glasses[] Overview
+
+These alerts cover Redis HA issues in AppCat services.
+It triggers in the following cases:
+
+* *VSHNRedisNotMaster* - Redis master service has not been pointing to elected master for 5 minutes.
+* *VSHNRedisQuorumNotOk* - Quorum check is failing for 5 minutes.
+* *VSHNRedisQuorumFlapping* - Quorum state is flapping repeatedly within 10 minutes.
+
+A Redis HA setup has 1 master and 2 replicas. Each pod runs a Sentinel sidecar that monitors and manages failover.
+
+Failover is automatic. If the master goes down, Sentinel promotes a replica to become the new master.
+
+*Service behavior:*
+
+* redis-master → Always points to the current master.
+* redis-headless → Connects to all Redis pods. You might land on a replica (read-only). This also exposes Sentinel on port 26379.
+
+*Ports:*
+
+* 6379 → Redis (read/write if master, read-only if replica)
+* 26379 → Sentinel
+
+== icon:bug[] Steps for Debugging
+
+*Check pod health*
+[source,bash]
+----
+kubectl -n $instanceNamespace get pods
+----
+
+*Connect to Sentinel*
+[source,bash]
+----
+kubectl exec -n $instanceNamespace -it $redisPod -- \
+  redis-cli \
+    -h 127.0.0.1 \
+    -p 26379 \
+    --tls \
+    --cert /opt/bitnami/redis/certs/tls.crt \
+    --key /opt/bitnami/redis/certs/tls.key \
+    --cacert /opt/bitnami/redis/certs/ca.crt \
+    -a "$( < "$REDIS_PASSWORD_FILE" )"
+----
+
+Check current master:
+[source,bash]
+----
+127.0.0.1:26379> SENTINEL get-master-addr-by-name mymaster
+1) "redis-master-0.redis-headless.$namespace.svc.cluster.local"
+2) "6379"
+----
+
+*Inspect Sentinel's view of the master*
+[source,bash]
+----
+127.0.0.1:26379> SENTINEL master mymaster
+ 1) "name"
+ 2) "mymaster"
+ 3) "ip"
+ 4) "edis-master-0.redis-headless.$namespace.svc.cluster.local"
+ 5) "port"
+ 6) "6379"
+ 7) "runid"
+ 8) "562b76a318f63f2dce5b21049e3f82c18798e3cb"
+ 9) "flags"
+10) "master"
+11) "link-pending-commands"
+...
+----
+
+*Check Sentinel quorum health*
+[source,bash]
+----
+127.0.0.1:26379> SENTINEL CKQUORUM mymaster
+OK 3 usable Sentinels. Quorum and failover authorization can be reached
+----
+Expected: output should confirm enough Sentinels are healthy to authorize a failover.
+If quorum cannot be reached, failover will not occur.
+
+*Connect to Redis*
+[source,bash]
+----
+kubectl exec -n $instanceNamespace -it $redisPod -- \
+  redis-cli \
+    -h 127.0.0.1 \
+    -p 6379 \
+    --tls \
+    --cert /opt/bitnami/redis/certs/tls.crt \
+    --key /opt/bitnami/redis/certs/tls.key \
+    --cacert /opt/bitnami/redis/certs/ca.crt \
+    -a "$( < "$REDIS_PASSWORD_FILE" )"
+----
+
+Check replication state:
+[source,bash]
+----
+127.0.0.1:6379> INFO replication
+# Replication
+role:master
+connected_slaves:2
+slave0:ip=redis-replicas-0.redis-headless.$namespace.svc.cluster.local,port=6379,state=online
+slave1:ip=redis-replicas-1.redis-headless.$namespace.svc.cluster.local,port=6379,state=online
+master_failover_state:no-failover
+----
+
+Expected:
+
+* `role: master` on exactly one pod
+* Replicas listed as `state=online`
+* `master_failover_state:no-failover` in normal state
+
+== icon:wrench[] Steps for Remediation
+
+*If no master is elected (VSHNRedisNotMaster):*
+.Restart the Redis StatefulSet to trigger a new master election.
+[source,bash]
+----
+kubectl -n $instanceNamespace rollout restart statefulset redis-node
+----
+Verify a new master via Sentinel:
+[source,bash]
+----
+127.0.0.1:26379> SENTINEL get-master-addr-by-name mymaster
+----
+
+*If quorum is not OK (VSHNRedisQuorumNotOk):*
+
+* Confirm at least 2 of 3 Sentinels are running and healthy.
+* Restart unhealthy Sentinel sidecar pods if needed.
+* Verify quorum with:
+[source,bash]
+----
+127.0.0.1:26379> SENTINEL CKQUORUM mymaster
+----
+
+*If quorum is flapping (VSHNRedisQuorumFlapping):*
+
+* Inspect Sentinel logs for repeated promotions/demotions.
+* Verify pod-to-pod networking and node stability.
+* Inspect if instability is node-related.
+
+=== Manual Failover
+
+If Sentinel fails to promote a new master automatically, you can trigger a manual failover.
+Only do this if quorum is healthy. Check first:
+
+[source,bash]
+----
+127.0.0.1:26379> SENTINEL CKQUORUM mymaster
+OK 3 usable Sentinels. Quorum and failover authorization can be reached
+----
+
+Then trigger failover:
+
+[source,bash]
+----
+kubectl exec -n $instanceNamespace -it $redisPod -- \
+  redis-cli \
+    -h 127.0.0.1 \
+    -p 26379 \
+    --tls \
+    --cert /opt/bitnami/redis/certs/tls.crt \
+    --key /opt/bitnami/redis/certs/tls.key \
+    --cacert /opt/bitnami/redis/certs/ca.crt \
+    -a "$( < "$REDIS_PASSWORD_FILE" )" \
+----
+[source,bash]
+----
+127.0.0.1:26379> SENTINEL failover mymaster
+----
+
+This instructs the Sentinel cluster to elect a new master immediately.
+The old master will rejoin as a replica when it comes back online.
+
+== icon:book[] References
+
+* https://artifacthub.io/packages/helm/bitnami/redis[Bitnami Redis Helm Chart]
+* https://redis.io/docs/interact/sentinel/[Redis Sentinel Documentation]

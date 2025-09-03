@@ -114,8 +114,9 @@
 **** xref:framework/quality-requirements/usability/provisioning-time.adoc[]
 **** xref:framework/quality-requirements/usability/logs.adoc[]
 ** Runbooks
-*** xref:framework/runbooks/AppCatRollback.adoc[]
 *** xref:framework/runbooks/AppCatBackupJobError.adoc[]
+*** xref:framework/runbooks/AppCatRollback.adoc[]
+*** xref:framework/runbooks/AppCatRedis.adoc[]
 *** xref:framework/runbooks/GuaranteedUptimeTarget.adoc[]
 *** xref:framework/runbooks/AppCatHighAvailableStatefulsetWarning.adoc[]
 *** xref:framework/runbooks/AppCatHighAvailableDeploymentWarning.adoc[]
