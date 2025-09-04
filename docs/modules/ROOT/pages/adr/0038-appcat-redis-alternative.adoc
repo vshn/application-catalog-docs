@@ -1,0 +1,176 @@
+= ADR 0038 - Redis Bitnami Chart Alternative
+:adr_author:    Gabriel Saratura
+:adr_owner:     Schedar
+:adr_reviewers:
+:adr_date:      2025-09-03
+:adr_upd_date:  2025-09-03
+:adr_status:    draft
+:adr_tags:      redis,bitnami,helm,service,operator
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+We are evaluating alternatives to the Redis Bitnami Helm Chart due to licensing cost changes.
+After comprehensive testing, the DandyDeveloper redis-ha chart emerges as the most viable community alternative, with operators recommended for enterprise deployments.
+====
+
+== Problem
+
+For our VSHNRedis offering, we have relied on the Bitnami Redis Helm Chart.
+However, the https://github.com/bitnami/containers/issues/83267[announced changes to the Bitnami catalog] force us to re-evaluate our options.
+The new licensing model introduces significant operational and financial challenges:
+
+- Expensive access to versioned container images
+- Migration pressure due to legacy repository limitations
+- Need for production-ready high availability Redis deployments
+- Requirement for automated failover capabilities
+
+== Evaluated Options
+
+[cols="2,1,1,1,1,1,2", options="header"]
+|===
+| Name | Type | HA Support | Failover | Active Project? | Production Ready | Notes
+
+| Bitnami Redis Chart
+| Helm chart
+| ✅
+| ✅ Sentinel
+| ✅
+| ✅
+| Expensive licensing, proven solution
+
+| DandyDeveloper redis-ha
+| Helm chart
+| ✅
+| ✅ Sentinel + HAProxy
+| ✅
+| ✅ *Validated*
+| Community fork from helm/stable, battle-tested
+
+| OpsTree Redis Operator
+| Operator
+| ✅
+| ✅ Automated
+| ✅
+| ❌ *Not Validated*
+| Modern Go operator, CNCF Sandbox candidate, reliability issues identified
+
+| Redis Enterprise Operator
+| Operator
+| ✅
+| ✅ Enterprise grade
+| ✅
+| ✅
+| Official but commercial licensing required
+|===
+
+== Comparison
+
+=== DandyDeveloper redis-ha Chart *Community Recommendation*
+
+The *DandyDeveloper redis-ha chart* represents the most mature community alternative, successfully migrated from the deprecated helm/stable repository.
+
+*Key Features:*
+
+- Redis master/replica configuration with Sentinel for automatic failover
+- HAProxy load balancer for connection routing
+- Comprehensive monitoring with redis_exporter integration
+- Persistent volume support with configurable anti-affinity
+- TLS encryption capabilities
+- Extensive configuration options
+
+*Production Validation:*
+[NOTE]
+====
+**✅ Failover Testing Completed Successfully** +
+We deployed and tested this chart with automated failover scenarios:
+
+- Redis master pod deletion triggers automatic failover
+- HAProxy correctly routes traffic to new master
+- Applications automatically reconnect without intervention
+- Zero data loss during failover events
+- Recovery time: ~10-15 seconds for complete failover cycle
+====
+
+*Maintenance Status:* Actively maintained with regular updates through 2025. Strong community adoption with 160+ GitHub forks.
+
+=== OpsTree Redis Operator *Enterprise Recommendation (Not Currently Viable)*
+
+The *OpsTree redis-operator* provides comprehensive operator functionality with support for all Redis deployment modes.
+
+*Distinguished Features:*
+
+- Support for standalone, cluster, replication, and sentinel modes
+- Built-in monitoring with Prometheus/Grafana integration
+- IPv4/IPv6 dual-stack networking
+- Password and password-less authentication options
+- Professional support available if needed
+- Under consideration for CNCF Sandbox status
+
+*Production Adoption:* Growing rapidly with multiple documented enterprise deployments and comprehensive CI/CD testing.
+
+*Production Validation:*
+[NOTE]
+====
+**❌ Failover Testing Failed** +
+We deployed and tested this operator with automated failover scenarios:
+
+- Redis master pod deletion triggers automatic failover
+- Sentinel unable to properly elect a single master
+- Multiple nodes become masters (split-brain scenario)
+- https://github.com/OT-CONTAINER-KIT/redis-operator/issues/1094[Active issue] resolved but users continue reporting problems
+====
+
+=== Redis Enterprise Operator
+
+*Redis Inc.'s Enterprise Operator* offers Level 4-5 operator maturity with comprehensive enterprise capabilities.
+
+*Advanced Capabilities:*
+
+- Active-Active geo-distribution
+- Auto tiering with Redis on Flash
+- Multi-tenant database deployments
+- Zero-downtime upgrades and automated failover
+- Enterprise-grade security with RBAC and LDAP
+- Professional 24/7 support
+
+*Limitation:* Commercial licensing required after 30-day trial, higher resource requirements.
+
+=== Bitnami Redis Chart Limitations
+
+*Current Challenges:*
+
+- **Expensive licensing** - Version-specific image access requires costly subscription
+- **Migration deadline pressure** - Legacy repository migration by August 2025
+- **Limited automation** - Manual intervention often required for complex scenarios
+
+*Self-build Analysis:*
+
+We evaluated building https://github.com/vshn/bitnami-containers/pull/4[custom images] from Bitnami components but determined this approach carries **high risk** due to:
+
+-  Lack of official documentation for internal components
+- Potential for subtle bugs in production environments
+- Ongoing maintenance burden
+
+== Decision
+
+*Short term:* For existing AppCat Redis offering, we will build Bitnami images ourselves in case of critical security updates.
+
+*Long term:* We choose DandyDeveloper redis-ha chart because:
+
+- Proven failover capabilities through comprehensive testing
+- Mature codebase migrated from official Helm stable repository
+- Active community maintenance and support
+- No licensing costs
+- Production-ready with validated high availability
+
+== Consequences
+
+With the decision to migrate from Bitnami to DandyDeveloper's Helm Chart, we have the following consequences:
+
+- Refactor AppCat Redis service configurations in comp-functions
+- Develop and validate migration procedures for existing instances
+- Update operational documentation and runbooks
+- Implement comprehensive testing for production migration
