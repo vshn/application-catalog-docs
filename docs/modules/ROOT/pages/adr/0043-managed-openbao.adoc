@@ -1,0 +1,207 @@
+= ADR 0043 - Managed OpenBao Service Implementation
+:adr_author:    Yannik Dällenbach
+:adr_owner:     Schedar/bespinian
+:adr_reviewers: Schedar
+:adr_date:      2025-01-13
+:adr_upd_date:  2025-01-13
+:adr_status:    draft
+:adr_tags:      service,openbao,secret-management
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+This ADR outlines the implementation of a managed OpenBao service on the AppCat platform to provide secret mamanagement capabilities to customers.
+This builds upon the suggestion of xref:adr/0024-product-choice-for-secret-management.adoc[ADR 0024] to use OpenBao as secret and PKI management solution.
+====
+
+== Context
+
+Following the suggestion in ADR 0024 to use OpenBao for secret management, we need to implement it as a managed service within the AppCat ecosystem. OpenBao provides:
+
+- Secret storage with REST API
+- Vault API compatibility
+- Open-source license with Linux Foundation backing
+- Self-hostable deployment model
+
+The service must integrate with the existing AppCat patterns including:
+
+- Crossplane-based provisioning
+- Managed namespace deployment model
+- User-workload monitoring integration
+- Backup and maintenance automation
+- SLA monitoring and reporting
+
+== Requirements
+
+=== Functional Requirements
+
+* **Secret Management**: Store, retrieve, and manage secrets via REST API
+* **API Compatibility**: Maintain Vault API compatibility for existing tooling
+* **High Availability**: Support clustered deployment for production workloads
+* **Authentication**: Integration with OIDC
+
+=== Operational Requirements
+
+* **Backup & Recovery**: Automated backup of secret data
+* **Monitoring**: SLA metrics, capacity alerts, and operational dashboards
+* **Maintenance**: Automated security updates and version upgrades
+* **Scaling**: Horizontal scaling capabilities for high-throughput scenarios
+* **Security**: Encryption at rest, TLS in transit, audit logging
+
+== Proposals
+
+=== Proposal 1: Helm Chart with External Storage
+
+Deploy OpenBao using the official Helm chart with external storage backends (PostgreSQL).
+
+**Implementation:**
+
+- Use `provider-helm` to deploy OpenBao Helm chart
+- PostgreSQL backend for secret storage (leveraging existing `VSHNPostgreSQL`)
+- Initialization through composition functions
+
+**Advantages:**
+
+- Leverages existing PostgreSQL infrastructure
+- Official Helm chart provides production-ready deployment
+- Separation of compute and storage for better scaling
+- Familiar AppCat deployment patterns
+
+**Disadvantages:**
+
+- Additional complexity in managing external dependencies
+- Potential performance overhead with external storage
+
+=== Proposal 2: Integrated Deployment with Local Storage
+
+Deploy OpenBao with integrated storage using Raft consensus.
+
+**Implementation:**
+
+- Use `provider-helm` to deploy OpenBao Helm chart
+- Raft storage backend for simplicity
+- Built-in clustering for high availability
+
+**Advantages:**
+
+- Simplified deployment with fewer external dependencies
+- Built-in consensus and replication
+
+**Disadvantages:**
+
+- Raft cluster management overhead
+
+=== Proposal 3: Operator-Based Deployment
+
+Develop or adopt an OpenBao operator for Kubernetes-native management.
+
+**Implementation:**
+
+- Custom operator following AppCat patterns
+- CRDs for vault configuration and policies
+- Automated lifecycle management
+- Native Kubernetes integration
+
+**Advantages:**
+
+- Full Kubernetes-native experience
+- Automated day-2 operations
+- Extensible for future features
+- Better integration with AppCat framework
+
+**Disadvantages:**
+
+- High development effort
+- Additional operational complexity
+- Maintenance burden for custom operator
+
+== Decision
+
+**Proposal 2: Helm Chart with Internal Storage**
+
+We choose to implement OpenBao using the official Helm chart with integrated Raft storage.
+
+### Implementation Details
+
+**Storage Backend:**
+
+- Primary: Raft consensus storage for built-in clustering
+- Leverage existing AppCat Backup mechanisms (K8sup)
+- Self-contained storage eliminates external dependencies
+
+**Deployment Architecture:**
+
+TODO
+
+```yaml
+apiVersion: vshn.appcat.vshn.io/v1
+kind: VSHNOpenBao
+metadata:
+  name: my-bao
+spec:
+  parameters:
+    service:
+      version: "2.0.0"
+      replicas: 3
+    storage:
+      backup:
+        enabled: true
+        schedule: "0 2 * * *"
+        snapshots: true
+    monitoring:
+      enabled: true
+```
+
+**Key Components:**
+
+1. **OpenBao Cluster**: 3-node HA deployment with Raft consensus
+2. **Raft Storage**: Built-in distributed storage backend
+3. **Backup Storage**: `VSHNObjectBucket` for Raft snapshots using K8sup
+4. **Monitoring**: Custom SLI exporter and Prometheus integration
+
+**Security Model:**
+
+- TLS encryption for all communications
+- Kubernetes service account integration
+- RBAC policies managed through OpenBao
+- Audit logging to persistent storage
+- Auto-unseal configuration for cluster bootstrap
+
+== Consequences
+
+**Positive**
+
+- Simplified deployment with fewer external dependencies
+- Built-in consensus and replication reduces operational complexity
+- Self-contained backup mechanisms using Raft snapshots
+- Leverages official OpenBao Helm chart for production readiness
+- Eliminates external storage dependency management
+
+**Negative**
+
+- Raft cluster management requires specialized knowledge
+- Limited to OpenBao's built-in storage capabilities
+- Potential storage scaling limitations compared to external databases
+- No feature parity with HashiCorp Vault Enterprise
+
+**Operational Impact**
+
+- Simplified service deployment with reduced external dependencies
+- Raft snapshot management and restoration procedures
+- Need for OpenBao and Raft consensus expertise in operations team
+- Integration testing with existing AppCat services
+- TLS certificate lifecycle management (renewal, rotation)
+- Auto-unseal configuration and cluster bootstrap management
+- Raft cluster health monitoring and node management
+- Audit log management and compliance reporting
+- ServiceMonitor configuration for Prometheus integration
+- Snapshot-based backup validation and testing
+
+**Customer Benefits**
+
+- Self-hosted alternative to cloud secret management services
+- Kubernetes-native secret injection patterns
+- Vault API compatibility for existing applications and tooling
+- Compliance with data sovereignty requirements
