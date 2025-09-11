@@ -1,0 +1,92 @@
+= AppCat Release Process
+
+The AppCat release process ensures that new versions of AppCat and its components are consistently built, tested, and rolled out across environments.
+
+The process consists of:
+
+1. Creating an AppCat version.
+2. Creating a component-appcat version.
+3. Updating *fast* and *stable* channels in `commodore-defaults`.
+4. Deploying the component and AppCat function by compiling cluster catalogs.
+5. Rolling out AppCat (comp-function) to AppCat services.
+
+== Sprint Release
+
+At the end of each sprint, a new AppCat version is released.
+This process is partly automated but still requires engineer involvement. Full automation is planned once the CI/CD lifecycle proves stable.
+
+=== Preparation
+
+1. Ensure the `develop` branch is up to date with `master`. 👤
+2. Confirm with the team that all AppCat and component PRs have been merged. 👤
+
+=== Execution
+
+1. Trigger the https://github.com/vshn/appcat/actions/workflows/pre-release.yml[pre-release workflow] in GitHub Actions. 👤
+2. Wait for the workflow to succeed. A new AppCat version is released and a component PR is created automatically.
+3. Review the new component PR to confirm it points to the latest AppCat version. 👤
+4. Merge the component PR. 👤
+5. If `develop` is behind, a PR will be created automatically. Ensure `master` is merged back into `develop`. 👤
+
+=== Post-Release
+
+Once the release is merged, dependencies and rollouts happen automatically:
+
+1. Renovate in the https://git.vshn.net/syn/commodore-defaults/[commodore-defaults] repository updates the AppCat dependency:
+* ~5 minutes in *fast* channel (test).
+* ~1 week in *stable* channel (prod).
+2. https://git.vshn.net/syn/compile-all-poc/-/pipeline_schedules[Cluster compilations] run daily at 09:30 (except weekends).
+3. After compilation:
+* Component artifacts are rolled out.
+* The AppCat Crossplane function is deployed.
+4. The AppCat Crossplane function is rolled out to services during each service maintenance window.
+
+== Hotfix Release
+
+The hotfix process is used for urgent fixes that cannot wait for the next sprint release.
+
+=== Preparation
+
+1. Label the PR with `hotfix`. 👤
+2. Set the PR base branch to `master`. 👤
+
+=== Execution
+
+1. Add the comment `/merge` to the PR. 👤
+→ This automatically creates a new AppCat and component version.
+2. Renovate in the https://git.vshn.net/syn/commodore-defaults/[commodore-defaults] repository updates the AppCat dependency:
+* ~5 minutes in *fast* channel (test).
+* ~1 week in *stable* channel (prod).
+(The engineer may accelerate this for hotfixes.) 👤
+3. Trigger the https://git.vshn.net/syn/compile-all-poc/-/pipelines[cluster compilation pipeline] manually instead of waiting for the next scheduled run. 👤
+4. If `develop` is behind, a PR will be created automatically. Ensure `master` is merged back into `develop`. 👤
+
+=== Post-Release
+
+After the compilation is complete:
+
+1. Component artifacts are rolled out.
+2. The AppCat Crossplane function is deployed and rolled out immediately, since the maintenance job is triggered right away.
+
+== Key Considerations
+
+IMPORTANT: 👤 indicates *engineer action required*.
+
+[NOTE]
+====
+Rollout timing differs between components and functions:
+
+* Component artifacts are applied immediately after cluster compilation via ArgoCD.
+* The AppCat Crossplane function is rolled out only during the service maintenance job.
+
+This timing difference is critical to consider when planning releases, and is the reason for the ~1 week delay in the `commodore-defaults` *stable* channel.
+====
+
+[NOTE]
+====
+Version bumping follows semantic labels:
+
+* `patch`, `documentation`, `dependency`, `hotfix` → increases the **patch** version (`v0.0.X`)
+* `minor` → increases the **minor** version (`v0.X.0`)
+* `major` → increases the **major** version (`vX.0.0`)
+====

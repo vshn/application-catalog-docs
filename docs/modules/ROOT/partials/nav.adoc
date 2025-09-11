@@ -114,6 +114,7 @@
 **** xref:framework/quality-requirements/usability/provisioning-time.adoc[]
 **** xref:framework/quality-requirements/usability/logs.adoc[]
 ** Runbooks
+*** xref:framework/runbooks/AppCatRelease.adoc[]
 *** xref:framework/runbooks/AppCatBackupJobError.adoc[]
 *** xref:framework/runbooks/AppCatRollback.adoc[]
 *** xref:framework/runbooks/AppCatRedis.adoc[]
