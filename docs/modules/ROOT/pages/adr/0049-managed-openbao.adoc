@@ -56,20 +56,20 @@ The service must integrate with the existing AppCat patterns including:
 
 Deploy OpenBao using the official Helm chart with external storage backends (PostgreSQL).
 
-**Implementation:**
+Implementation::
 
 - Use `provider-helm` to deploy OpenBao Helm chart
 - PostgreSQL backend for secret storage (leveraging existing `VSHNPostgreSQL`)
 - Initialization through composition functions
 
-**Advantages:**
+Advantages::
 
 - Leverages existing PostgreSQL infrastructure
 - Official Helm chart provides production-ready deployment
 - Separation of compute and storage for better scaling
 - Familiar AppCat deployment patterns
 
-**Disadvantages:**
+Disadvantages::
 
 - Additional complexity in managing external dependencies
 - Potential performance overhead with external storage
@@ -78,18 +78,18 @@ Deploy OpenBao using the official Helm chart with external storage backends (Pos
 
 Deploy OpenBao with integrated storage using Raft consensus.
 
-**Implementation:**
+Implementation::
 
 - Use `provider-helm` to deploy OpenBao Helm chart
 - Raft storage backend for simplicity
 - Built-in clustering for high availability
 
-**Advantages:**
+Advantages::
 
 - Simplified deployment with fewer external dependencies
 - Built-in consensus and replication
 
-**Disadvantages:**
+Disadvantages::
 
 - Raft cluster management overhead
 
@@ -97,21 +97,21 @@ Deploy OpenBao with integrated storage using Raft consensus.
 
 Develop or adopt an OpenBao operator for Kubernetes-native management.
 
-**Implementation:**
+Implementation::
 
 - Custom operator following AppCat patterns
 - CRDs for vault configuration and policies
 - Automated lifecycle management
 - Native Kubernetes integration
 
-**Advantages:**
+Advantages::
 
 - Full Kubernetes-native experience
 - Automated day-2 operations
 - Extensible for future features
 - Better integration with AppCat framework
 
-**Disadvantages:**
+Disadvantages::
 
 - High development effort
 - Additional operational complexity
@@ -125,7 +125,7 @@ We choose to implement OpenBao using the official Helm chart with integrated Raf
 
 ### Implementation Details
 
-**Storage Backend:**
+Storage Backend::
 
 - Primary: Raft consensus storage for built-in clustering
 - Leverage existing AppCat Backup mechanisms (K8sup)
@@ -154,14 +154,14 @@ spec:
       enabled: true
 ```
 
-**Key Components:**
+Key Components::
 
 1. **OpenBao Cluster**: 3-node HA deployment with Raft consensus
 2. **Raft Storage**: Built-in distributed storage backend
 3. **Backup Storage**: `VSHNObjectBucket` for Raft snapshots using K8sup
 4. **Monitoring**: Custom SLI exporter and Prometheus integration
 
-**Security Model:**
+Security Model::
 
 - TLS encryption for all communications
 - Kubernetes service account integration
@@ -171,7 +171,7 @@ spec:
 
 == Consequences
 
-**Positive**
+Positive::
 
 - Simplified deployment with fewer external dependencies
 - Built-in consensus and replication reduces operational complexity
@@ -179,14 +179,14 @@ spec:
 - Leverages official OpenBao Helm chart for production readiness
 - Eliminates external storage dependency management
 
-**Negative**
+Negative::
 
 - Raft cluster management requires specialized knowledge
 - Limited to OpenBao's built-in storage capabilities
 - Potential storage scaling limitations compared to external databases
 - No feature parity with HashiCorp Vault Enterprise
 
-**Operational Impact**
+Operational Impact::
 
 - Simplified service deployment with reduced external dependencies
 - Raft snapshot management and restoration procedures
@@ -199,7 +199,7 @@ spec:
 - ServiceMonitor configuration for Prometheus integration
 - Snapshot-based backup validation and testing
 
-**Customer Benefits**
+Customer Benefits::
 
 - Self-hosted alternative to cloud secret management services
 - Kubernetes-native secret injection patterns
