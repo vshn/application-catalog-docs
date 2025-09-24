@@ -1,7 +1,7 @@
 = ADR 0031 - Naming scheme for Servala cluster names and URLs
 :adr_author:    Nicolas Bigler
 :adr_owner:     Schedar
-:adr_reviewers: 
+:adr_reviewers:
 :adr_date:      2025-04-11
 :adr_upd_date:  2025-04-11
 :adr_status:    accepted
@@ -69,17 +69,17 @@ Examples:
 
 We have a dedicated domain for servala clusters: servala.com and will use that domain for all clusters
 
-The control-plane clusters API should be reachable under the following URL: `api.control-[csp]-[region]-[stage][counter].servala.com`
+The control-plane clusters API should be reachable under the following URL: `api.[csp]-[region]-[stage][counter].control.servala.com`
 
-The apps domain for the services should be: `*.apps.services-[csp]-[region]-[stage][counter].servala.com`
+The apps domain for the services should be: `*.apps.[csp]-[region]-[stage][counter].services.servala.com`
 
 Examples:
 
 * First production control-plane cluster running on Cloudscale in the lpg1 region:
-`api.control-cloudscale-lpg1-prod1.servala.com`
+`api.cloudscale-lpg1-prod1.control.servala.com`
 * Second test control-plane cluster running on Exoscale in the ch-gva-2 region:
-`api.control-exoscale-ch-gva-2-test2.servala.com`
+`api.exoscale-ch-gva-2-test2.control.servala.com`
 * First production service-cluster running on Cloudscale in the rma1 region:
-`*.apps.services-cloudscale-rma1-prod1.servala.com`
+`*.apps.cloudscale-rma1-prod1.services.servala.com`
 * Third test service-cluster running on Exoscale in the ch-dk-2 region:
-`*.apps.services-exoscale-ch-dk-2-test2.servala.com`
+`*.apps.exoscale-ch-dk-2-test2.services.servala.com`
