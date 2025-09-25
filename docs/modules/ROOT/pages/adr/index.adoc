@@ -128,7 +128,7 @@
 |xref:adr/0031-naming-scheme-for-servala-cluster-names-and-urls.adoc[]
 
 `servala,naming,scheme,cluster`
-|draft | |2025-04-11
+|accepted | |2025-04-11
 |xref:adr/0032-ci-pipeline.adoc[]
 
 `ci,pipeline,cd,github`
@@ -149,4 +149,12 @@
 
 `appcat,postgresql`
 |draft | |2025-07-07
+|xref:adr/0037-mariadb-bitnami-replacement.adoc[]
+
+`mariadb,bitnami,helm,service`
+|draft | |2025-07-30
+|xref:adr/0038-appcat-redis-alternative.adoc[]
+
+`redis,bitnami,helm,service,operator`
+|draft | |2025-09-03
 |===
