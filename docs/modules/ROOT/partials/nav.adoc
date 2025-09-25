@@ -130,3 +130,8 @@
 * xref:adr/index.adoc[]
 ** xref:adr/working-with.adoc[]
 include::partial$nav-adrs.adoc[]
+
+* How-Tos
+** xref:how-tos/add-servala-service-cluster.adoc[]
+** xref:how-tos/add-servala-control-cluster.adoc[]
+** xref:how-tos/connect-to-servala-control-cluster.adoc[]

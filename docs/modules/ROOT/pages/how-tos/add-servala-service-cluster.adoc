@@ -1,0 +1,48 @@
+= Add a Servala service cluster
+
+
+== Add syn configuration
+
+
+.Syn configs to apply
+[source,yaml]
+----
+classes:
+  - .openshift4 <1>
+
+applications:
+  - appcat <2>
+
+parameters:
+  appcat:
+    clusterManagementSystem:
+      controlPlaneKubeconfig: "?{vaultkv:${cluster:tenant}/${cluster:name}/kubeconfigs/controlclusterID}" <3>
+----
+
+<1> Contains the common configuration for appcat service clusters
+<2> Make sure appcat is imported
+<3> Add the control plane kubeconfig secrets.
+
+== Get the control cluster kubeconfig
+
+Connect to the control plane that will handle this service cluster.
+Then run the following command to generate a valid kubeconfig.
+
+This uses a https://krew.sigs.k8s.io/[krew] plugin called `view-serviceaccount-kubeconfig` which helps generating kubeconfigs from service accounts.
+
+To install the plugin use `kubectl krew install view-serviceaccount-kubeconfig`.
+
+.Generate kubeconfig
+[source,bash]
+----
+kubectl view-serviceaccount-kubeconfig -n syn-appcat appcat-service-cluster | yq 'del(.clusters[0].cluster.certificate-authority-data)'
+----
+
+After the kubeconfig has been generated it can be added to https://vault-prod.syn.vshn.net/ui/vault/secrets/clusters%2Fkv/kv/list/t-servala/[vault].
+
+== Configure DNS
+
+The apps domain needs to be configured as well. For this please refere to the xref:adr/0031-naming-scheme-for-servala-cluster-names-and-urls.html#_urls_2[naming ADR].
+The dns configuration can be found https://git.vshn.net/vshn/vshn_zonefiles/-/blob/master/servala.com.zone?ref_type=heads[here].
+
+The apps domain is a `CNAME` to the cluster's ingress.
