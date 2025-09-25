@@ -60,10 +60,10 @@ COUNTER:: A unique two digit counter for each cluster
 Examples:
 
 * First production control-plane cluster running on Cloudscale in the lpg1 zone:
-`c-servala-control-cloudscale-lpg1-prod1`
+`c-sv-ctr-cls-lpg1-prod1`
 
 * Second test service cluster running on Exoscale in the ch-gva-2 region:
-`c-servala-service-exoscale-ch-gva-2-test2`
+`c-sv-svc-exo-ch-gva-2-test2`
 
 === URLs
 
