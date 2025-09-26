@@ -12,7 +12,7 @@ include::partial$adr-meta.adoc[]
 [NOTE]
 .Summary
 ====
-This ADR outlines the implementation of a managed OpenBao service on the AppCat platform to provide secret mamanagement capabilities to customers.
+This ADR outlines the implementation of a managed OpenBao service on the AppCat platform to provide secret mananagement capabilities to customers.
 This builds upon the suggestion of xref:adr/0024-product-choice-for-secret-management.adoc[ADR 0024] to use OpenBao as secret and PKI management solution.
 ====
 
@@ -128,7 +128,7 @@ We choose to implement OpenBao using the official Helm chart with integrated Raf
 Storage Backend::
 
 - Primary: Raft consensus storage for built-in clustering
-- Leverage existing AppCat Backup mechanisms (K8sup)
+- Leverage existing AppCat Backup mechanisms (K8up)
 - Self-contained storage eliminates external dependencies
 
 **Deployment Architecture:**
@@ -158,7 +158,7 @@ Key Components::
 
 1. **OpenBao Cluster**: 3-node HA deployment with Raft consensus
 2. **Raft Storage**: Built-in distributed storage backend
-3. **Backup Storage**: `VSHNObjectBucket` for Raft snapshots using K8sup
+3. **Backup Storage**: `ObjectBucket` for Raft snapshots using K8up
 4. **Monitoring**: Custom SLI exporter and Prometheus integration
 
 Security Model::
