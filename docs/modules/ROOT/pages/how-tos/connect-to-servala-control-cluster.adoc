@@ -1,0 +1,45 @@
+= Connect to a Servala control cluster
+
+Servala control clusters are vclusters that run within specific service clusters. This means they differ from service cluster such that they are not OpenShift clusters but rather vanilla Kubernetes.
+
+Their authentication is handled via the `kubelogin` plugin. For more details how to install and connect to the vcluster see: https://hub.syn.tools/vcluster/how-tos/oidc.html#_optional_setup_kubelogin[here].
+
+.Example kubeconfig
+[source,yaml]
+----
+apiVersion: v1
+clusters:
+- cluster:
+    server: https://api.cloudscale-rma-1-prod1.control.servala.com/ <1>
+  name: c-sv-ctr-cls-rma-1-prod01 <2>
+contexts:
+- context:
+    cluster: c-sv-ctr-cls-rma-1-prod01 <2>
+    namespace: default
+    user: oidc-user
+  name: c-sv-ctr-cls-rma-1-prod01 <2>
+current-context: c-sv-ctr-cls-rma-1-prod01 <2>
+kind: Config
+preferences: {}
+users:
+- name: oidc-user
+  user:
+    exec:
+      apiVersion: client.authentication.k8s.io/v1beta1
+      args:
+      - oidc-login
+      - get-token
+      - --oidc-issuer-url=https://id.vshn.net/auth/realms/vshn-realm
+      - --oidc-client-id=appuio-managed_c-sv-ctr-cls-rma-1-prod01 <3>
+      - --oidc-extra-scope=email offline_access profile openid
+      command: kubectl
+      env: null
+      interactiveMode: IfAvailable
+      provideClusterInfo: false
+----
+
+<1> URL to connect to
+<2> Cluster name for easier identification
+<3> `appuio-managed_` + cluster name
+
+Save the kubeconfig at a convenient location and use it to connect to the control-plane cluster.
