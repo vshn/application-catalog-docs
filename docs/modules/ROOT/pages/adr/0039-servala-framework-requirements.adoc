@@ -1,0 +1,26 @@
+= ADR 0039 - Servala Framework Requirements
+:adr_author:    Tobias Brunner
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2025-09-30
+:adr_upd_date:  2025-09-30
+:adr_status:    draft
+:adr_tags:      framework
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+Short and concise summary of the decision in this ADR.
+====
+
+== Context
+
+
+
+== Decision
+
+
+
+== Consequences
