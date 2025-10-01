@@ -1,0 +1,26 @@
+= ADR 0040 - ADR for Codey Git SSH Access
+:adr_author:    Marco De Luca
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2025-10-01
+:adr_upd_date:  2025-10-01
+:adr_status:    draft
+:adr_tags:      codey
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+Short and concise summary of the decision in this ADR.
+====
+
+== Context
+
+
+
+== Decision
+
+
+
+== Consequences
