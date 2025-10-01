@@ -109,7 +109,6 @@ Advantages::
 - Full Kubernetes-native experience
 - Automated day-2 operations
 - Extensible for future features
-- Better integration with AppCat framework
 
 Disadvantages::
 
