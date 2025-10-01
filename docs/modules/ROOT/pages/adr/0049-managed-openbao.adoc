@@ -163,10 +163,9 @@ Key Components::
 Security Model::
 
 - TLS encryption for all communications
-- Kubernetes service account integration
 - RBAC policies managed through OpenBao
 - Audit logging to persistent storage
-- Auto-unseal configuration for cluster bootstrap
+- Auto-unseal configuration for OpenBao bootstrap
 
 == Consequences
 
@@ -201,6 +200,5 @@ Operational Impact::
 Customer Benefits::
 
 - Self-hosted alternative to cloud secret management services
-- Kubernetes-native secret injection patterns
 - Vault API compatibility for existing applications and tooling
 - Compliance with data sovereignty requirements
