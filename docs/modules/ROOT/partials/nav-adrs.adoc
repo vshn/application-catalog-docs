@@ -36,3 +36,4 @@
 ** xref:adr/0036-revisiting-postgresql-operators.adoc[]
 ** xref:adr/0037-mariadb-bitnami-replacement.adoc[]
 ** xref:adr/0038-appcat-redis-alternative.adoc[]
+** xref:adr/42-backup-encryption-for-mariadb-galera-and-postgresql.adoc[]

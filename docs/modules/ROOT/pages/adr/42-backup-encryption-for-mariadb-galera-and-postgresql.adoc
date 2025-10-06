@@ -1,0 +1,26 @@
+= ADR 42 - Backup Encryption for MariaDB Galera and PostgreSQL
+:adr_author:    Mike Ditton
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2025-10-06
+:adr_upd_date:  2025-10-06
+:adr_status:    draft
+:adr_tags:      backup,encryption,galera,postgresql
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+Short and concise summary of the decision in this ADR.
+====
+
+== Context
+
+
+
+== Decision
+
+
+
+== Consequences
