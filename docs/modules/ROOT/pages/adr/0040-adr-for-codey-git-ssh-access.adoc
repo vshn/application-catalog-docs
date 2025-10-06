@@ -3,24 +3,138 @@
 :adr_owner:     Schedar
 :adr_reviewers: Schedar
 :adr_date:      2025-10-01
-:adr_upd_date:  2025-10-01
-:adr_status:    draft
-:adr_tags:      codey
+:adr_upd_date:  2025-10-06
+:adr_status:    accepted
+:adr_tags:      codey,forgejo,git,git-ssh
 
 include::partial$adr-meta.adoc[]
 
 [NOTE]
 .Summary
 ====
-Short and concise summary of the decision in this ADR.
+This ADR evaluates methods to enable Git over SSH for Codey and selects a single-IP, port-based routing solution using a dynamic TCP proxy. All beta users asked for SSH access, there's a clear need for this feature. To control costs we must share one ingress IP and use unique TCP ports per instance to route connections. Because SSH is not SNI-aware, a single IP necessarily implies one distinct SSH port per customer instance.
 ====
 
 == Context
 
+All beta users of Codey requested Git over SSH and we lost some due to its absence. SSH cannot rely on SNI, so sharing a single IP across many tenants requires distinct TCP ports per tenant. We want a design that:
 
+* Works in k8s/OpenShift with one public IP for Codey,
+* Supports dynamic onboarding/offboarding of tenants,
+* Avoids proxy restarts on changes,
+* Provides high availability.
+
+Codey (multi-tenant PaaS): one public IP via a single k8s `Service type=LoadBalancer`.
+Forgejo (customer-managed, single-tenant): may have its own public IP (less constrained).
+
+Internal assumptions::
+* Each Codey/Forgejo instance exposes HTTP (port 3000) and built-in SSH (standardized on 2222 inside the pod).
+* We maintain a port pool (default 22000-24000) for public SSH ports.
+* A custom controller watches instances and programs the proxy.
+
+=== Considered Options
+
+Option 1: Per-tenant LoadBalancer (distinct public IP per instance)::
+* Each Forgejo SSH Service exposed as `type: LoadBalancer` in its namespace.
+* **Pros:** Simple datapath, native LB health.
+* **Cons:** Multiple IPs, linear cost, violates Codey's single-IP requirement.
+* **Status:** Discarded.
+
+Option 2a: One LB + one IP + TCP proxy (file-based config + graceful reloads)::
+* Single LB fronts a TCP proxy; controller rewrites config and triggers graceful reload.
+* **Pros:** Portable; one IP; optional PROXY protocol preservation.
+* **Cons:** Reloads still touch all listeners; operationally noisier than runtime APIs.
+* **Status:** Superseded by 2b.
+
+Option 2b: One LB + one IP + dynamic proxy (Envoy xDS / HAProxy Data Plane API)::
+* Controller pushes changes via runtime API (HAProxy) or xDS (Envoy) without reloads.
+* **Pros:** Atomic updates; minimal blast radius; ideal for higher churn; no connection drops.
+* **Cons:** Slightly higher complexity; requires operating a control plane component.
+* **Status:** **Chosen.**
+
+Option 3: Multiple LoadBalancer Services sharing one IP (provider-dependent)::
+* Per-tenant LB Services bound to one IP/port range (cloud/MetalLB dependent).
+* **Pros:** No proxy pods.
+* **Cons:** Not portable/reliable across providers; operationally awkward.
+* **Status:** Discarded.
+
+Option 4: One external LB with NodePort mappings::
+* External LB programmed per-port → NodePort on nodes.
+* **Pros:** No proxy pods, still one IP.
+* **Cons:** NodePort management, cloud-specific LB programming, not k8s-native enough.
+* **Status:** Viable in lab; not preferred.
 
 == Decision
 
+We will adopt **Option 2b: One LoadBalancer IP + dynamic TCP proxy**.
 
+*Data plane:* Either HAProxy with Data Plane API or Envoy with xDS.
+*Control plane:* A custom Kubernetes controller that:
+1. Watches Codey/Forgejo instances (create/delete/update).
+2. Discovers the instance's internal SSH Service DNS/port (standardized to `:2222`).
+3. Allocates a free external TCP port from the configured pool (default `22000-24000`).
+4. Programs the proxy to route `:<assigned-port> → <instance-svc>:2222` without reloads.
+5. Updates the instance's displayed SSH URL (via Helm/values/Config/Secret as applicable).
+6. Cleans up routing and releases the port on deletion.
+
+*High availability:*
+* Proxy runs 3 replicas, with PodDisruptionBudget and anti-affinity/topology spread.
+* K8s probes use a dedicated health endpoint (e.g., HAProxy `http-return` on `:8404`), not tenant SSH ports.
+* NetworkPolicies allow proxy → tenant namespaces on TCP/2222 (or 22 if chart diverges).
+
+== Implementation Notes
+
+=== Controller responsibilities
+* Maintain port mapping (ConfigMap or CRD) with lease semantics to prevent collisions.
+* Reconcile desired vs. actual proxy state (idempotent, retry with backoff).
+* Validate that tenant Service has ready endpoints before advertising the port.
+
+=== Proxy choices
+
+*HAProxy + Data Plane API*::
+- One shared frontend; per-port `bind :<port>` mapping to per-tenant backends, or one ACL map table.
+- Add `send-proxy-v2` on the `server` line only if we enable PROXY at Forgejo.
+- Health endpoint on `:8404`; TCP listeners on the assigned ports.
+- Pros: simple, well-documented API, familiar operations.
+
+*Envoy + xDS*::
+- Controller publishes Clusters (per tenant) and Listeners (per assigned port) via CDS/LDS.
+- Use TCP proxy filter; enable/disable PROXY v2 as policy.
+- Pros: model-driven, scalable; Cons: more moving parts.
+
+=== Forgejo configuration per instance
+
+We standardize on built-in SSH server listening on `2222` inside the pod. The displayed public port must match the controller's assigned port.
+
+Required:
+[source,shell]
+----
+DISABLE_SSH=false
+START_SSH_SERVER=true
+SSH_LISTEN_PORT=2222         # container listener
+SSH_PORT=<assigned_port>     # shown in clone URLs, e.g., 22037
+SSH_DOMAIN=ssh.codey.ch      # shared SSH domain for all Codey instances
+DOMAIN=codey.app.codey.ch
+SSH_SERVER_USE_PROXY_PROTOCOL=false # set to `true` **only if** the proxy sends PROXY v2.
+----
+
+=== Networking & observability
+* **Service (LoadBalancer):** one Service exposes the external port range (cloud-dependent). If the provider cannot expose a range, the controller adds per-port entries for active tenants.
+* **NetworkPolicy:** allow proxy → tenant namespaces on TCP/2222 (or tenant SSH target).
+* **Logs/metrics:** HAProxy stdout logs and/or Prometheus exporter; Envoy admin `/stats` and access logs; controller emits Kubernetes Events for assignments.
 
 == Consequences
+
+* Meets the one-IP requirement for Codey while enabling SSH for all tenants.
+* Dynamic, zero-downtime updates when tenants are added/removed.
+* Slightly higher operational complexity (controller + runtime API/xDS) vs. static LBs.
+* Clear migration path: Forgejo (single-tenant) can still use its own IP and simpler LB if desired; the controller pattern is reusable.
+
+
+== Risks and Mitigations
+
+* **Port exhaustion** in 22000-24000 → enlarge pool, garbage-collect stale assignments, detect collisions.
+* **Provider limit on Service port ranges** → fall back to discrete Service ports (controller manages active set).
+* **NetworkPolicy misconfigurations** → ship baseline allow rules with the controller.
+* **Drift** between controller state and proxy → periodic reconcile and read-back verification.
+* **Wrong PROXY setting** → default to `SSH_SERVER_USE_PROXY_PROTOCOL=false`; enable only with matching proxy config.
