@@ -12,10 +12,72 @@ include::partial$adr-meta.adoc[]
 [NOTE]
 .Summary
 ====
-Short and concise summary of the decision in this ADR.
+Use rclone as an S3 encryption proxy to provide encrypted backups for MariaDB Galera and PostgreSQL services.
 ====
 
 == Context
+
+We want to provide encrypted backups for all AppCat services. The backup solutions for MariaDB and PostgreSQL are tightly integrated with their respective operators, which prevents us from using k8up. Neither the MariaDB Operator nor the PostgreSQL Operator support encrypted backups natively, so we need an alternative solution.
+
+== Evaluated Options
+
+=== Constellation s3proxy - not viable
+
+The s3proxy is part of the Constellation Kubernetes engine and provides transparent client-side encryption for S3-compatible storage backends. This would enable seamless integration with PostgreSQL and Galera.
+
+However, the Helm chart has limited configuration options, only exposing `awsAccessKeyID` and `awsSecretAccessKey`. Despite documentation claiming support for "AWS S3 and compatible stores," there's no endpoint configuration parameter.
+
+The s3proxy router implementation uses the provided host header as the endpoint, requiring DNS hijacking to redirect requests to our S3-compatible storage backend. See the official example for details.
+
+[NOTE]
+s3proxy is licensed under the Business Source License 1.1, which prohibits production use without a commercial license
+
+==== References
+
+- https://docs.edgeless.systems/constellation/getting-started/examples/filestash-s3proxy[Offical example]
+- https://github.com/edgelesssys/constellation/blob/main/s3proxy/internal/router/router.go#L267[s3proxy router implementation]
+- https://github.com/edgelesssys/constellation/blob/main/s3proxy/deploy/s3proxy/values.yaml[Helmchart values]
+
+=== Rclone - recommended
+
+Rclone is a command-line program for managing files on cloud storage, supporting various backends including S3-compatible storage. Using `rclone serve` with crypt remotes, we can implement a transparent encryption proxy.
+
+The configuration requires two remotes: the first is the actual storage backend, and the second is a crypt remote that wraps the first. The crypt remote handles encryption and decryption transparently.
+
+[source,toml]
+----
+[minio]
+type = s3
+provider = Minio
+env_auth = false
+access_key_id = minioadmin
+secret_access_key = minioadmin
+endpoint = http://127.0.0.1:9000
+region = us-east-1
+location_constraint = us-east-1
+force_path_style = true
+
+[s3-crypt]
+type = crypt
+remote = minio:backups <1>
+filename_encryption = standard
+directory_name_encryption = true
+password = IRv0dJ285I6uxOAKW7tpwirL9TxiF5wbwAlSHA <2>
+password2 = rPRcLTS8YCbzeV_WiDfrB-fhf5f1dGJ94CXBzw <3>
+----
+<1> Use the minio remote as the storage backend
+<2> Password used for encryption
+<3> Password used for salt
+
+We can then run rclone with: `rclone serve s3 s3-crypt: --addr :9090 --auth-key proxyaccess,proxysecret`.
+
+Rclone is the most viable option: it's actively maintained, widely used, and has straightforward configuration.
+
+==== References
+
+- https://rclone.org/crypt/[Rclone crypt]
+- https://rclone.org/commands/rclone_serve_s3/[Rclone serve s3]
+- https://rclone.org/commands/rclone_serve_s3/[Rclone s3 backend]
 
 
 
