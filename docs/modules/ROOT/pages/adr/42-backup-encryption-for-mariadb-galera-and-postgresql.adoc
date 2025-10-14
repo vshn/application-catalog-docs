@@ -80,9 +80,54 @@ Rclone is the most viable option: it's actively maintained, widely used, and has
 - https://rclone.org/commands/rclone_serve_s3/[Rclone s3 backend]
 
 
+[NOTE]
+====
+**Key rotation**
+
+Since rclone uses the provided password to generate the encryption key, changing the password is not possible for already encrypted data. The data would need to be wiped from the remote and re-encrypted with the new key. This is not feasible in our setup. Since our setup with k8up also doesn't do key rotation, this isn't an issue.
+====
+
+==== Storing encryption passwords
+
+Since we don't plan to rotate the password used for the encryption key, the password can be saved inside of a Kubernetes secret. This is also how we do it with the repository password for K8up.
+
+== Using Rclone with CNPG and MariaDB
+
+Rclone will run as a separate deployment inside each instance namespace, acting as an encryption proxy between the database operators and the object storage backend.
+
+=== Deployment Architecture
+
+The rclone proxy will:
+
+* Deploy as a dedicated service in the instance namespace
+* Connect directly to the provisioned `xobjectbucket` resource
+* Expose an S3-compatible endpoint for the database operators
+
+=== Integration Points
+
+Each database operator integrates with the rclone proxy through its native S3 backup configuration.
+
+**CloudNativePG (CNPG)**
+
+The Barman object storage configuration will point to the rclone service endpoint as its S3 remote, ensuring all PostgreSQL backups are transparently encrypted before reaching the storage backend.
+
+**MariaDB Operator**
+
+The physical backup resource will configure the rclone service endpoint as its target, providing the same transparent encryption for MariaDB Galera backups.
 
 == Decision
 
+We will use rclone as an S3 encryption proxy to provide encrypted backups for MariaDB Galera and PostgreSQL services. Rclone will be deployed as a separate service in each instance namespace, configured with crypt remotes to transparently encrypt all backup data before it reaches the object storage backend.
 
+The encryption passwords will be stored in Kubernetes secrets within the instance namespace, similar to how K8up manages repository passwords.
 
 == Consequences
+
+With the decision to use rclone as an encryption proxy for MariaDB Galera and PostgreSQL backups, we need to:
+
+* Implement rclone deployment manifests for each database instance namespace
+* Configure CNPG Barman and MariaDB Operator to use the rclone endpoint instead of direct S3 access
+* Establish secret management for rclone encryption passwords
+* Monitor rclone proxy performance and availability alongside database services
+
+Key rotation will not be feasible once backups are encrypted, as changing the password would require wiping and re-encrypting all existing backup data. This aligns with our current K8up approach where repository passwords are also not rotated.
