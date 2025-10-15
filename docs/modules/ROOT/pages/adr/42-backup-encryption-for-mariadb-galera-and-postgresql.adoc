@@ -91,6 +91,18 @@ Since rclone uses the provided password to generate the encryption key, changing
 
 Since we don't plan to rotate the password used for the encryption key, the password can be saved inside of a Kubernetes secret. This is also how we do it with the repository password for K8up.
 
+==== Performance Impact
+
+Performance testing was conducted using MinIO's warp tool on a local kind cluster. The tests compared direct S3 access against rclone with the crypt remote enabled.
+
+image::adr-0042-performance-comparison.png[Performance Comparison: Rclone Crypt vs Direct MinIO]
+
+The encryption overhead averages 2.3x across all operations. GET operations are 2.31x slower, while PUT operations show 2.45x overhead. For backup workloads, rclone delivers 69 MiB/s for reads and 24 MiB/s for writes.
+
+image::adr-0042-latency-comparison.png[Latency Comparison: Rclone Crypt vs Direct MinIO]
+
+GET operations average 2.1 seconds with rclone versus 0.95 seconds direct. PUT operations average 2.2 seconds versus 0.35 seconds direct. While this represents a significant performance decrease, it is acceptable for backup operations which run in the background and where encryption security outweighs the performance cost.
+
 == Using Rclone with CNPG and MariaDB
 
 Rclone will run as a separate deployment inside each instance namespace, acting as an encryption proxy between the database operators and the object storage backend.
