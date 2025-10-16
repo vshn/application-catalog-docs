@@ -19,11 +19,11 @@ Use rclone as an S3 encryption proxy to provide encrypted backups for MariaDB Ga
 
 We want to provide encrypted backups for all AppCat services. The backup solutions for MariaDB and PostgreSQL are tightly integrated with their respective operators, which prevents us from using k8up. Neither the MariaDB Operator nor the PostgreSQL Operator support encrypted backups natively, so we need an alternative solution.
 
-== Evaluated Options
+=== Evaluated Options
 
-=== Constellation s3proxy - not viable
+==== Constellation s3proxy
 
-The s3proxy is part of the Constellation Kubernetes engine and provides transparent client-side encryption for S3-compatible storage backends. This would enable seamless integration with PostgreSQL and Galera.
+The https://constellation-docs.netlify.app/constellation/workflows/s3proxy[s3proxy^] is part of the Constellation Kubernetes engine and provides transparent client-side encryption for S3-compatible storage backends. This would enable seamless integration with PostgreSQL and Galera.
 
 However, the Helm chart has limited configuration options, only exposing `awsAccessKeyID` and `awsSecretAccessKey`. Despite documentation claiming support for "AWS S3 and compatible stores," there's no endpoint configuration parameter.
 
@@ -38,9 +38,9 @@ s3proxy is licensed under the Business Source License 1.1, which prohibits produ
 - https://github.com/edgelesssys/constellation/blob/main/s3proxy/internal/router/router.go#L267[s3proxy router implementation]
 - https://github.com/edgelesssys/constellation/blob/main/s3proxy/deploy/s3proxy/values.yaml[Helmchart values]
 
-=== Rclone - recommended
+==== Rclone
 
-Rclone is a command-line program for managing files on cloud storage, supporting various backends including S3-compatible storage. Using `rclone serve` with crypt remotes, we can implement a transparent encryption proxy.
+https://rclone.org/[Rclone^] is a command-line program for managing files on cloud storage, supporting various backends including S3-compatible storage. Using `rclone serve` with crypt remotes, we can implement a transparent encryption proxy.
 
 The configuration requires two remotes: the first is the actual storage backend, and the second is a crypt remote that wraps the first. The crypt remote handles encryption and decryption transparently.
 
@@ -91,6 +91,9 @@ Since rclone uses the provided password to generate the encryption key, changing
 
 Since we don't plan to rotate the password used for the encryption key, the password can be saved inside of a Kubernetes secret. This is also how we do it with the repository password for K8up.
 
+[NOTE]
+Password rotation could be required should we somehow leak the password or be hacked. In such cases, all backup data would need to be wiped and re-encrypted with a new key.
+
 ==== Performance Impact
 
 Performance testing was conducted using MinIO's warp tool on a local kind cluster. The tests compared direct S3 access against rclone with the crypt remote enabled.
@@ -112,7 +115,7 @@ Testing has determined the following minimum resource configuration for reliable
 
 This is the case for both CNPG and MariaDB.
 
-== Using Rclone with CNPG and MariaDB
+== Using Rclone with CloudNativePG and MariaDB
 
 Rclone will run as a separate deployment inside each instance namespace, acting as an encryption proxy between the database operators and the object storage backend.
 
