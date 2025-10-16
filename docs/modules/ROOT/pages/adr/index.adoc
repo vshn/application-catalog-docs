@@ -157,4 +157,8 @@
 
 `redis,bitnami,helm,service,operator`
 |draft | |2025-09-03
+|xref:adr/0042-backup-encryption-for-mariadb-galera-and-postgresql.adoc[]
+
+`backup,encryption,galera,postgresql`
+|draft |2025-10-06 |2025-10-06
 |===

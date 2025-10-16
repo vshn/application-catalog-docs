@@ -1,4 +1,4 @@
-= ADR 42 - Backup Encryption for MariaDB Galera and PostgreSQL
+= ADR 0042 - Backup Encryption for MariaDB Galera and PostgreSQL
 :adr_author:    Mike Ditton
 :adr_owner:     Schedar
 :adr_reviewers: Schedar
