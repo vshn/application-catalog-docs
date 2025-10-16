@@ -159,6 +159,7 @@ The encryption passwords will be stored in Kubernetes secrets within the instanc
 With the decision to use rclone as an encryption proxy for MariaDB Galera and PostgreSQL backups, we need to:
 
 * Implement rclone deployment manifests for each database instance namespace
+* Backup encryption should be opt-out. In that case, rclone is not deployed
 * Configure CNPG Barman and MariaDB Operator to use the rclone endpoint instead of direct S3 access
 * Establish secret management for rclone encryption passwords
 * Monitor rclone proxy performance and availability alongside database services
