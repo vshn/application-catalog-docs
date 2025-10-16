@@ -103,6 +103,15 @@ image::adr-0042-latency-comparison.png[Latency Comparison: Rclone Crypt vs Direc
 
 GET operations average 2.1 seconds with rclone versus 0.95 seconds direct. PUT operations average 2.2 seconds versus 0.35 seconds direct. While this represents a significant performance decrease, it is acceptable for backup operations which run in the background and where encryption security outweighs the performance cost.
 
+==== Minimum Resource Requirements
+
+Testing has determined the following minimum resource configuration for reliable backup operations:
+
+* **Memory**: 128Mi limit (observed peak usage: 121-124Mi during backup operations)
+* **CPU**: 25m limit (observed peak usage: 19-25m during backup operations)
+
+This is the case for both CNPG and MariaDB.
+
 == Using Rclone with CNPG and MariaDB
 
 Rclone will run as a separate deployment inside each instance namespace, acting as an encryption proxy between the database operators and the object storage backend.
@@ -126,6 +135,18 @@ The Barman object storage configuration will point to the rclone service endpoin
 **MariaDB Operator**
 
 The physical backup resource will configure the rclone service endpoint as its target, providing the same transparent encryption for MariaDB Galera backups.
+
+=== Validation
+
+This architecture was validated through a PoC implementation where an rclone deployment was configured with a crypt remote pointing to a MinIO S3 instance.
+
+**CloudNativePG Testing**
+
+A backup was created using the Barman cloud plugin and successfully restored into a new PostgreSQL instance. Verification confirmed that the data was properly encrypted in the remote bucket.
+
+**MariaDB Testing**
+
+A physical backup was created and successfully restored into a new MariaDB instance. Verification confirmed that the data was properly encrypted in the remote bucket.
 
 == Decision
 
