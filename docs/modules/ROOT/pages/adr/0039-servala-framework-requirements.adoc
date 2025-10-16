@@ -23,7 +23,7 @@ This ADR specifies the requirements for the Servala Framework.
 
 The Servala framework (also called the AppCat framework) allows to easily add day-2 operations facilities to any cloud-native application and offer it through Servala as a self-service SaaS application.
 
-Day-2 operations means:
+Day-2 operations mean:
 
 * Regular Maintenance and security fixes
 * Version Upgrades
@@ -40,27 +40,29 @@ Building of these container images is outside of the scope of the Servala framew
 
 == Personas and User Stories
 
-This section outlines personas which are users of the framework and their user stories.
+This section outlines the personas who are the users of the framework and their use cases.
 
-=== Services Engineer
+=== Service Engineer
 
-The services engineers creates a managed service by using the Servala framework and makes the service available in the self-service portal.
+The service engineer creates a managed service by using the Servala framework and makes the service available in the self-service portal.
 They are the experts in the services which is beeing SaaSified.
 
-_As a services engineer, I want to_:
+_As a service engineer, I want to_:
 
 * add day-2 operations to the service I'm expert in
 * make the service available in the self-service portal
 * give the end-user of the service parameters to customize the service behaviour
-* be able to easily add a new service
-
+* be able to easily add a new service by "bringing your own helm chart"
+* be able to map the Helm Chart values to the API values for backend variables, e.g. backup, maintenance.
+* be able to map the Helm Chart values to the API values for user-facing variables, e.g. instances, setting.
+* be able to manipulate API for user-facing variables.
 === Framework Engineer
 
 The framework engineer develops the framework tooling and the tools required to make day-2 operations possible.
 
 _As a framework engineer, I want to_:
 
-* provide the services engineer an easy to use framework to build managed services
+* provide the service engineer with an easy to use framework for them to build managed services
 * have a rock-solid base which others can rely on
 * be able to easily develop the framework
 * sleep well because the testing infrastructure has all the requirements covered
