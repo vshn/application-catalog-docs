@@ -55,11 +55,11 @@ _As a service user, I want to_:
 === Service Engineer
 
 NOTE: The service engineer creates a managed service by using the Servala framework and makes the service available in the self-service portal.
-They are the experts in the services which is beeing SaaSified.
+They are experts in the services which are being SaaSified.
 
 _As a service engineer, I want to_:
 
-* add esily add day-2 operations to the service I'm expert in
+* easily add day-2 operations to the service I'm expert in
 * make the service available in the self-service portal
 * give the end-user of the service parameters to customize the service behaviour
 
