@@ -67,8 +67,8 @@ _As a service engineer having a Helm Chart at hand, I want to_:
 
 * be able to easily make a managed service out of it and make it available in self-service
 * be able to map the Helm Chart values to the API values for
-** backend variables, e.g. backup, maintenance.
-** user-facing variables, e.g. instances, setting.
+** backend variables, for example backup, maintenance.
+** user-facing variables, for example instances, settings.
 * be able to manipulate API for user-facing variables.
 
 === Service Operator
