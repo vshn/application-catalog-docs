@@ -48,9 +48,12 @@ NOTE: The service user is the end-user of a manged service provided by this fram
 
 _As a service user, I want to_:
 
-* consume a stable managed service in self-service
+* consume a stable, secured and compliant managed service in self-service
 * configure the service to my requirements
 * get meaningful documentation about the service and its parameters
+* know about the status of my service instance and its health (metrics, logs)
+* stay informed about running costs
+* be aware of the service capabilities
 
 === Service Maintainer
 
@@ -79,7 +82,8 @@ _As a service operator, I want to_:
 
 * get informed when a service instance behaves different than its defined and agreed good state
 * know what to do when a service acts outside its defined good state
-* rely on tooling which helps to debug service instances
+* rely on tooling which helps to troubleshoot potentially misbehaving service instances
+* be able to handle support requests by having useful information about service instance at hand
 
 === Framework Engineer
 
@@ -90,7 +94,10 @@ _As a framework engineer, I want to_:
 * provide the <<Service Maintainer>> with an easy to use framework for them to build managed services
 * build a rock-solid base which others can rely on
 * be able to easily develop the framework
-* sleep well because the testing infrastructure has all the requirements covered
+* have an extensive testing infrastructure in place
+* ensure backward compatibility when updating framework
+* provide migration guides for breaking changes
+* deprecate old features gracefully
 
 === Platform Operator
 
