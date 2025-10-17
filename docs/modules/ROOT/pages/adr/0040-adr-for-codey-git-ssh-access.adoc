@@ -12,69 +12,58 @@ include::partial$adr-meta.adoc[]
 [NOTE]
 .Summary
 ====
-This ADR evaluates methods to enable Git over SSH for Codey and compares several architectures to multiplex SSH traffic for hundreds of Codey tenants through a limited number of ingress IPs.
-
-Findings show that cloud provider LoadBalancer products impose hard limits on the number of listeners per IP:
-
-* Cloudscale: up to 100 listeners per LoadBalancer
-* Exoscale: up to 10 listeners per LoadBalancer
-
-These limits make a single-IP for all tenants design infeasible at large scale.
-We must therefore introduce LoadBalancer sharding and evaluate which proxy technology provides the most reliable and maintainable control plane for that model.
+This ADR evaluates methods to enable Git over SSH for Codey instances and compares architectures for multiplexing SSH traffic across hundreds of tenants.
 ====
 
 == Context
 
-Codey users want a secure way to push/pull Git repositories using SSH keys.
-Because SSH is not SNI-aware, a single IP necessarily implies one unique TCP port per customer instance.
-The design must:
+Codey users need a secure way to push and pull Git repositories using SSH keys.
+The SSH protocol lacks SNI (Server Name Indication), which means hostname-based routing on a single port is not possible.
+To multiplex multiple tenants through a single IP address, each customer instance must be assigned a unique TCP port.
 
-* Work in Kubernetes/OpenShift environments,
-* Support dynamic onboarding/offboarding of tenants,
-* Avoid proxy restarts during updates,
-* Provide high availability,
-* Scale to hundreds of tenants within provider limits.
+Cloud provider LoadBalancers impose hard limits on the number of listeners (ports) per IP address:
 
-== Considered Options
+* Cloudscale: up to 100 listeners per LoadBalancer
+* Exoscale: up to 10 listeners per LoadBalancer
 
-=== Option 1: Per-tenant LoadBalancer (distinct IP per instance)
+
+=== Considered Options
+
+==== Option 1: Per-tenant LoadBalancer (distinct IP per instance)
 
 Each Codey customer's Forgejo instance would expose its SSH Service directly as `type: LoadBalancer`, letting the cloud provider allocate a public IP and open TCP/22 for that instance.
 This is the most straightforward design and uses Kubernetes native Service abstraction without any shared proxying layer.
 Network traffic from the Internet terminates directly on each tenant's Forgejo pod, no intermediate routing or multiplexing is required.
 Operationally, this model scales linearly: every new customer gets one LoadBalancer and one public IP.
 
-.Pros:
+Pros::
 * Simple datapath
 * Simpler to operate
 * No lateral movement risk
 
-.Cons:
+Cons::
 * Potentially hundreds of IPs
 * Linear cost
 * Violates consolidation goal
 
-Status: Discarded
 
-
-=== Option 2: One LB + one IP + file-based TCP proxy (graceful reloads)
+==== Option 2: One LB + one IP + file-based TCP proxy (graceful reloads)
 
 A single shared LoadBalancer IP would forward all inbound SSH traffic to a TCP proxy Deployment (for example HAProxy).
 The proxy configuration file would define one `bind :PORT` and `server <tenant>` pair per customer instance.
 A custom controller would maintain that configuration file (for example a ConfigMap) and trigger a graceful reload whenever tenants are added or removed.
 During reloads, HAProxy can keep existing sessions alive but still incurs short pauses for new connections.
 
-.Pros: 
+Pros:: 
 * Simple architecture
 * Portable
 
-.Cons:
-* Reloads interrupt active sessions
+Cons::
+* Reloads can interrupt active sessions, altough sessions are short-lived for Git
 * Config management complexity
 
-Status: Discarded
 
-=== Option 3: Dynamic proxy with runtime API (HAProxy Data Plane API / Envoy xDS)
+==== Option 3: Dynamic proxy with runtime API (HAProxy Data Plane API / Envoy xDS)
 
 Instead of editing files, the controller would communicate with the proxy at runtime:
 
@@ -84,18 +73,21 @@ Instead of editing files, the controller would communicate with the proxy at run
 The proxy stays running continuously. New tenants are added or removed atomically without restarting the process.
 The controller becomes a lightweight "routing brain" maintaining the mapping of `(tenant → port → backend service)` and pushing those changes to the proxy's API.
 
-.Pros:
+Pros::
 * Atomic updates
 * No dropped connections
-* Mature APIs
+* Mature APIss
 
-.Cons:
+Cons::
 * Needs custom control-plane component
 * Higher operational burden
 
-Status: Viable
+References::
+* https://www.haproxy.com/documentation/haproxy-data-plane-api/[HAProxy Data Plane API]
+* https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol[Envoy xDS protocol]
+* https://github.com/envoyproxy/go-control-plane[xDS go-control-plane]
 
-=== Option 4: Kubernetes Gateway API (TCPRoute per tenant)
+==== Option 4: Kubernetes Gateway API (TCPRoute per tenant)
 
 In this model, Codey uses the Kubernetes Gateway API as the control plane for multiplexing SSH traffic, independent of any specific proxy implementation.  
 A conformant Gateway controller such as Envoy Gateway, Cilium Gateway, or KGateway manages a shared data plane that acts as a TCP multiplexer for all Codey customer SSH connections.
@@ -107,44 +99,26 @@ For larger deployments, additional ports can be defined through `XListenerSet` (
 A custom controller acts as a lightweight orchestrator: it allocates a free port, creates a `TCPRoute` pointing to the tenant's internal Forgejo SSH `Service`, and adds a `ReferenceGrant` in the tenant's namespace to authorize the cross-namespace reference.
 The selected Gateway implementation (Envoy, Cilium, etc.) then automatically reconciles these CRDs into live configuration, handling listener creation, routing, and backend resolution without reloads or direct API calls.
 
-.Pros:
+Pros::
 * Fully Kubernetes-native and declarative, integrates cleanly with OpenShift and future Gateway API implementations.  
 * Zero-downtime dynamic updates. Gateway controllers apply config atomically without restarts.  
 * Simpler controller logic: only needs to manage CRDs, not interact with proxy runtime APIs.  
 * Strong observability and status reporting via Gateway API metrics and Proxy metrics.
 
-.Cons:
-* Each `Gateway` supports ≤ 64 listeners, additional listeners require `XListenerSet`, which can add management overhead.  
-* Still constrained by cloud LoadBalancer listener caps (10-100), necessitating sharding at scale.  
+Cons::
+* Each `Gateway` supports ≤ 64 listeners, additional listeners require `XListenerSet`, which can add management overhead.
+* Still constrained by cloud LoadBalancer listener caps (10-100), necessitating sharding at scale.
 * Slightly heavier footprint than a plain HAProxy setup.
 
-Status: Chosen 
-
-== Provider Listener Limits
-
-.Cloudscale LoadBalancer Listener Limit (Support Conversation)
-> **VSHN Engineer:**  
-> "Is there a limit to the number of listeners I can create? I couldn't find any specific limits mentioned in the documentation. Couldn't find docs."
->
-> > **Cloudscale Engineer:**  
-> > "Yes, you can create up to 100 listeners. Is that an issue for your use case?"
->
-> **VSHN Engineer:**  
-> “Is that a hard product cap?"  
->
-> > **Cloudscale Engineer:**  
-> > "I'll check if it can be lifted. What would you consider appropriate?"
->
-> **VSHN Engineer:**  
-> "A few hundreds for sure. Thanks for checking."
-
-* **Cloudscale** LoadBalancer -> **100** listeners per IP.
-  -> Practical upper bound ≈ 100 Codey instances per IP.
-
-* **Exoscale** Network LoadBalancer -> **10** listeners per IP.
-  -> Practical upper bound ≈ 10 Codey instances per IP.
-
-To scale beyond these numbers, multiple `Service type=LoadBalancer` objects (each with its own public IP) are required.
+References::
+* https://gateway-api.sigs.k8s.io/[Kubernetes Gateway API]
+* https://gateway-api.sigs.k8s.io/geps/gep-1713/?h=listenerset[Gateway API GEP-1713 XListenerSet]
+* https://gateway.envoyproxy.io/[Envoy Gateway]
+* https://gateway.envoyproxy.io/v1.1/concepts/concepts_overview/[Envoy Gateway concepts]
+* https://docs.cilium.io/en/stable/network/servicemesh/gateway-api/gateway-api/#gs-gateway-api/[Cilium Gateway API]
+* https://kgateway.dev/[KGateway]
+* https://community.exoscale.com/product/networking/nlb/overview/#limitations[Exoscale limitations]
+* https://github.com/exoscale/exoscale-cloud-controller-manager/blob/master/docs/service-loadbalancer.md[CCM Service LoadBalancer]
 
 == Decision
 
@@ -207,15 +181,3 @@ SSH_SERVER_USE_PROXY_PROTOCOL=false
 * **DNS complexity:** deterministic shard hostnames (`sshN.codey.ch`) and automation.
 * **Operational drift:** periodic reconcile verifies proxy state against controller CRDs.
 
-== References
-
-* https://gateway-api.sigs.k8s.io/[Kubernetes Gateway API]
-* https://gateway-api.sigs.k8s.io/geps/gep-1713/?h=listenerset[Gateway API GEP-1713 XListenerSet]
-* https://gateway.envoyproxy.io/[Envoy Gateway]
-* https://docs.cilium.io/en/stable/network/servicemesh/gateway-api/gateway-api/#gs-gateway-api/[Cilium Gateway API]
-* https://kgateway.dev/[KGateway]
-* https://www.haproxy.com/documentation/haproxy-data-plane-api/[HAProxy Data Plane API]
-* https://gateway.envoyproxy.io/v1.1/concepts/concepts_overview/[Envoy Gateway concepts]
-* https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol[Envoy xDS protocol], https://github.com/envoyproxy/go-control-plane[go-control-plane]
-* https://community.exoscale.com/product/networking/nlb/overview/#limitations[Exoscale limitations]
-* https://github.com/exoscale/exoscale-cloud-controller-manager/blob/master/docs/service-loadbalancer.md[CCM Service LoadBalancer]
