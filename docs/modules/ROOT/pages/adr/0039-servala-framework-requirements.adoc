@@ -3,7 +3,7 @@
 :adr_owner:     Schedar
 :adr_reviewers: Schedar
 :adr_date:      2025-09-30
-:adr_upd_date:  2025-09-30
+:adr_upd_date:  2025-10-17
 :adr_status:    draft
 :adr_tags:      framework
 
@@ -52,18 +52,18 @@ _As a service user, I want to_:
 * configure the service to my requirements
 * get meaningful documentation about the service and its parameters
 
-=== Service Engineer
+=== Service Maintainer
 
-NOTE: The service engineer creates a managed service by using the Servala framework and makes the service available in the self-service portal.
+NOTE: The service maintainer creates a managed service by using the Servala framework and makes the service available in the self-service portal.
 They are experts in the services which are being SaaSified.
 
-_As a service engineer, I want to_:
+_As a service maintainer, I want to_:
 
 * easily add day-2 operations to the service I'm expert in
 * make the service available in the self-service portal
 * give the end-user of the service parameters to customize the service behaviour
 
-_As a service engineer having a Helm Chart at hand, I want to_:
+_As a service maintainer having a Helm Chart at hand, I want to_:
 
 * be able to easily make a managed service out of it and make it available in self-service
 * be able to map the Helm Chart values to the API values for
@@ -87,7 +87,7 @@ NOTE: The framework engineer develops the framework tooling and the tools requir
 
 _As a framework engineer, I want to_:
 
-* provide the <<Service Engineer>> with an easy to use framework for them to build managed services
+* provide the <<Service Maintainer>> with an easy to use framework for them to build managed services
 * build a rock-solid base which others can rely on
 * be able to easily develop the framework
 * sleep well because the testing infrastructure has all the requirements covered
