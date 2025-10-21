@@ -1,0 +1,170 @@
+= ADR 0042 - Backup Encryption for MariaDB Galera and PostgreSQL
+:adr_author:    Mike Ditton
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2025-10-06
+:adr_upd_date:  2025-10-06
+:adr_status:    draft
+:adr_tags:      backup,encryption,galera,postgresql
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+Use rclone as an S3 encryption proxy to provide encrypted backups for MariaDB Galera and PostgreSQL services.
+====
+
+== Context
+
+We want to provide encrypted backups for all AppCat services. The backup solutions for MariaDB and PostgreSQL are tightly integrated with their respective operators, which prevents us from using k8up. Neither the MariaDB Operator nor the PostgreSQL Operator support encrypted backups natively, so we need an alternative solution.
+
+=== Evaluated Options
+
+==== Constellation s3proxy
+
+The https://constellation-docs.netlify.app/constellation/workflows/s3proxy[s3proxy^] is part of the Constellation Kubernetes engine and provides transparent client-side encryption for S3-compatible storage backends. This would enable seamless integration with PostgreSQL and Galera.
+
+However, the Helm chart has limited configuration options, only exposing `awsAccessKeyID` and `awsSecretAccessKey`. Despite documentation claiming support for "AWS S3 and compatible stores," there's no endpoint configuration parameter.
+
+The s3proxy router implementation uses the provided host header as the endpoint, requiring DNS hijacking to redirect requests to our S3-compatible storage backend. See the official example for details.
+
+[NOTE]
+s3proxy is licensed under the Business Source License 1.1, which prohibits production use without a commercial license
+
+==== References
+
+- https://docs.edgeless.systems/constellation/getting-started/examples/filestash-s3proxy[Offical example]
+- https://github.com/edgelesssys/constellation/blob/main/s3proxy/internal/router/router.go#L267[s3proxy router implementation]
+- https://github.com/edgelesssys/constellation/blob/main/s3proxy/deploy/s3proxy/values.yaml[Helmchart values]
+
+==== Rclone
+
+https://rclone.org/[Rclone^] is a command-line program for managing files on cloud storage, supporting various backends including S3-compatible storage. Using `rclone serve` with crypt remotes, we can implement a transparent encryption proxy.
+
+The configuration requires two remotes: the first is the actual storage backend, and the second is a crypt remote that wraps the first. The crypt remote handles encryption and decryption transparently.
+
+[source,toml]
+----
+[minio]
+type = s3
+provider = Minio
+env_auth = false
+access_key_id = minioadmin
+secret_access_key = minioadmin
+endpoint = http://127.0.0.1:9000
+region = us-east-1
+location_constraint = us-east-1
+force_path_style = true
+
+[s3-crypt]
+type = crypt
+remote = minio:backups <1>
+filename_encryption = standard
+directory_name_encryption = true
+password = IRv0dJ285I6uxOAKW7tpwirL9TxiF5wbwAlSHA <2>
+password2 = rPRcLTS8YCbzeV_WiDfrB-fhf5f1dGJ94CXBzw <3>
+----
+<1> Use the minio remote as the storage backend
+<2> Password used for encryption
+<3> Password used for salt
+
+We can then run rclone with: `rclone serve s3 s3-crypt: --addr :9090 --auth-key proxyaccess,proxysecret`.
+
+Rclone is the most viable option: it's actively maintained, widely used, and has straightforward configuration.
+
+==== References
+
+- https://rclone.org/crypt/[Rclone crypt]
+- https://rclone.org/commands/rclone_serve_s3/[Rclone serve s3]
+- https://rclone.org/commands/rclone_serve_s3/[Rclone s3 backend]
+
+
+[NOTE]
+====
+**Key rotation**
+
+Since rclone uses the provided password to generate the encryption key, changing the password is not possible for already encrypted data. The data would need to be wiped from the remote and re-encrypted with the new key. This is not feasible in our setup. Since our setup with k8up also doesn't do key rotation, this isn't an issue.
+====
+
+==== Storing encryption passwords
+
+Since we don't plan to rotate the password used for the encryption key, the password can be saved inside of a Kubernetes secret. This is also how we do it with the repository password for K8up.
+
+[NOTE]
+Password rotation could be required should we somehow leak the password or be hacked. In such cases, all backup data would need to be wiped and re-encrypted with a new key.
+
+==== Performance Impact
+
+Performance testing was conducted using MinIO's warp tool on a local kind cluster. The tests compared direct S3 access against rclone with the crypt remote enabled.
+
+image::adr-0042-performance-comparison.png[Performance Comparison: Rclone Crypt vs Direct MinIO]
+
+The encryption overhead averages 2.3x across all operations. GET operations are 2.31x slower, while PUT operations show 2.45x overhead. For backup workloads, rclone delivers 69 MiB/s for reads and 24 MiB/s for writes.
+
+image::adr-0042-latency-comparison.png[Latency Comparison: Rclone Crypt vs Direct MinIO]
+
+GET operations average 2.1 seconds with rclone versus 0.95 seconds direct. PUT operations average 2.2 seconds versus 0.35 seconds direct. While this represents a significant performance decrease, it is acceptable for backup operations which run in the background and where encryption security outweighs the performance cost.
+
+==== Minimum Resource Requirements
+
+Testing has determined the following minimum resource configuration for reliable backup operations:
+
+* **Memory**: 128Mi limit (observed peak usage: 121-124Mi during backup operations)
+* **CPU**: 25m limit (observed peak usage: 19-25m during backup operations)
+
+This is the case for both CNPG and MariaDB.
+
+== Using Rclone with CloudNativePG and MariaDB
+
+Rclone will run as a separate deployment inside each instance namespace, acting as an encryption proxy between the database operators and the object storage backend.
+
+=== Deployment Architecture
+
+The rclone proxy will:
+
+* Deploy as a dedicated service in the instance namespace
+* Connect directly to the provisioned `xobjectbucket` resource
+* Expose an S3-compatible endpoint for the database operators
+
+=== Integration Points
+
+Each database operator integrates with the rclone proxy through its native S3 backup configuration.
+
+**CloudNativePG (CNPG)**
+
+The Barman object storage configuration will point to the rclone service endpoint as its S3 remote, ensuring all PostgreSQL backups are transparently encrypted before reaching the storage backend.
+
+**MariaDB Operator**
+
+The physical backup resource will configure the rclone service endpoint as its target, providing the same transparent encryption for MariaDB Galera backups.
+
+=== Validation
+
+This architecture was validated through a PoC implementation where an rclone deployment was configured with a crypt remote pointing to a MinIO S3 instance.
+
+**CloudNativePG Testing**
+
+A backup was created using the Barman cloud plugin and successfully restored into a new PostgreSQL instance. Verification confirmed that the data was properly encrypted in the remote bucket.
+
+**MariaDB Testing**
+
+A physical backup was created and successfully restored into a new MariaDB instance. Verification confirmed that the data was properly encrypted in the remote bucket.
+
+== Decision
+
+We will use rclone as an S3 encryption proxy to provide encrypted backups for MariaDB Galera and PostgreSQL services. Rclone will be deployed as a separate service in each instance namespace, configured with crypt remotes to transparently encrypt all backup data before it reaches the object storage backend.
+
+The encryption passwords will be stored in Kubernetes secrets within the instance namespace, similar to how K8up manages repository passwords.
+
+== Consequences
+
+With the decision to use rclone as an encryption proxy for MariaDB Galera and PostgreSQL backups, we need to:
+
+* Implement rclone deployment manifests for each database instance namespace
+* Backup encryption should be opt-out. In that case, rclone is not deployed
+* Configure CNPG Barman and MariaDB Operator to use the rclone endpoint instead of direct S3 access
+* Establish secret management for rclone encryption passwords
+* Monitor rclone proxy performance and availability alongside database services
+
+Key rotation will not be feasible once backups are encrypted, as changing the password would require wiping and re-encrypting all existing backup data. This aligns with our current K8up approach where repository passwords are also not rotated.
