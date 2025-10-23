@@ -67,7 +67,9 @@ Examples:
 
 === URLs
 
-We have a dedicated domain for servala clusters: servala.com and will use that domain for all clusters
+We have a dedicated domain for servala clusters: servala.com and will use that domain for all clusters.
+
+For the domains we use single digit counters.
 
 The control-plane clusters API should be reachable under the following URL: `api.[csp]-[region]-[stage][counter].control.servala.com`
 
