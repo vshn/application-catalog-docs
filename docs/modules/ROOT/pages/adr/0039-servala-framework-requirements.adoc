@@ -65,6 +65,8 @@ _As a service maintainer, I want to_:
 * easily add day-2 operations to the service I'm expert in
 * make the service available in the self-service portal
 * give the end-user of the service parameters to customize the service behaviour
+* have the freedom to choose where the code of the service lives and be independent of a single code repository
+* be able to easily develop and test a service locally
 
 _As a service maintainer having a Helm Chart at hand, I want to_:
 
@@ -106,7 +108,7 @@ NOTE: The platform operator takes care of the underlying platform where the serv
 _As a platform operator, I want to_:
 
 * have clear separation of concerns between the services and the platform
-* have strong multi-tenancy to protect different tenants using the platform
+* have strong multi-tenancy to protect different tenants using the platform (for example explicit SA/RBAC per tenant)
 * protect service instances from each other (noisy neighbours)
 
 === Self-Service Portal
@@ -118,6 +120,8 @@ _As a self-service portal, I want to_:
 * query a well-defined API to get a list of available services and their metadata
 * retrieve the available parameters of a service to provide the user a configuration form
 * be sure that the API is standardized so that I can rely on it
+* get information about the setup flow and parameter prioritization
+* report actionable and easy to understand error (and status) messages to the user
 
 == Core Requirements
 
