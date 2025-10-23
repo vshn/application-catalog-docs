@@ -54,6 +54,7 @@ _As a service user, I want to_:
 * know about the status of my service instance and its health (metrics, logs)
 * stay informed about running costs
 * be aware of the service capabilities
+* be able to recover a service instance even after user erros (for example deleting the instance) during a certain amount of time
 
 === Service Maintainer
 
