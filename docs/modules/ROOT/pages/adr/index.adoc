@@ -157,8 +157,8 @@
 
 `redis,bitnami,helm,service,operator`
 |draft | |2025-09-03
-|xref:adr/0040-adr-for-codey-git-ssh-access.adoc[]
+|xref:adr/0040-tcp-service-access.adoc[]
 
-`codey`
-|draft |2025-10-01 |2025-10-01
+`framework,networking,tcp`
+|draft |2025-10-01 |2025-10-27 
 |===

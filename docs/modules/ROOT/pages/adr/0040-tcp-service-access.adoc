@@ -1,25 +1,27 @@
-= ADR 0040 - Codey Git SSH Access
+= ADR 0040 - TCP Service Access
 :adr_author:    Marco De Luca
 :adr_owner:     Schedar
 :adr_reviewers: Schedar
 :adr_date:      2025-10-01
-:adr_upd_date:  2025-10-01
+:adr_upd_date:  2025-10-27
 :adr_status:    draft
-:adr_tags:      codey
+:adr_tags:      framework, networking, tcp
 
 include::partial$adr-meta.adoc[]
 
 [NOTE]
 .Summary
 ====
-This ADR evaluates methods to enable Git over SSH for Codey instances and compares architectures for multiplexing SSH traffic across hundreds of tenants.
+This ADR evaluates methods to enable TCP-based service access for AppCat/Servala instances and compares architectures for multiplexing TCP traffic across hundreds of tenants.
+This applies to services such as Codey (Git over SSH), PostgreSQL, Redis, MySQL, and other database or TCP-based workloads.
 ====
 
 == Context
 
-Codey users need a secure way to push and pull Git repositories using SSH keys.
-The SSH protocol lacks SNI (Server Name Indication), which means hostname-based routing on a single port is not possible.
-To multiplex multiple tenants through a single IP address, each customer instance must be assigned a unique TCP port.
+AppCat/Servala users need direct TCP access to various services running in their tenant namespaces, including Codey (Git over SSH), PostgreSQL, Redis, MySQL, and other database or TCP-based workloads.
+
+Unlike HTTP, TCP protocols typically lack SNI (Server Name Indication), which means hostname-based routing on a single port is not possible.
+To multiplex multiple tenant services through a single IP address, each service instance must be assigned a unique TCP port.
 
 Cloud provider LoadBalancers impose hard limits on the number of listeners (ports) per IP address:
 
@@ -54,7 +56,7 @@ The proxy configuration file would define one `bind :PORT` and `server <tenant>`
 A custom controller would maintain that configuration file (for example a ConfigMap) and trigger a graceful reload whenever tenants are added or removed.
 During reloads, HAProxy can keep existing sessions alive but still incurs short pauses for new connections.
 
-Pros:: 
+Pros::
 * Simple architecture
 * Portable
 
@@ -89,20 +91,20 @@ References::
 
 ==== Option 4: Kubernetes Gateway API (TCPRoute per tenant)
 
-In this model, Codey uses the Kubernetes Gateway API as the control plane for multiplexing SSH traffic, independent of any specific proxy implementation.  
+In this model, Codey uses the Kubernetes Gateway API as the control plane for multiplexing SSH traffic, independent of any specific proxy implementation.
 A conformant Gateway controller such as Envoy Gateway, Cilium Gateway, or KGateway manages a shared data plane that acts as a TCP multiplexer for all Codey customer SSH connections.
 
-A Kubernetes `Gateway` resource represents the public entry point (one `Service type=LoadBalancer` with a single external IP).  
-Each customer tenant receives a dedicated TCP `listener` bound to a unique port.  
+A Kubernetes `Gateway` resource represents the public entry point (one `Service type=LoadBalancer` with a single external IP).
+Each customer tenant receives a dedicated TCP `listener` bound to a unique port.
 For larger deployments, additional ports can be defined through `XListenerSet` (an experimental feature as the X implies) resources, which extend a `Gateway` with extra listener definitions beyond its native limit.
 
 A custom controller acts as a lightweight orchestrator: it allocates a free port, creates a `TCPRoute` pointing to the tenant's internal Forgejo SSH `Service`, and adds a `ReferenceGrant` in the tenant's namespace to authorize the cross-namespace reference.
 The selected Gateway implementation (Envoy, Cilium, etc.) then automatically reconciles these CRDs into live configuration, handling listener creation, routing, and backend resolution without reloads or direct API calls.
 
 Pros::
-* Fully Kubernetes-native and declarative, integrates cleanly with OpenShift and future Gateway API implementations.  
-* Zero-downtime dynamic updates. Gateway controllers apply config atomically without restarts.  
-* Simpler controller logic: only needs to manage CRDs, not interact with proxy runtime APIs.  
+* Fully Kubernetes-native and declarative, integrates cleanly with OpenShift and future Gateway API implementations.
+* Zero-downtime dynamic updates. Gateway controllers apply config atomically without restarts.
+* Simpler controller logic: only needs to manage CRDs, not interact with proxy runtime APIs.
 * Strong observability and status reporting via Gateway API metrics and Proxy metrics.
 
 Cons::
@@ -120,20 +122,43 @@ References::
 * https://community.exoscale.com/product/networking/nlb/overview/#limitations[Exoscale limitations]
 * https://github.com/exoscale/exoscale-cloud-controller-manager/blob/master/docs/service-loadbalancer.md[CCM Service LoadBalancer]
 
+==== Option 5: BGP-advertised Floating IPs with MetalLB or Cilium LB
+
+This approach uses BGP to advertise floating IP addresses directly to the cluster, bypassing cloud provider LoadBalancer-as-a-Service (LBaaS) offerings.
+Tools such as MetalLB or Cilium LoadBalancer mode manage IP allocation and BGP advertisements, allowing Kubernetes `Service type=LoadBalancer` resources to receive IPs from a provider-configured floating IP range.
+
+Pros::
+* Independence from cloud provider LBaaS APIs and their limitations
+* Potentially lower cost at scale
+
+Cons::
+* Each Kubernetes `Service type=LoadBalancer` still requires a unique IP address
+* Kubernetes Services cannot route traffic to endpoints across multiple namespaces
+* Does not solve the listener port multiplexing problem, reverse proxy still required
+* Requires BGP peering configuration with the cloud provider
+* May require external load balancer infrastructure or additional network management
+* Increases operational overhead compared to managed LBaaS
+* Feasibility depends on cloud provider support for BGP and floating IP ranges
+* Not verified on all target platforms (for example Exoscale)
+
+References::
+* https://metallb.universe.tf/[MetalLB]
+* https://cilium.io/use-cases/load-balancer/[Cilium LoadBalancer]
+
 == Decision
 
-We will adopt Option 4, a **Gateway API based architecture** for multiplexing SSH traffic across Codey customer instances.
+We will adopt Option 4, a **Gateway API based architecture** for multiplexing TCP traffic across AppCat/Servala tenant services.
 
 This design leverages the Kubernetes Gateway API as the declarative control plane for dynamic TCP routing, while allowing flexibility in choosing the underlying implementation such as Envoy Gateway, Cilium Gateway API, KGateway etc.
 
-The custom controller will manage Gateway API resources (`Gateway`, `TCPRoute`, `ReferenceGrant`, and optionally `XListenerSet`) to dynamically assign ports and routes for each tenant.  
+The custom controller will manage Gateway API resources (`Gateway`, `TCPRoute`, `ReferenceGrant`, and optionally `XListenerSet`) to dynamically assign ports and routes for each tenant service.
 The selected Gateway implementation (Envoy, Cilium, etc.) will reconcile these CRDs into live data-plane configuration without requiring reloads or manual synchronization.
 
 .Sharding model:
   - Each shard = one `Gateway` object behind its own `Service type=LoadBalancer` (one IP).
   - Shard capacity is provider-specific (Cloudscale = 100 listeners/IP, Exoscale = 10 listeners/IP).
-  - The controller allocates ports from a reserved per-shard ranges (sticky per tenant to avoid collisions) and updates each tenant's Forgejo configuration (SSH_DOMAIN, SSH_PORT)
-  - DNS uses deterministic hostnames: `ssh1.codey.ch`, `ssh2.codey.ch`, each resolving to a shard IP.
+  - The controller allocates ports from reserved per-shard ranges (sticky per tenant to avoid collisions) and updates each tenant service's configuration with the assigned external port and hostname.
+  - DNS uses deterministic service-specific hostnames per shard: for example, `ssh1.codey.ch`, `ssh2.codey.ch` for Codey Git SSH; `db1.example.ch`, `db2.example.ch` for databases.
 
 .Rationale:
   - Gateway API is the next generation Kubernetes Ingress, ensuring long-term compatibility and portability.
@@ -142,36 +167,25 @@ The selected Gateway implementation (Envoy, Cilium, etc.) will reconcile these C
   - The controller logic remains simple: declarative CRD management and port allocation rather than low-level proxy configuration.
 
 .Note on complexity:
-  - LoadBalancer sharding remains necessary due to provider listener caps (10-100 listeners/IP).  
+  - LoadBalancer sharding remains necessary due to provider listener caps (10-100 listeners/IP).
   - This complexity is isolated to the controller layer (shard lifecycle, DNS updates), not the data plane.
   - The architecture remains portable across providers and Gateway implementations.
 
 == Implementation Notes
 
-* Each Forgejo instance listens internally on port `2222`.
-* Controller maintains a CRD tracking shard capacity, port ranges, and assignments.
+* Each service instance listens internally on a service-specific port (for example, Forgejo on `2222`, PostgreSQL on `5432`, Redis on `6379`).
+* Controller maintains a CRD tracking shard capacity, port ranges, and per-service assignments.
 * When a shard reaches capacity, the controller provisions a new `Gateway` and assigns the next DNS alias.
-* NetworkPolicies allow traffic from the proxy namespace to tenant namespaces on `TCP/2222`.
-* Health, metrics, and reconciliation loops ensure the proxy state matches the controller's record.
-
-=== Forgejo Configuration Example
-
-[source,shell]
-----
-DISABLE_SSH=false
-START_SSH_SERVER=true
-SSH_LISTEN_PORT=2222
-SSH_DOMAIN=ssh2.codey.ch     # shard domain
-SSH_PORT=22037               # unique external port
-SSH_SERVER_USE_PROXY_PROTOCOL=false
-----
+* NetworkPolicies allow traffic from the Gateway namespace to tenant namespaces on the service-specific internal ports.
+* Health, metrics, and reconciliation loops ensure the Gateway state matches the controller's record.
 
 == Consequences
 
-* **Cloudscale:** one IP supports ~100 tenants.
-* **Exoscale:** one IP supports 10 tenants.
-* Uniform controller logic across providers, only capacities differ.
+* **Cloudscale:** one IP supports ~100 tenant services (listeners).
+* **Exoscale:** one IP supports 10 tenant services (listeners).
+* Uniform controller logic across providers and service types, only shard capacities differ.
 * LoadBalancer costs grow linearly with shard count.
+* Each service type (Codey, PostgreSQL, Redis, etc.) can use dedicated or shared Gateway shards depending on scale and isolation requirements.
 
 == Risks and Mitigations
 
