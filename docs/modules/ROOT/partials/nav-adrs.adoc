@@ -37,3 +37,4 @@
 ** xref:adr/0037-mariadb-bitnami-replacement.adoc[]
 ** xref:adr/0038-appcat-redis-alternative.adoc[]
 ** xref:adr/0040-tcp-service-access.adoc[]
+** xref:adr/0042-backup-encryption-for-mariadb-galera-and-postgresql.adoc[]

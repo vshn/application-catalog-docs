@@ -78,7 +78,7 @@ The controller becomes a lightweight "routing brain" maintaining the mapping of 
 Pros::
 * Atomic updates
 * No dropped connections
-* Mature APIss
+* Mature APIs
 
 Cons::
 * Needs custom control-plane component

@@ -161,4 +161,8 @@
 
 `framework,networking,tcp`
 |draft |2025-10-01 |2025-10-27 
+|xref:adr/0042-backup-encryption-for-mariadb-galera-and-postgresql.adoc[]
+
+`backup,encryption,galera,postgresql`
+|draft |2025-10-06 |2025-10-06
 |===

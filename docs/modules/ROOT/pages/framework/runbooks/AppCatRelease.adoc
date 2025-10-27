@@ -19,6 +19,7 @@ This process is partly automated but still requires engineer involvement. Full a
 
 1. Ensure the `develop` branch is up to date with `master`. 👤
 2. Confirm with the team that all AppCat and component PRs have been merged. 👤
+3. Make sure the e2e tests pass. 👤
 
 === Execution
 
