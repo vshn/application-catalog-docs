@@ -4,7 +4,7 @@
 :adr_reviewers: Schedar
 :adr_date:      2025-10-01
 :adr_upd_date:  2025-10-27
-:adr_status:    draft
+:adr_status:    accepted
 :adr_tags:      framework, networking, tcp
 
 include::partial$adr-meta.adoc[]
@@ -12,18 +12,18 @@ include::partial$adr-meta.adoc[]
 [NOTE]
 .Summary
 ====
-This ADR evaluates methods to enable TCP-based service access for AppCat/Servala instances and compares architectures for multiplexing TCP traffic across hundreds of tenants.
+This ADR evaluates methods to enable cluster-external TCP-based service access for AppCat/Servala instances and compares architectures for multiplexing TCP traffic across hundreds of tenants.
 This applies to services such as Codey (Git over SSH), PostgreSQL, Redis, MySQL, and other database or TCP-based workloads.
 ====
 
 == Context
 
-AppCat/Servala users need direct TCP access to various services running in their tenant namespaces, including Codey (Git over SSH), PostgreSQL, Redis, MySQL, and other database or TCP-based workloads.
+AppCat/Servala users need direct TCP access from outside a cluster to various services running in their tenant namespaces, including Codey (Git over SSH), PostgreSQL, Redis, MySQL, and other database or TCP-based workloads.
 
 Unlike HTTP, TCP protocols typically lack SNI (Server Name Indication), which means hostname-based routing on a single port is not possible.
 To multiplex multiple tenant services through a single IP address, each service instance must be assigned a unique TCP port.
 
-Cloud provider LoadBalancers impose hard limits on the number of listeners (ports) per IP address:
+Cloud provider load balancers impose hard limits on the number of listeners (ports) per IP address. For example (as of October 2025):
 
 * Cloudscale: up to 100 listeners per LoadBalancer
 * Exoscale: up to 10 listeners per LoadBalancer
@@ -33,10 +33,10 @@ Cloud provider LoadBalancers impose hard limits on the number of listeners (port
 
 ==== Option 1: Per-tenant LoadBalancer (distinct IP per instance)
 
-Each Codey customer's Forgejo instance would expose its SSH Service directly as `type: LoadBalancer`, letting the cloud provider allocate a public IP and open TCP/22 for that instance.
-This is the most straightforward design and uses Kubernetes native Service abstraction without any shared proxying layer.
-Network traffic from the Internet terminates directly on each tenant's Forgejo pod, no intermediate routing or multiplexing is required.
-Operationally, this model scales linearly: every new customer gets one LoadBalancer and one public IP.
+Each tenant service instance would expose its `Service` directly as `type: LoadBalancer`, letting the cloud provider allocate a public IP for that instance.
+This is the most straightforward design and uses Kubernetes native service abstraction without any shared proxying layer.
+Network traffic from the Internet terminates directly on each tenant's service pod, no intermediate routing or multiplexing is required.
+Operationally, this model scales linearly: every new tenant service gets one LoadBalancer and one public IP.
 
 Pros::
 * Simple datapath
@@ -47,6 +47,7 @@ Cons::
 * Potentially hundreds of IPs
 * Linear cost
 * Violates consolidation goal
+* Cloud providers limit the number of load balancers a per tenant
 
 
 ==== Option 2: One LB + one IP + file-based TCP proxy (graceful reloads)
@@ -91,14 +92,14 @@ References::
 
 ==== Option 4: Kubernetes Gateway API (TCPRoute per tenant)
 
-In this model, Codey uses the Kubernetes Gateway API as the control plane for multiplexing SSH traffic, independent of any specific proxy implementation.
-A conformant Gateway controller such as Envoy Gateway, Cilium Gateway, or KGateway manages a shared data plane that acts as a TCP multiplexer for all Codey customer SSH connections.
+In this model, the Kubernetes Gateway API serves as the control plane for multiplexing TCP traffic, independent of any specific proxy implementation.
+A conformant Gateway controller such as Envoy Gateway, Cilium Gateway, or KGateway manages a shared data plane that acts as a TCP multiplexer for all tenant service connections.
 
 A Kubernetes `Gateway` resource represents the public entry point (one `Service type=LoadBalancer` with a single external IP).
-Each customer tenant receives a dedicated TCP `listener` bound to a unique port.
+Each tenant service receives a dedicated TCP `listener` bound to a unique port.
 For larger deployments, additional ports can be defined through `XListenerSet` (an experimental feature as the X implies) resources, which extend a `Gateway` with extra listener definitions beyond its native limit.
 
-A custom controller acts as a lightweight orchestrator: it allocates a free port, creates a `TCPRoute` pointing to the tenant's internal Forgejo SSH `Service`, and adds a `ReferenceGrant` in the tenant's namespace to authorize the cross-namespace reference.
+A custom controller acts as a lightweight orchestrator: it allocates a free port, creates a `TCPRoute` pointing to the tenant's internal `Service`, and adds a `ReferenceGrant` in the tenant's namespace to authorize the cross-namespace reference.
 The selected Gateway implementation (Envoy, Cilium, etc.) then automatically reconciles these CRDs into live configuration, handling listener creation, routing, and backend resolution without reloads or direct API calls.
 
 Pros::
