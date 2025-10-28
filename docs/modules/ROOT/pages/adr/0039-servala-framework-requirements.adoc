@@ -125,7 +125,7 @@ _As a self-service portal, I want to_:
 * get information about the setup flow and parameter prioritization
 * report actionable and easy to understand error (and status) messages to the user
 
-== Core Requirements
+== Constraints
 
 Kubernetes API::
 The framework and the control-plane is based on the Kubernetes API and its tooling.
