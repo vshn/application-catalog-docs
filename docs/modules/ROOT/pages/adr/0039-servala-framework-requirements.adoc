@@ -111,6 +111,7 @@ _As a platform operator, I want to_:
 * have clear separation of concerns between the services and the platform
 * have strong multi-tenancy to protect different tenants using the platform (for example explicit SA/RBAC per tenant)
 * protect service instances from each other (noisy neighbours)
+* protect the platform from misbehaving service instances
 
 === Self-Service Portal
 
