@@ -1,0 +1,148 @@
+= ADR 0039 - Servala Framework Requirements
+:adr_author:    Tobias Brunner
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2025-09-30
+:adr_upd_date:  2025-10-17
+:adr_status:    draft
+:adr_tags:      framework
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+This ADR specifies the requirements for the Servala Framework.
+====
+
+== Vision
+
+> Transform a Kubernetes workload into a standardized managed service - “Helm Chart in - Managed Service out”
+
+(Substitute Helm Chart with “any Kubernetes artifact.”)
+
+The Servala framework (also called the AppCat framework) allows to easily add standardized day-2 operations facilities to any cloud-native application, making it a managed service, and to offer it through Servala as a self-service SaaS application.
+
+Day-2 operations mean:
+
+* Regular Maintenance and security fixes
+* Version Upgrades
+* Backup and Restore
+* Monitoring and Alert handling
+* Metrics and Logging
+
+In adherence to the xref:framework/service-maturity.adoc[Service Maturity levels].
+
+== Scope
+
+The framework targets already built OCI compliant container images.
+Building of these container images is outside of the scope of the Servala framework.
+
+== Personas and User Stories
+
+This section outlines the personas who are the stakeholders of the framework and their use cases.
+
+=== Service User
+
+NOTE: The service user is the end-user of a manged service provided by this framework.
+
+_As a service user, I want to_:
+
+* consume a stable, secured and compliant managed service in self-service
+* configure the service to my requirements
+* get meaningful documentation about the service and its parameters
+* know about the status of my service instance and its health (metrics, logs)
+* stay informed about running costs
+* be aware of the service capabilities
+* be able to recover a service instance even after user erros (for example deleting the instance) during a certain amount of time
+
+=== Service Maintainer
+
+NOTE: The service maintainer creates a managed service by using the Servala framework and makes the service available in the self-service portal.
+They are experts in the services which are being SaaSified.
+
+_As a service maintainer, I want to_:
+
+* easily add day-2 operations to the service I'm expert in
+* make the service available in the self-service portal
+* give the end-user of the service parameters to customize the service behaviour
+* have the freedom to choose where the code of the service lives and be independent of a single code repository
+* be able to easily develop and test a service locally
+* have the possibility to manipulate user input before passing it on
+
+_As a service maintainer having a Helm Chart at hand, I want to_:
+
+* be able to easily make a managed service out of it and make it available in self-service
+* be able to map API values to Helm Chart values for:
+** standardized day-2 operations settings. For example backup configuration or maintenance settings.
+** service specific settings. For example number or instances or service configuration.
+
+=== Service Operator
+
+NOTE: The service operator takes care of the individual service instances.
+
+_As a service operator, I want to_:
+
+* get informed when a service instance behaves different than its defined and agreed good state
+* know what to do when a service acts outside its defined good state
+* rely on tooling which helps to troubleshoot potentially misbehaving service instances
+* be able to handle support requests by having useful information about service instance at hand
+
+=== Framework Engineer
+
+NOTE: The framework engineer develops the framework tooling and the tools required to make day-2 operations possible.
+
+_As a framework engineer, I want to_:
+
+* provide the <<Service Maintainer>> with an easy to use framework for them to build managed services
+* build a rock-solid base which others can rely on
+* be able to easily develop the framework
+* have an extensive testing infrastructure in place
+* ensure backward compatibility when updating framework
+* provide migration guides for breaking changes
+* deprecate old features gracefully
+
+=== Platform Operator
+
+NOTE: The platform operator takes care of the underlying platform where the services are running on.
+
+_As a platform operator, I want to_:
+
+* have clear separation of concerns between the services and the platform
+* have strong multi-tenancy to protect different tenants using the platform (for example explicit SA/RBAC per tenant)
+* protect service instances from each other (noisy neighbours)
+* protect the platform from misbehaving service instances
+
+=== Self-Service Portal
+
+NOTE: The self-service portal consumes the catalog of managed services built by using this framework.
+
+_As a self-service portal, I want to_:
+
+* query a well-defined API to get a list of available services and their metadata
+* retrieve the available parameters of a service to provide the user a configuration form
+* be sure that the API is standardized so that I can rely on it
+* get information about the setup flow and parameter prioritization
+* report actionable and easy to understand error (and status) messages to the user
+
+== Constraints
+
+Kubernetes API::
+The framework and the control-plane is based on the Kubernetes API and its tooling.
+This is the core technology used at VSHN and has the most experience around.
+Moving away from the Kubernetes API as the core architecture would be a significant change with plenty of risks involved.
+
+Core Tooling::
+The framework relies on many tools, assuming these tools are available and ready to use.
+This core tooling must be industry standard whenever possible, so that compatibility is given.
+Examples: Prometheus for metrics collection.
+
+Independence::
+The framework must be independent of VSHN Managed Kubernetes and VSHN Managed OpenShift.
+This mainly means it must not depend on Project Syn to allow deploying the service catalog to non-VSHN managed Kubernetes environments.
+
+Open Source::
+All tooling developed and used must be open source.
+
+Automation::
+The focus lies on automation, including keeping software up-to-date.

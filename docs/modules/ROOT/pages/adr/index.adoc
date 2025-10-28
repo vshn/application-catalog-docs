@@ -157,6 +157,10 @@
 
 `redis,bitnami,helm,service,operator`
 |draft | |2025-09-03
+|xref:adr/0039-servala-framework-requirements.adoc[]
+
+`framework`
+|draft |2025-09-30 |2025-10-17
 |xref:adr/0040-tcp-service-access.adoc[]
 
 `framework,networking,tcp`
