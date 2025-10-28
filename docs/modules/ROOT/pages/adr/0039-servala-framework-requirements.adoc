@@ -4,7 +4,7 @@
 :adr_reviewers: Schedar
 :adr_date:      2025-09-30
 :adr_upd_date:  2025-10-17
-:adr_status:    draft
+:adr_status:    accepted
 :adr_tags:      framework
 
 include::partial$adr-meta.adoc[]
