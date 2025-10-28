@@ -68,14 +68,14 @@ _As a service maintainer, I want to_:
 * give the end-user of the service parameters to customize the service behaviour
 * have the freedom to choose where the code of the service lives and be independent of a single code repository
 * be able to easily develop and test a service locally
+* have the possibility to manipulate user input before passing it on
 
 _As a service maintainer having a Helm Chart at hand, I want to_:
 
 * be able to easily make a managed service out of it and make it available in self-service
-* be able to map the Helm Chart values to the API values for
-** backend variables, for example backup, maintenance.
-** user-facing variables, for example instances, settings.
-* be able to manipulate API for user-facing variables.
+* be able to map API values to Helm Chart values for:
+** standardized day-2 operations settings. For example backup configuration or maintenance settings.
+** service specific settings. For example number or instances or service configuration.
 
 === Service Operator
 
