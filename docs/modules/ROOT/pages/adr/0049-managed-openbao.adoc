@@ -13,12 +13,12 @@ include::partial$adr-meta.adoc[]
 .Summary
 ====
 This ADR outlines the implementation of a managed OpenBao service on the AppCat platform to provide secret mananagement capabilities to customers.
-This builds upon the suggestion of xref:adr/0024-product-choice-for-secret-management.adoc[ADR 0024] to use OpenBao as secret and PKI management solution.
+This builds upon the suggestion of xref:adr/0024-product-choice-for-secret-management.adoc[] to use OpenBao as secret and PKI management solution.
 ====
 
 == Context
 
-Following the suggestion in ADR 0024 to use OpenBao for secret management, we need to implement it as a managed service within the AppCat ecosystem. OpenBao provides:
+Following the suggestion in xref:adr/0024-product-choice-for-secret-management.adoc[] to use OpenBao for secret management, we need to implement it as a managed service within the AppCat ecosystem. OpenBao provides:
 
 - Secret storage with REST API
 - Vault API compatibility
@@ -132,7 +132,7 @@ Storage Backend::
 
 **API Specification:**
 
-The VSHNOpenBao CRD follows AppCat conventions (ADR 0016) with parameter groups for service configuration, sizing, backup, monitoring, and maintenance.
+The VSHNOpenBao CRD follows AppCat conventions (xref:adr/0016-service-api-design.adoc[]) with parameter groups for service configuration, sizing, backup, monitoring, and maintenance.
 
 ```yaml
 apiVersion: vshn.appcat.vshn.io/v1
