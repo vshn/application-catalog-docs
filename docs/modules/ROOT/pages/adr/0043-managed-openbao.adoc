@@ -199,14 +199,13 @@ spec:
 
   # Unseal keys and root token secret reference
   # This secret will contain the unseal keys and root token generated during initialization
-  writeUnsealKeysSecretToRef:
+  writeConnectionSecretToRef:
     name: openbao-unseal-keys
-    namespace: ""  # defaults to claim namespace
 ```
 
 **Unseal Keys Secret:**
 
-The `writeUnsealKeysSecretToRef` secret contains the unseal keys and root token:
+The `writeConnectionSecretToRef` secret contains the unseal keys and root token:
 
 ```yaml
 apiVersion: v1
@@ -214,12 +213,12 @@ kind: Secret
 metadata:
   name: openbao-unseal-keys
 data:
-  unseal-key-1: <base64-encoded-key>
-  unseal-key-2: <base64-encoded-key>
-  unseal-key-3: <base64-encoded-key>
-  unseal-key-4: <base64-encoded-key>
-  unseal-key-5: <base64-encoded-key>
-  root-token: <base64-encoded-root-token>
+  UNSEAL_KEY_1: <base64-encoded-key>
+  UNSEAL_KEY_2: <base64-encoded-key>
+  UNSEAL_KEY_3: <base64-encoded-key>
+  UNSEAL_KEY_4: <base64-encoded-key>
+  UNSEAL_KEY_5: <base64-encoded-key>
+  ROOT_TOKEN: <base64-encoded-root-token>
 ```
 
 **Auto unseal**
