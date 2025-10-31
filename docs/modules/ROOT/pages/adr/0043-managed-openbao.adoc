@@ -74,9 +74,9 @@ Disadvantages::
 - Additional complexity in managing external dependencies
 - Potential performance overhead with external storage
 
-=== Proposal 2: Integrated Deployment with Local Storage
+=== Proposal 2: Helm Chart with Internal Storage
 
-Deploy OpenBao with integrated storage using Raft consensus.
+Deploy OpenBao using the official Helm chart with integrated storage using Raft consensus.
 
 Implementation::
 
