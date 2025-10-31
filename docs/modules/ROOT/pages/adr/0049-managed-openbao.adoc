@@ -12,7 +12,7 @@ include::partial$adr-meta.adoc[]
 [NOTE]
 .Summary
 ====
-This ADR outlines the implementation of a managed OpenBao service on the AppCat platform to provide secret mananagement capabilities to customers.
+This ADR outlines the implementation of a managed OpenBao service on the AppCat platform to provide secret management capabilities to customers.
 This builds upon the suggestion of xref:adr/0024-product-choice-for-secret-management.adoc[] to use OpenBao as secret and PKI management solution.
 ====
 
