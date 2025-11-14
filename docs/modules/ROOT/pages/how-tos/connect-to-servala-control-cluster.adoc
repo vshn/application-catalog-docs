@@ -1,5 +1,12 @@
 = Connect to a Servala control cluster
 
+== Use the servala-kubeconfigs repository
+
+Clone https://github.com/vshn/servala-kubeconfigs locally and simply `cd` into the folder that corresponds with the control plane you want to connect to.
+`direnv` will handle the rest.
+
+== Craft a new kubeconfig
+
 Servala control clusters are vclusters that run within specific service clusters. This means they differ from service cluster such that they are not OpenShift clusters but rather vanilla Kubernetes.
 
 Their authentication is handled via the `kubelogin` plugin. For more details how to install and connect to the vcluster see: https://hub.syn.tools/vcluster/how-tos/oidc.html#_optional_setup_kubelogin[here].
