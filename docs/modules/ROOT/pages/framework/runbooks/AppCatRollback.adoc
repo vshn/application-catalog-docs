@@ -2,13 +2,13 @@
 :page-aliases: how-tos/appcat/AppCatRollback.adoc
 
 For on-call engineers responding to an AppCat release issue.
-Use these scripts to quickly revert affected Claims to a previous CompositionRevision and restore them once the issue is resolved.
+Use this script to quickly revert affected Claims to a previous CompositionRevision and restore them once the issue is resolved.
 
 == Terminology
 
 * **Claim** - The user-facing, namespaced resource (for example `VSHNPostgreSQL` in namespace `my-app`). This is what customers create and interact with.
 * **Composite Resource (XR)** - The cluster-scoped resource automatically created by Crossplane when a Claim is made (for example `XVSHNPostgreSQL`). Claims reference their XR via `spec.resourceRef.name`.
-* **CompositionRevision (CR)** - A versioned snapshot of a Composition template. Each has a unique name (like `vshnpostgresql.vshn.appcat.vshn.io-a1b2c3d`) and a human-readable label (like `v3.59.0-v4.172.0`).
+* **CompositionRevision** - A versioned snapshot of a Composition template. Each has a unique name (like `vshnpostgresql.vshn.appcat.vshn.io-a1b2c3d`) and a revision label (like `v3.59.0-v4.172.0`).
 * **Function** - The Crossplane function package that contains the logic to render a Composition. If a CompositionRevision's function is MISSING, that revision cannot be used.
 
 == Before you start
@@ -57,7 +57,8 @@ Usage: rollback.sh [options]
   -t TYPE           Claim type (for example vshnpostgresqls.vshn.appcat.vshn.io).
                     Comma-separated allowed for multiple types (requires -r for rollback).
   -i NAME           Specific claim instance name (requires -n NAMESPACE and single -t).
-  -n NAMESPACE      Namespace for the claim instance (requires -i).
+  -n NAMESPACE      Namespace for the claim instance. Can be used with -i for a single claim,
+                    or without -i to target all claims of the specified type in that namespace.
   -r REVISION       Explicit revision label (for example v3.59.0-v4.172.0).
                     Required when using multiple types. Optional otherwise (autodetects per claim).
                     Not used with --unpin.
@@ -78,6 +79,9 @@ Examples:
   # Rollback all claims of one type (autodetect revision per claim)
   rollback.sh -t vshnpostgresqls.vshn.appcat.vshn.io
 
+  # Rollback all claims of one type in a specific namespace (autodetect revision per claim)
+  rollback.sh -t vshnpostgresqls.vshn.appcat.vshn.io -n my-namespace
+
   # Rollback all claims of one type to specific revision
   rollback.sh -t vshnpostgresqls.vshn.appcat.vshn.io -r v3.59.0-v4.172.0
 
@@ -89,6 +93,9 @@ Examples:
 
   # Unpin all claims of one type
   rollback.sh --unpin -t vshnpostgresqls.vshn.appcat.vshn.io
+
+  # Unpin all claims of one type in a specific namespace
+  rollback.sh --unpin -t vshnpostgresqls.vshn.appcat.vshn.io -n my-namespace
 
   # Unpin single claim
   rollback.sh --unpin -t vshnpostgresqls.vshn.appcat.vshn.io -i my-postgres -n my-namespace
@@ -172,16 +179,25 @@ autodetect_prev_label(){
   local claim_type="$1" claim_ns="$2" claim_name="$3" xr_type xr_name cur base prev lbl func_name
   # Get XR name from claim's resourceRef
   xr_name="$(kubectl_cmd get "$claim_type" "$claim_name" -n "$claim_ns" -o jsonpath='{.spec.resourceRef.name}' || true)"
-  [ -n "$xr_name" ] || fatal "Claim $claim_type/$claim_name in namespace $claim_ns lacks .spec.resourceRef.name"
+  if [ -z "$xr_name" ]; then
+    echo "ERROR: Claim $claim_type/$claim_name in namespace $claim_ns lacks .spec.resourceRef.name" >&2
+    return 1
+  fi
 
   # Derive XR type by adding 'x' prefix
   xr_type="x${claim_type}"
 
   # Get current compositionRevisionRef from XR
   cur="$(kubectl_cmd get "$xr_type" "$xr_name" -o jsonpath='{.spec.compositionRevisionRef.name}' || true)"
-  [ -n "$cur" ] || fatal "XR $xr_type/$xr_name lacks .spec.compositionRevisionRef.name"
+  if [ -z "$cur" ]; then
+    echo "ERROR: XR $xr_type/$xr_name lacks .spec.compositionRevisionRef.name" >&2
+    return 1
+  fi
   base="$(printf '%s' "$cur" | sed -E 's/-[0-9a-f]{7,}$//')" || true
-  [ -n "$base" ] || fatal "Cannot derive base from '$cur' for XR $xr_type/$xr_name"
+  if [ -z "$base" ]; then
+    echo "ERROR: Cannot derive base from '$cur' for XR $xr_type/$xr_name" >&2
+    return 1
+  fi
 
   # Get all previous revisions (newest to oldest relative to current)
   local all_prev
@@ -192,7 +208,10 @@ autodetect_prev_label(){
     | awk -v b="$base" -v c="$cur" 'index($0,b"-")==1{a[++n]=$0} END{for(i=1;i<=n;i++)if(a[i]==c&&i>1){for(j=i-1;j>=1;j--)print a[j]; exit}}'
   )"
 
-  [ -n "$all_prev" ] || fatal "No previous CompositionRevision for base '$base' (current=$cur) on XR $xr_type/$xr_name"
+  if [ -z "$all_prev" ]; then
+    echo "ERROR: No previous CompositionRevision for base '$base' (current=$cur) on XR $xr_type/$xr_name" >&2
+    return 1
+  fi
 
   # Find the first previous revision with a valid function
   while IFS= read -r prev; do
@@ -215,7 +234,8 @@ autodetect_prev_label(){
     fi
   done <<<"$all_prev"
 
-  fatal "No usable previous CompositionRevision found for base '$base' (all previous revisions either missing function or revision label)"
+  echo "ERROR: No usable previous CompositionRevision found for base '$base' (all previous revisions either missing function or revision label)" >&2
+  return 1
 }
 
 patch_claim(){
@@ -283,7 +303,6 @@ if [ $LIST_REVISIONS -eq 1 ]; then
 fi
 
 [ -n "$NAME" ] && [ -z "$NAMESPACE" ] && fatal "-i requires -n NAMESPACE"
-[ -z "$NAME" ] && [ -n "$NAMESPACE" ] && fatal "-n requires -i NAME"
 
 # build type list
 TYPES_CSV=${TYPES_CSV//[[:space:]]/}
@@ -304,10 +323,20 @@ for claim_type in "${types[@]}"; do
     fi
     claims+=("$NAMESPACE $NAME")
   else
-    # All claims of this type
-    out="$(list_instances "$claim_type" 2>/dev/null || true)"
+    # All claims of this type (optionally filtered by namespace)
+    if [ -n "$NAMESPACE" ]; then
+      # Get claims only in specified namespace
+      out="$(kubectl_cmd get "$claim_type" -n "$NAMESPACE" -o jsonpath='{range .items[*]}{.metadata.namespace}{" "}{.metadata.name}{"\n"}{end}' 2>/dev/null || true)"
+    else
+      # Get claims across all namespaces
+      out="$(list_instances "$claim_type" 2>/dev/null || true)"
+    fi
     if [ -z "${out:-}" ]; then
-      echo "No claims of type $claim_type; skipping."
+      if [ -n "$NAMESPACE" ]; then
+        echo "No claims of type $claim_type in namespace $NAMESPACE; skipping."
+      else
+        echo "No claims of type $claim_type; skipping."
+      fi
       continue
     fi
     while IFS= read -r line; do
@@ -434,6 +463,12 @@ All commands use **claim types** (for example `vshnpostgresqls.vshn.appcat.vshn.
 ./rollback.sh -t vshnpostgresqls.vshn.appcat.vshn.io -r v3.59.0-v4.172.0
 ----
 
+*Rollback all claims of one type in a specific namespace (autodetect)*
+[source,bash]
+----
+./rollback.sh -t vshnpostgresqls.vshn.appcat.vshn.io -n my-namespace
+----
+
 *Rollback single claim (autodetect)*
 [source,bash]
 ----
@@ -450,6 +485,12 @@ All commands use **claim types** (for example `vshnpostgresqls.vshn.appcat.vshn.
 [source,bash]
 ----
 ./rollback.sh -t vshnpostgresqls.vshn.appcat.vshn.io,vshnnextclouds.vshn.appcat.vshn.io -r v3.59.0-v4.172.0
+----
+
+*Rollback multiple types in a specific namespace to specific revision*
+[source,bash]
+----
+./rollback.sh -t vshnpostgresqls.vshn.appcat.vshn.io,vshnnextclouds.vshn.appcat.vshn.io -n my-namespace -r v3.59.0-v4.172.0
 ----
 
 *Return to automatic policy (unpin)*
@@ -495,11 +536,11 @@ Use the `--list-revisions` flag to see all available CompositionRevisions for a 
 This will display a table with:
 
 * **CompositionRevision name** - Full CompositionRevision identifier with hash
-* **Revision label** - Human-readable version (use this value with `-r`)
+* **Revision label** -  Label to use with `-r`
 * **Created** - Timestamp when the revision was created
 * **Function status** - Whether the composition function package exists in the cluster (EXISTS/MISSING/N/A)
 
-[TIP]
+[IMPORTANT]
 ====
 Don't roll back to revisions with `MISSING` function status, as they cannot be reconciled properly.
 ====
