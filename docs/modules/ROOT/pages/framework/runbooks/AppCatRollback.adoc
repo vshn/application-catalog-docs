@@ -2,38 +2,44 @@
 :page-aliases: how-tos/appcat/AppCatRollback.adoc
 
 For on-call engineers responding to an AppCat release issue.
-Use these scripts to quickly revert affected XRs to a previous CompositionRevision and restore them once the issue is resolved.
+Use this script to quickly revert affected Claims to a previous CompositionRevision and restore them once the issue is resolved.
+
+== Terminology
+
+* **Claim** - The user-facing, namespaced resource (for example `VSHNPostgreSQL` in namespace `my-app`). This is what customers create and interact with.
+* **Composite Resource (XR)** - The cluster-scoped resource automatically created by Crossplane when a Claim is made (for example `XVSHNPostgreSQL`). Claims reference their XR via `spec.resourceRef.name`.
+* **CompositionRevision** - A versioned snapshot of a Composition template. Each has a unique name (like `vshnpostgresql.vshn.appcat.vshn.io-a1b2c3d`) and a revision label (like `v3.59.0-v4.172.0`).
+* **Function** - The Crossplane function package that contains the logic to render a Composition. If a CompositionRevision's function is MISSING, that revision cannot be used.
 
 == Before you start
 
 [IMPORTANT]
 ====
 Make sure you can run `kubectl` against the cluster that runs AppCat/Crossplane.
-You'll need permissions to **get/list/patch** XRs/XRDs and CompositionRevisions.
+You'll need permissions to **get/list/patch**:
+
+* Claims (in all relevant namespaces) - for listing and applying rollback patches
+* CompositionRevisions - for autodetecting and listing previous versions
 ====
 
 [TIP]
 ====
-If your user isn't a cluster admin, pass `--as-admin` to the scripts.
-They'll run all `kubectl` commands as `kubectl --as cluster-admin …` under the hood.
+If your user isn't a cluster admin, pass `--as-admin` to the script.
+It will run all `kubectl` commands as `kubectl --as=system:admin ...` under the hood.
 ====
 
-Copy the two scripts below into files named **rollback.sh** and **unpin.sh**, then make them executable:
+Copy the script below into a file named **rollback.sh** and make it executable:
 
 [source,bash]
 ----
-# Copy/paste the contents from the "Scripts" section into these files:
+# Copy/paste the contents from the "Script" section into this file:
 $EDITOR rollback.sh
-$EDITOR unpin.sh
 
-# Make them executable (either run in-place or move onto your PATH)
-chmod +x rollback.sh unpin.sh
-# optional:
-# sudo mv rollback.sh /usr/local/bin/
-# sudo mv unpin.sh /usr/local/bin/
+# Make it executable (either run in-place or move onto your PATH)
+chmod +x rollback.sh
 ----
 
-== Scripts
+== Script
 
 [%collapsible]
 .rollback.sh 
@@ -48,13 +54,54 @@ KUBECTL="${KUBECTL:-kubectl}"
 
 usage(){ cat <<'EOF'
 Usage: rollback.sh [options]
-  -t TYPE           XR type (CRD name). Comma-separated allowed.
-  -i NAME           Specific XR instance (only with a single -t).
-  --all-instances   Operate on all instances of the given TYPE(s).
-  --all-types       Operate on all instances across all XRD types.
-  -r REVISION       Explicit revision label (e.g. v3.52.0-v4.166.0).
-  --as-admin        Run kubectl commands as cluster-admin.
+  -t TYPE           Claim type (for example vshnpostgresqls.vshn.appcat.vshn.io).
+                    Comma-separated allowed for multiple types (requires -r for rollback).
+  -i NAME           Specific claim instance name (requires -n NAMESPACE and single -t).
+  -n NAMESPACE      Namespace for the claim instance. Can be used with -i for a single claim,
+                    or without -i to target all claims of the specified type in that namespace.
+  -r REVISION       Explicit revision label (for example v3.59.0-v4.172.0).
+                    Required when using multiple types. Optional otherwise (autodetects per claim).
+                    Not used with --unpin.
+  --list-revisions  List all available CompositionRevisions for the given type(s) and exit.
+  --unpin           Remove compositionRevisionSelector to return to automatic policy.
+  --dry-run         Show what would be patched without making actual changes.
+  -y|--yes          Skip confirmation prompt and proceed immediately.
+  --as-admin        Run kubectl commands as system:admin.
   -h|--help         Show help.
+
+Examples:
+  # List available revisions for a type
+  rollback.sh -t vshnpostgresqls.vshn.appcat.vshn.io --list-revisions
+
+  # Dry-run: preview what would be rolled back (autodetect)
+  rollback.sh -t vshnpostgresqls.vshn.appcat.vshn.io --dry-run
+
+  # Rollback all claims of one type (autodetect revision per claim)
+  rollback.sh -t vshnpostgresqls.vshn.appcat.vshn.io
+
+  # Rollback all claims of one type in a specific namespace (autodetect revision per claim)
+  rollback.sh -t vshnpostgresqls.vshn.appcat.vshn.io -n my-namespace
+
+  # Rollback all claims of one type to specific revision
+  rollback.sh -t vshnpostgresqls.vshn.appcat.vshn.io -r v3.59.0-v4.172.0
+
+  # Rollback single claim (autodetect)
+  rollback.sh -t vshnpostgresqls.vshn.appcat.vshn.io -i my-postgres -n my-namespace
+
+  # Rollback multiple types to specific revision
+  rollback.sh -t vshnpostgresqls.vshn.appcat.vshn.io,vshnnextclouds.vshn.appcat.vshn.io -r v3.59.0-v4.172.0
+
+  # Unpin all claims of one type
+  rollback.sh --unpin -t vshnpostgresqls.vshn.appcat.vshn.io
+
+  # Unpin all claims of one type in a specific namespace
+  rollback.sh --unpin -t vshnpostgresqls.vshn.appcat.vshn.io -n my-namespace
+
+  # Unpin single claim
+  rollback.sh --unpin -t vshnpostgresqls.vshn.appcat.vshn.io -i my-postgres -n my-namespace
+
+  # Unpin multiple types
+  rollback.sh --unpin -t vshnpostgresqls.vshn.appcat.vshn.io,vshnnextclouds.vshn.appcat.vshn.io
 EOF
 }
 
@@ -65,170 +112,170 @@ kubectl_cmd() {
   "$KUBECTL" $AS_ADMIN_FLAG "$@"
 }
 
-discover_all_types(){
-  kubectl_cmd get xrd -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' | sed '/^$/d'
-}
-
 list_instances(){
-  kubectl_cmd get "$1" -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' || return 1
+  # List claims across all namespaces, returning "namespace name" pairs
+  kubectl_cmd get "$1" -A -o jsonpath='{range .items[*]}{.metadata.namespace}{" "}{.metadata.name}{"\n"}{end}' || return 1
 }
 
-autodetect_prev_label(){
-  local t="$1" n="$2" cur base prev lbl
-  cur="$(kubectl_cmd get "$t" "$n" -o jsonpath='{.spec.compositionRevisionRef.name}' || true)"
-  [ -n "$cur" ] || fatal "$t/$n lacks .spec.compositionRevisionRef.name"
-  base="$(printf '%s' "$cur" | sed -E 's/-[0-9a-f]{7,}$//')" || true
-  [ -n "$base" ] || fatal "Cannot derive base from '$cur' for $t/$n"
-  prev="$(
+list_revisions_for_type(){
+  local claim_type="$1" base xr_type xr_name cur claim_ns claim_name
+
+  # Try to derive composition base from an actual claim's XR
+  # First, try to find any claim of this type
+  local first_claim="$(kubectl_cmd get "$claim_type" -A -o jsonpath='{.items[0].metadata.namespace}{" "}{.items[0].metadata.name}' 2>/dev/null || true)"
+
+  if [ -n "$first_claim" ]; then
+    read -r claim_ns claim_name <<<"$first_claim"
+    xr_name="$(kubectl_cmd get "$claim_type" "$claim_name" -n "$claim_ns" -o jsonpath='{.spec.resourceRef.name}' 2>/dev/null || true)"
+
+    if [ -n "$xr_name" ]; then
+      xr_type="x${claim_type}"
+      cur="$(kubectl_cmd get "$xr_type" "$xr_name" -o jsonpath='{.spec.compositionRevisionRef.name}' 2>/dev/null || true)"
+
+      if [ -n "$cur" ]; then
+        # Extract base from current revision (remove hash suffix)
+        base="$(printf '%s' "$cur" | sed -E 's/-[0-9a-f]{7,}$//')" || true
+      fi
+    fi
+  fi
+
+  # Fallback: if we couldn't derive base from a claim, try simple singularization
+  if [ -z "${base:-}" ]; then
+    warn "No claims found for type $claim_type, using fallback name derivation"
+    base="$(echo "$claim_type" | sed 's/s\(\.[^.]*\)/\1/')"
+  fi
+
+  echo "Available CompositionRevisions for $claim_type (base: $base):"
+  echo ""
+  printf "%-45s  %-65s  %-25s  %s\n" "COMPOSITION REVISION" "REVISION LABEL" "CREATED" "FUNCTION STATUS"
+  printf "%-45s  %-65s  %-25s  %s\n" "---------------------------------------------" "-----------------------------------------------------------------" "-------------------------" "---------------"
+
+  for r in $(
     kubectl_cmd get compositionrevisions.apiextensions.crossplane.io \
       --sort-by=.metadata.creationTimestamp -o name \
     | sed 's|.*/||' \
-    | awk -v b="$base" -v c="$cur" 'index($0,b"-")==1{a[++n]=$0} END{for(i=1;i<=n;i++)if(a[i]==c&&i>1)print a[i-1]}'
-  )"
-  [ -n "$prev" ] || fatal "No previous CompositionRevision for base '$base' (current=$cur) on $t/$n"
-  lbl="$(kubectl_cmd get compositionrevision "$prev" \
-          -o go-template='{{ index .metadata.labels "metadata.appcat.vshn.io/revision" }}' 2>/dev/null || true)"
-  [ -n "$lbl" ] && [ "$lbl" != "<no value>" ] || fatal "Previous CR '$prev' missing revision label"
-  printf '%s\n' "$lbl"
-}
+    | awk -v b="$base" 'index($0, b "-")==1 { print }' \
+    | tac
+  ); do
+    timestamp="$(kubectl_cmd get compositionrevision "$r" -o jsonpath='{.metadata.creationTimestamp}' 2>/dev/null || echo "N/A")"
+    label="$(kubectl_cmd get compositionrevision "$r" -o go-template='{{ index .metadata.labels "metadata.appcat.vshn.io/revision" }}' 2>/dev/null || echo "<none>")"
 
-patch_xr(){ 
-  echo "Patching $1/$2 revision=$3"
-  kubectl_cmd patch "$1" "$2" --type=merge \
-    -p "{\"spec\":{\"compositionRevisionSelector\":{\"matchLabels\":{\"metadata.appcat.vshn.io/revision\":\"$3\"}}}}"
-}
-
-# arg parsing
-[ $# -gt 0 ] || { usage; exit 1; }
-ALL_TYPES=0 ALL_INST=0 TYPES_CSV="" NAME="" REV=""
-while [ $# -gt 0 ]; do
-  case "$1" in
-    -t) TYPES_CSV="${2:?}"; shift 2;;
-    -i) NAME="${2:?}"; shift 2;;
-    -r) REV="${2:?}"; shift 2;;
-    --all-instances) ALL_INST=1; shift;;
-    --all-types) ALL_TYPES=1; shift;;
-    --as-admin) AS_ADMIN_FLAG="--as cluster-admin"; shift;;
-    -h|--help) usage; exit 0;;
-    -*) fatal "Unknown option $1";;
-    *)  fatal "Unexpected argument $1";;
-  esac
-done
-
-# validations
-[ $ALL_TYPES -eq 1 ] && [ -n "$TYPES_CSV" ] && fatal "Do not combine -t with --all-types"
-[ $ALL_TYPES -eq 0 ] && [ -z "$TYPES_CSV" ] && fatal "-t is required when --all-types is not set"
-[ -n "$NAME" ] && [ $ALL_INST -eq 1 ] && fatal "-i cannot be used with --all-instances"
-[ -n "$NAME" ] && [ $ALL_TYPES -eq 1 ] && fatal "-i cannot be used with --all-types"
-[ $ALL_TYPES -eq 0 ] && [ $ALL_INST -eq 0 ] && [ -z "$NAME" ] && fatal "Use -i or --all-instances (or --all-types)"
-
-# build type list
-types=()
-if [ $ALL_TYPES -eq 1 ]; then
-  types=()
-  while IFS= read -r line; do
-    [ -n "$line" ] && types+=("$line")
-  done < <(discover_all_types)
-  [ ${#types[@]} -gt 0 ] || fatal "No Crossplane XRDs found"
-else
-  TYPES_CSV=${TYPES_CSV//[[:space:]]/}
-  IFS=',' read -r -a types <<<"$TYPES_CSV"
-  [ -n "$NAME" ] && [ ${#types[@]} -ne 1 ] && fatal "With -i NAME you must pass exactly one TYPE"
-fi
-
-FAILED=0
-for t in "${types[@]}"; do
-  instances=()
-  if [ -n "$NAME" ]; then
-    if ! kubectl_cmd get "$t" "$NAME" >/dev/null 2>&1; then
-      warn "Instance not found: $t/$NAME; skipping"
-      FAILED=1; continue
-    fi
-    instances+=("$NAME")
-  else
-    out="$(list_instances "$t" 2>/dev/null || true)"
-    if [ -z "${out:-}" ]; then
-      echo "No instances of $t; skipping."
-      continue
-    fi
-    instances=()
-    while IFS= read -r line; do
-      [ -n "$line" ] && instances+=("$line")
-    done <<<$out
-
-  fi
-
-  for n in "${instances[@]}"; do
-    [ -n "$n" ] || { warn "Empty name for $t; skipping"; FAILED=1; continue; }
-    rev="$REV"
-    if [ -z "$rev" ]; then
-      if ! rev="$(autodetect_prev_label "$t" "$n" 2>&1)"; then
-        warn "$rev"; FAILED=1; continue
+    # Check if the function exists
+    func_name="$(kubectl_cmd get compositionrevision "$r" -o jsonpath='{.spec.pipeline[0].functionRef.name}' 2>/dev/null || true)"
+    func_status="N/A"
+    if [ -n "$func_name" ]; then
+      if kubectl_cmd get function.pkg.crossplane.io "$func_name" >/dev/null 2>&1; then
+        func_status="EXISTS"
+      else
+        func_status="MISSING"
       fi
     fi
-    if ! patch_xr "$t" "$n" "$rev"; then
-      warn "Failed to patch $t/$n"; FAILED=1
-    fi
+
+    printf "%-45s  %-65s  %-25s  %s\n" "$r" "$label" "$timestamp" "$func_status"
   done
-done
-
-[ $FAILED -eq 0 ] || exit 1
-echo "Done."
-----
-====
-
-[%collapsible]
-.unpin.sh 
-====
-[source,bash]
-----
-#!/usr/bin/env bash
-set -euo pipefail
-AS_ADMIN_FLAG=""
-KUBECTL="${KUBECTL:-kubectl}"
-
-usage(){ cat <<'EOF'
-Usage: unpin.sh [options]
-  -t TYPE           XR type (CRD name). Comma-separated allowed.
-  -i NAME           Specific XR instance (only with a single -t).
-  --all-instances   Operate on all instances of the given TYPE(s).
-  --all-types       Operate on all instances across all XRD types.
-  --as-admin        Run kubectl commands as cluster-admin.
-  -h|--help         Show help.
-EOF
 }
 
-fatal(){ echo "ERROR: $*" >&2; exit 1; }
-warn(){ echo "WARN: $*" >&2; }
+autodetect_prev_label(){
+  local claim_type="$1" claim_ns="$2" claim_name="$3" xr_type xr_name cur base prev lbl func_name
+  # Get XR name from claim's resourceRef
+  xr_name="$(kubectl_cmd get "$claim_type" "$claim_name" -n "$claim_ns" -o jsonpath='{.spec.resourceRef.name}' || true)"
+  if [ -z "$xr_name" ]; then
+    echo "ERROR: Claim $claim_type/$claim_name in namespace $claim_ns lacks .spec.resourceRef.name" >&2
+    return 1
+  fi
 
-kubectl_cmd() {
-  "$KUBECTL" $AS_ADMIN_FLAG "$@"
+  # Derive XR type by adding 'x' prefix
+  xr_type="x${claim_type}"
+
+  # Get current compositionRevisionRef from XR
+  cur="$(kubectl_cmd get "$xr_type" "$xr_name" -o jsonpath='{.spec.compositionRevisionRef.name}' || true)"
+  if [ -z "$cur" ]; then
+    echo "ERROR: XR $xr_type/$xr_name lacks .spec.compositionRevisionRef.name" >&2
+    return 1
+  fi
+  base="$(printf '%s' "$cur" | sed -E 's/-[0-9a-f]{7,}$//')" || true
+  if [ -z "$base" ]; then
+    echo "ERROR: Cannot derive base from '$cur' for XR $xr_type/$xr_name" >&2
+    return 1
+  fi
+
+  # Get all previous revisions (newest to oldest relative to current)
+  local all_prev
+  all_prev="$(
+    kubectl_cmd get compositionrevisions.apiextensions.crossplane.io \
+      --sort-by=.metadata.creationTimestamp -o name \
+    | sed 's|.*/||' \
+    | awk -v b="$base" -v c="$cur" 'index($0,b"-")==1{a[++n]=$0} END{for(i=1;i<=n;i++)if(a[i]==c&&i>1){for(j=i-1;j>=1;j--)print a[j]; exit}}'
+  )"
+
+  if [ -z "$all_prev" ]; then
+    echo "ERROR: No previous CompositionRevision for base '$base' (current=$cur) on XR $xr_type/$xr_name" >&2
+    return 1
+  fi
+
+  # Find the first previous revision with a valid function
+  while IFS= read -r prev; do
+    [ -n "$prev" ] || continue
+
+    # Check if function exists
+    func_name="$(kubectl_cmd get compositionrevision "$prev" -o jsonpath='{.spec.pipeline[0].functionRef.name}' 2>/dev/null || true)"
+    if [ -n "$func_name" ]; then
+      if ! kubectl_cmd get function.pkg.crossplane.io "$func_name" >/dev/null 2>&1; then
+        continue  # Skip this revision, function is missing
+      fi
+    fi
+
+    # Check for revision label
+    lbl="$(kubectl_cmd get compositionrevision "$prev" \
+            -o go-template='{{ index .metadata.labels "metadata.appcat.vshn.io/revision" }}' 2>/dev/null || true)"
+    if [ -n "$lbl" ] && [ "$lbl" != "<no value>" ]; then
+      printf '%s\n' "$lbl"
+      return 0
+    fi
+  done <<<"$all_prev"
+
+  echo "ERROR: No usable previous CompositionRevision found for base '$base' (all previous revisions either missing function or revision label)" >&2
+  return 1
 }
 
-discover_all_types(){
-  kubectl_cmd get xrd -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' | sed '/^$/d'
-}
-
-list_instances(){
-  kubectl_cmd get "$1" -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' || return 1
-}
-
-unpin_xr(){
-  echo "Unpinning $1/$2 (removing spec.compositionRevisionSelector)"
-  kubectl_cmd patch "$1" "$2" --type=merge \
-    -p '{"spec":{"compositionRevisionSelector":null}}'
+patch_claim(){
+  local claim_type="$1" claim_ns="$2" claim_name="$3" rev="$4"
+  if [ "${UNPIN:-0}" -eq 1 ]; then
+    # Unpin mode: remove the selector
+    if [ "${DRY_RUN:-0}" -eq 1 ]; then
+      echo "[DRY-RUN] Would unpin claim $claim_type/$claim_name in namespace $claim_ns (remove compositionRevisionSelector)"
+    else
+      echo "Unpinning claim $claim_type/$claim_name in namespace $claim_ns (removing compositionRevisionSelector)"
+      kubectl_cmd patch "$claim_type" "$claim_name" -n "$claim_ns" --type=merge \
+        -p '{"spec":{"compositionRevisionSelector":null}}'
+    fi
+  else
+    # Rollback mode: set the selector
+    if [ "${DRY_RUN:-0}" -eq 1 ]; then
+      echo "[DRY-RUN] Would patch claim $claim_type/$claim_name in namespace $claim_ns with revision=$rev"
+      echo "[DRY-RUN] Patch: {\"spec\":{\"compositionRevisionSelector\":{\"matchLabels\":{\"metadata.appcat.vshn.io/revision\":\"$rev\"}}}}"
+    else
+      echo "Patching claim $claim_type/$claim_name in namespace $claim_ns with revision=$rev"
+      kubectl_cmd patch "$claim_type" "$claim_name" -n "$claim_ns" --type=merge \
+        -p "{\"spec\":{\"compositionRevisionSelector\":{\"matchLabels\":{\"metadata.appcat.vshn.io/revision\":\"$rev\"}}}}"
+    fi
+  fi
 }
 
 # arg parsing
 [ $# -gt 0 ] || { usage; exit 1; }
-ALL_TYPES=0 ALL_INST=0 TYPES_CSV="" NAME=""
+TYPES_CSV="" NAME="" NAMESPACE="" REV="" LIST_REVISIONS=0 DRY_RUN=0 SKIP_CONFIRM=0 UNPIN=0
 while [ $# -gt 0 ]; do
   case "$1" in
     -t) TYPES_CSV="${2:?}"; shift 2;;
     -i) NAME="${2:?}"; shift 2;;
-    --all-instances) ALL_INST=1; shift;;
-    --all-types) ALL_TYPES=1; shift;;
-    --as-admin) AS_ADMIN_FLAG="--as cluster-admin"; shift;;
+    -n) NAMESPACE="${2:?}"; shift 2;;
+    -r) REV="${2:?}"; shift 2;;
+    --list-revisions) LIST_REVISIONS=1; shift;;
+    --unpin) UNPIN=1; shift;;
+    --dry-run) DRY_RUN=1; shift;;
+    -y|--yes) SKIP_CONFIRM=1; shift;;
+    --as-admin) AS_ADMIN_FLAG="--as=system:admin"; shift;;
     -h|--help) usage; exit 0;;
     -*) fatal "Unknown option $1";;
     *)  fatal "Unexpected argument $1";;
@@ -236,60 +283,140 @@ while [ $# -gt 0 ]; do
 done
 
 # validations
-[ $ALL_TYPES -eq 1 ] && [ -n "$TYPES_CSV" ] && fatal "Do not combine -t with --all-types"
-[ $ALL_TYPES -eq 0 ] && [ -z "$TYPES_CSV" ] && fatal "-t is required when --all-types is not set"
-[ -n "$NAME" ] && [ $ALL_INST -eq 1 ] && fatal "-i cannot be used with --all-instances"
-[ -n "$NAME" ] && [ $ALL_TYPES -eq 1 ] && fatal "-i cannot be used with --all-types"
-[ $ALL_TYPES -eq 0 ] && [ $ALL_INST -eq 0 ] && [ -z "$NAME" ] && fatal "Use -i or --all-instances (or --all-types)"
+[ -z "$TYPES_CSV" ] && fatal "-t TYPE is required"
+[ $UNPIN -eq 1 ] && [ $LIST_REVISIONS -eq 1 ] && fatal "Cannot combine --unpin with --list-revisions"
+[ $UNPIN -eq 1 ] && [ -n "$REV" ] && fatal "Cannot specify -r with --unpin"
 
-types=()
-if [ $ALL_TYPES -eq 1 ]; then
-  while IFS= read -r line; do
-    [ -n "$line" ] && types+=("$line")
-  done < <(discover_all_types)
-  [ ${#types[@]} -gt 0 ] || fatal "No Crossplane XRDs found"
-else
+# Handle --list-revisions early exit
+if [ $LIST_REVISIONS -eq 1 ]; then
   TYPES_CSV=${TYPES_CSV//[[:space:]]/}
   IFS=',' read -r -a types <<<"$TYPES_CSV"
-  [ -n "$NAME" ] && [ ${#types[@]} -ne 1 ] && fatal "With -i NAME you must pass exactly one TYPE"
+  FAILED=0
+  for claim_type in "${types[@]}"; do
+    if ! list_revisions_for_type "$claim_type"; then
+      FAILED=1
+    fi
+    echo ""
+  done
+  [ $FAILED -eq 0 ] || exit 1
+  exit 0
 fi
 
-FAILED=0
-for t in "${types[@]}"; do
-  instances=()
+[ -n "$NAME" ] && [ -z "$NAMESPACE" ] && fatal "-i requires -n NAMESPACE"
+
+# build type list
+TYPES_CSV=${TYPES_CSV//[[:space:]]/}
+IFS=',' read -r -a types <<<"$TYPES_CSV"
+
+# Additional validations
+[ -n "$NAME" ] && [ ${#types[@]} -ne 1 ] && fatal "-i NAME requires exactly one TYPE (not comma-separated)"
+[ ${#types[@]} -gt 1 ] && [ -z "$REV" ] && [ $UNPIN -eq 0 ] && fatal "Multiple types require -r REVISION (cannot autodetect)"
+
+# Build list of what will be patched for confirmation
+patches_preview=()
+for claim_type in "${types[@]}"; do
+  claims=()
   if [ -n "$NAME" ]; then
-    if ! kubectl_cmd get "$t" "$NAME" >/dev/null 2>&1; then
-      warn "Instance not found: $t/$NAME; skipping"
-      FAILED=1; continue
+    # Single claim specified
+    if ! kubectl_cmd get "$claim_type" "$NAME" -n "$NAMESPACE" >/dev/null 2>&1; then
+      fatal "Claim not found: $claim_type/$NAME in namespace $NAMESPACE"
     fi
-    instances+=("$NAME")
+    claims+=("$NAMESPACE $NAME")
   else
-    out="$(list_instances "$t" 2>/dev/null || true)"
+    # All claims of this type (optionally filtered by namespace)
+    if [ -n "$NAMESPACE" ]; then
+      # Get claims only in specified namespace
+      out="$(kubectl_cmd get "$claim_type" -n "$NAMESPACE" -o jsonpath='{range .items[*]}{.metadata.namespace}{" "}{.metadata.name}{"\n"}{end}' 2>/dev/null || true)"
+    else
+      # Get claims across all namespaces
+      out="$(list_instances "$claim_type" 2>/dev/null || true)"
+    fi
     if [ -z "${out:-}" ]; then
-      echo "No instances of $t; skipping."
+      if [ -n "$NAMESPACE" ]; then
+        echo "No claims of type $claim_type in namespace $NAMESPACE; skipping."
+      else
+        echo "No claims of type $claim_type; skipping."
+      fi
       continue
     fi
     while IFS= read -r line; do
-      [ -n "$line" ] && instances+=("$line")
-    done <<<$out
+      [ -n "$line" ] && claims+=("$line")
+    done <<<"$out"
   fi
 
-  for n in "${instances[@]}"; do
-    [ -n "$n" ] || { warn "Empty name for $t; skipping"; FAILED=1; continue; }
-    if ! unpin_xr "$t" "$n"; then
-      warn "Failed to unpin $t/$n"; FAILED=1
+  for claim_info in "${claims[@]}"; do
+    read -r claim_ns claim_name <<<"$claim_info"
+    [ -n "$claim_ns" ] && [ -n "$claim_name" ] || continue
+
+    rev="$REV"
+    if [ $UNPIN -eq 0 ]; then
+      # Only need revision for rollback mode
+      if [ -z "$rev" ]; then
+        if ! rev="$(autodetect_prev_label "$claim_type" "$claim_ns" "$claim_name" 2>&1)"; then
+          warn "$rev"
+          continue
+        fi
+      fi
+    else
+      # Unpin mode doesn't need revision
+      rev="(unpin)"
     fi
+
+    patches_preview+=("$claim_type|$claim_ns|$claim_name|$rev")
   done
+done
+
+# Show preview and ask for confirmation
+if [ ${#patches_preview[@]} -eq 0 ]; then
+  echo "No claims to patch."
+  exit 0
+fi
+
+if [ $UNPIN -eq 1 ]; then
+  echo "The following claims will be unpinned:"
+else
+  echo "The following claims will be patched:"
+fi
+echo ""
+printf "%-50s  %-30s  %-30s  %s\n" "TYPE" "NAMESPACE" "NAME" "REVISION"
+printf "%-50s  %-30s  %-30s  %s\n" "--------------------------------------------------" "------------------------------" "------------------------------" "------------------------------"
+for patch_info in "${patches_preview[@]}"; do
+  IFS='|' read -r p_type p_ns p_name p_rev <<<"$patch_info"
+  printf "%-50s  %-30s  %-30s  %s\n" "$p_type" "$p_ns" "$p_name" "$p_rev"
+done
+echo ""
+
+if [ "${DRY_RUN:-0}" -eq 0 ] && [ "${SKIP_CONFIRM:-0}" -eq 0 ]; then
+  if [ $UNPIN -eq 1 ]; then
+    read -rp "Proceed with unpinning? (y/n): " confirm
+  else
+    read -rp "Proceed with rollback? (y/n): " confirm
+  fi
+  if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+    echo "Aborted."
+    exit 0
+  fi
+fi
+
+FAILED=0
+for patch_info in "${patches_preview[@]}"; do
+  IFS='|' read -r claim_type claim_ns claim_name rev <<<"$patch_info"
+
+  if ! patch_claim "$claim_type" "$claim_ns" "$claim_name" "$rev"; then
+    warn "Failed to patch claim $claim_type/$claim_name in namespace $claim_ns"; FAILED=1
+  fi
 done
 
 [ $FAILED -eq 0 ] || exit 1
 echo "Done."
 ----
 ====
- 
-== What the rollback does
 
-`rollback.sh` sets:
+== What the script does
+
+`rollback.sh` has two modes:
+
+**Rollback mode** (default): Patches **claims** directly to set:
 
 [source,yaml]
 ----
@@ -299,78 +426,130 @@ spec:
       metadata.appcat.vshn.io/revision: <REV>
 ----
 
-If `-r <REV>` is not given, it autodetects the previous `CompositionRevision` relative to the XR's current revision and uses that CR's label `metadata.appcat.vshn.io/revision`.
+If `-r <REV>` is not given, it autodetects the previous CompositionRevision relative to each claim's Composite Resource current revision and uses that CompositionRevision's label `metadata.appcat.vshn.io/revision`. Autodetect automatically skips revisions with missing function packages.
 
-It's idempotent: run it multiple times and it always picks "previous relative to current".
+**Unpin mode** (`--unpin`): Removes the `compositionRevisionSelector` from claims:
+
+[source,yaml]
+----
+spec:
+  compositionRevisionSelector: null
+----
+
+This returns claims to automatic policy, where they'll use the latest active CompositionRevision.
 
 == Usage examples
 
-*Single XR (autodetect previous)*
+[NOTE]
+====
+All commands use **claim types** (for example `vshnpostgresqls.vshn.appcat.vshn.io`). The script lists claims directly and patches them. For autodetection, it queries each claim's XR to determine the current revision.
+====
+
+*Preview what would be rolled back (dry-run)*
 [source,bash]
 ----
-./rollback.sh -t xvshnnextclouds.vshn.appcat.vshn.io -i nextcloud-test-mg7hp
+./rollback.sh -t vshnpostgresqls.vshn.appcat.vshn.io --dry-run
 ----
 
-*Single XR (pin to an explicit revision label)*
+*Rollback all claims of one type (autodetect revision per claim)*
 [source,bash]
 ----
-./rollback.sh -t xvshnnextclouds.vshn.appcat.vshn.io -i nextcloud-test-mg7hp -r v3.52.0-v4.166.0
+./rollback.sh -t vshnpostgresqls.vshn.appcat.vshn.io
 ----
 
-*All instances of one type (autodetect each)*
+*Rollback all claims of one type to specific revision*
 [source,bash]
 ----
-./rollback.sh -t xvshnnextclouds.vshn.appcat.vshn.io --all-instances
+./rollback.sh -t vshnpostgresqls.vshn.appcat.vshn.io -r v3.59.0-v4.172.0
 ----
 
-*All types across the cluster (autodetect each)*
+*Rollback all claims of one type in a specific namespace (autodetect)*
 [source,bash]
 ----
-./rollback.sh --all-types
+./rollback.sh -t vshnpostgresqls.vshn.appcat.vshn.io -n my-namespace
 ----
 
-*Return to automatic policy (remove the selector)*
+*Rollback single claim (autodetect)*
 [source,bash]
 ----
-./unpin.sh -t xvshnnextclouds.vshn.appcat.vshn.io -i nextcloud-test-mg7hp
-# or all instances of a type
-./unpin.sh -t xvshnnextclouds.vshn.appcat.vshn.io --all-instances
-# or all types
-./unpin.sh --all-types
+./rollback.sh -t vshnpostgresqls.vshn.appcat.vshn.io -i my-postgres -n my-namespace
+----
+
+*Rollback single claim to specific revision*
+[source,bash]
+----
+./rollback.sh -t vshnpostgresqls.vshn.appcat.vshn.io -i my-postgres -n my-namespace -r v3.59.0-v4.172.0
+----
+
+*Rollback multiple types to specific revision*
+[source,bash]
+----
+./rollback.sh -t vshnpostgresqls.vshn.appcat.vshn.io,vshnnextclouds.vshn.appcat.vshn.io -r v3.59.0-v4.172.0
+----
+
+*Rollback multiple types in a specific namespace to specific revision*
+[source,bash]
+----
+./rollback.sh -t vshnpostgresqls.vshn.appcat.vshn.io,vshnnextclouds.vshn.appcat.vshn.io -n my-namespace -r v3.59.0-v4.172.0
+----
+
+*Return to automatic policy (unpin)*
+[source,bash]
+----
+# Unpin all claims of a type
+./rollback.sh --unpin -t vshnpostgresqls.vshn.appcat.vshn.io
+
+# Unpin single claim
+./rollback.sh --unpin -t vshnpostgresqls.vshn.appcat.vshn.io -i my-postgres -n my-namespace
+
+# Unpin multiple types
+./rollback.sh --unpin -t vshnpostgresqls.vshn.appcat.vshn.io,vshnnextclouds.vshn.appcat.vshn.io
 ----
 
 == Verify after patch
 
-Check what the XR is pinned to and the currently referenced CR:
+Check what the claim is pinned to and watch for reconciliation:
 
 [source,bash]
 ----
-TYPE=xvshnnextclouds.vshn.appcat.vshn.io
-NAME=nextcloud-test-mg7hp
+TYPE=vshnpostgresqls.vshn.appcat.vshn.io
+NAME=my-postgres
+NAMESPACE=my-namespace
 
-echo "Selector (REV label) in XR:"
-kubectl get "$TYPE" "$NAME" -o jsonpath='{.spec.compositionRevisionSelector.matchLabels}'
+echo "Selector (REV label) in claim:"
+kubectl get "$TYPE" "$NAME" -n "$NAMESPACE" -o jsonpath='{.spec.compositionRevisionSelector.matchLabels}'
 
-echo "Watch for reconciliation"
-kubectl get "$TYPE" "$NAME" -w
+echo ""
+echo "Watch claim for reconciliation:"
+kubectl get "$TYPE" "$NAME" -n "$NAMESPACE" -w
 ----
 
-== Manually discover available revisions
+== Discover available revisions
 
-*List all CompositionRevisions for a given base, oldest to newest, with labels*
+Use the `--list-revisions` flag to see all available CompositionRevisions for a type:
+
 [source,bash]
 ----
-BASE=vshnnextcloud.vshn.appcat.vshn.io
-for r in $(
-  kubectl get compositionrevisions.apiextensions.crossplane.io \
-    --sort-by=.metadata.creationTimestamp -o name \
-  | sed 's|.*/||' \
-  | awk -v b="$BASE" 'index($0, b "-")==1 { print }'
-); do
-  printf "%-70s  " "$r"
-  kubectl get compositionrevision "$r" \
-    -o go-template='{{ .metadata.creationTimestamp }}  {{ index .metadata.labels "metadata.appcat.vshn.io/revision" }}{{"\n"}}'
-done
+./rollback.sh -t vshnpostgresqls.vshn.appcat.vshn.io --list-revisions
+----
+
+This will display a table with:
+
+* **CompositionRevision name** - Full CompositionRevision identifier with hash
+* **Revision label** -  Label to use with `-r`
+* **Created** - Timestamp when the revision was created
+* **Function status** - Whether the composition function package exists in the cluster (EXISTS/MISSING/N/A)
+
+[IMPORTANT]
+====
+Don't roll back to revisions with `MISSING` function status, as they cannot be reconciled properly.
+====
+
+You can also list revisions for multiple types at once:
+
+[source,bash]
+----
+./rollback.sh -t vshnpostgresqls.vshn.appcat.vshn.io,vshnnextclouds.vshn.appcat.vshn.io --list-revisions
 ----
 
 == Operational patterns
@@ -379,5 +558,5 @@ done
 * **Start small:** Roll back a single instance or all instances of a single type first to confirm the fix.
 * **Bulk rollback:** Use only for truly widespread incidents affecting many types at once.
 * **Pin explicitly:** When you already know the exact good revision label to apply across instances.
-* **Unpin after resolution:** Once the incident is fixed, run unpin.sh so healthy revisions roll out automatically again.
+* **Unpin after resolution:** Once the incident is fixed, run `rollback.sh --unpin` so healthy revisions roll out automatically again.
 
