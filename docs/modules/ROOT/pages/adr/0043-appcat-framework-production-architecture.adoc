@@ -1,0 +1,1750 @@
+= ADR - AppCat Framework Production Architecture
+:adr_author: Gabriel Saratura, Claude (AI Assistant)
+:adr_owner: Schedar
+:adr_reviewers: Schedar
+:adr_date: 2024-12-02
+:adr_upd_date: 2024-12-02
+:adr_status: draft
+:adr_tags: architecture,crossplane,kcl,appcat,framework
+
+[NOTE]
+.Summary
+====
+This ADR defines the production architecture for the AppCat framework with the vision "Helm Chart in - Managed Service out".
+The architecture establishes clear separation between Framework Engineers (Go + KCL core) and Service Maintainers (service configs), leverages existing AppCat capabilities (SLI exporter, BillingService → Odoo, API Server), and provides comprehensive observability for Service Users via the Servala portal.
+
+**Key Decisions:**
+
+* *Configuration Language:* KCL over CUE for type-safe, constraint-based configuration
+* *Orchestration:* Crossplane 2.0 composition functions for extensible service management
+* *Secret Management:* Continue with Crossplane connection secrets
+* *Cost Tracking:* Keep existing BillingService CRD → Odoo integration
+* *Maintenance:* Composition revisions with CronJobs (MVP), investigate Argo Workflows and Crossplane Operations (Phase 2)
+* *Testing:* Chainsaw integration tests + Go unit tests + optional golden tests
+
+====
+
+== Context
+
+=== Vision
+
+Transform any Kubernetes workload (Helm chart) into a standardized managed service with full lifecycle management - "Helm Chart in - Managed Service out".
+
+=== Requirements
+
+**Personas:**
+
+1. *Service User*: End customer using services via Servala portal (metrics, logs, costs, connection details)
+2. *Service Maintainer*: Adds new services, defines plans and Helm mappings (KCL only, no Go)
+3. *Service Operator*: Manages service instances, troubleshoots issues, performs maintenance
+4. *Framework Engineer*: Maintains platform infrastructure, composition functions, KCL framework
+
+**Key Constraints:**
+
+* Kubernetes API-based interactions
+* Open source tools
+* Automation-first approach
+* Single-tier clusters
+* Leverage existing: Servala portal, SLI exporter, API Server, BillingService, K8up backup, Crossplane
+
+== Quick Reference
+
+This section provides a quick overview of all major architectural decisions. See Section 1 for detailed rationale and alternatives analysis.
+
+[cols="3,3,4", options="header"]
+|===
+|Decision Area
+|Chosen Option
+|Rejected Options
+
+|*Configuration Language*
+|KCL (Kubernetes Configuration Language)
+|CUE (Configure Unify Execute)
+
+|*Service Orchestration*
+|Crossplane 2.0 with Composition Functions
+|Custom Kubernetes Operator, Helm Operator (Flux), Terraform Operator, KubeVela
+
+|*Secret Management*
+|Crossplane Connection Secrets (current approach)
+|External Secrets Operator + Vault/OpenBao
+
+|*Cost Tracking & Billing*
+|Event-based billing with BillingService CRD → Odoo integration
+|Prometheus-based metered billing, usage alerts + fair use policy
+
+|*Service Maintenance & Upgrades*
+|CronJob pattern with Composition Revisions (MVP)
+|Argo Workflows, Crossplane WatchOperation/CronOperation Functions
+
+|*Testing Strategy*
+|Three-layer testing: Go unit tests + Chainsaw integration tests + Golden tests
+|KUTTL (rejected in favor of Chainsaw), Golden tests only, No integration tests
+
+|===
+
+**Key Trade-offs Accepted:**
+
+* *KCL*: Smaller ecosystem and less mature tooling vs better fit for Helm value mapping and procedural logic
+* *Crossplane 2.0*: More abstraction layers and steeper learning curve vs better long-term maintainability and built-in revision management
+* *Crossplane Secrets*: No automatic rotation vs simplicity and no additional dependencies
+* *Event-based Billing*: No granular resource metering vs simplicity and existing partial implementation
+* *CronJob Maintenance*: Limited workflow complexity and observability vs simplicity and proven pattern (reevaluate for complex workflows)
+* *Chainsaw*: Active development and better error messages vs KUTTL's broader adoption
+
+**Deferred Decisions (Phase 2):**
+
+* Migration from CronJob to Argo Workflows or Crossplane Operations when workflow complexity increases or instance count exceeds scalability limits
+* External Secrets Operator adoption if secret rotation requirements emerge
+* Advanced metering if event-based billing proves insufficient
+
+== Section 1: Technology Decisions
+
+=== 1.1: Configuration Language - KCL vs CUE
+
+==== Problem
+
+Need a type-safe, constraint-based configuration language for defining service plans, Helm value mappings, and cluster configurations.
+Must support validation, composition, and reusability while being maintainable by Service Maintainers.
+
+==== Solutions
+
+===== Option A: KCL (Kubernetes Configuration Language)
+
+**Description:**
+
+KCL is a constraint-based configuration language designed for Kubernetes.
+Features include strong typing with compile-time validation, lambda functions for transformations, and native Kubernetes resource understanding.
+
+**Advantages:**
+
+* *Strong Typing*: Compile-time validation of schemas and data structures catches configuration errors before deployment
+* *Constraint-Based*: Define validation rules and constraints (e.g., CPU must match regex pattern, memory within allowed ranges)
+* *Built for Kubernetes*: Native understanding of Kubernetes resource structures reduces boilerplate
+* *Lambda Functions*: Natural expression of parameters/plan-to-Helm-value mapping functions, critical for service configuration
+* *Good Error Messages*: Clear validation errors with line numbers guide Service Maintainers to issues
+* *Composition Support*: Import system enables base configurations with distribution-specific overrides
+* *Override Pattern*: Supports defaults → service → distribution → profile composition chain
+* *Active Development*: Backed by Ant Group with growing community and ecosystem
+
+**Disadvantages:**
+
+* *Smaller Ecosystem*: Fewer tools and IDE support compared to more established languages like CUE
+* *Learning Curve*: Service Maintainers/Framework Engineers need to learn new syntax and constraint-based thinking
+* *Less Mature*: Newer language with potential for breaking changes as it evolves
+* *Limited Resources*: Fewer tutorials and examples
+
+===== Option B: CUE (Configure Unify Execute)
+
+**Description:**
+
+CUE is a data constraint language where types and values are unified.
+Configurations compose through constraint unification.
+Excels at validation but lacks native lambda functions - transformation logic must be expressed through constraint systems, making Helm value mappings verbose.
+
+**Advantages:**
+
+* *Unification Model*: Types and values unified - constraints automatically propagate and validate across compositions
+* *Exceptional Data Validation*: Catch configuration errors through mathematical constraint solving before any runtime execution
+* *Mature Tooling*: Language Server Protocol, IDE support, comprehensive CLI tools
+* *Constraint Propagation*: Automatically validates that all configuration layers satisfy constraints without explicit checks
+* *Export Flexibility*: Can export to multiple formats (JSON, YAML, Protocol Buffers) natively
+
+**Disadvantages:**
+
+* *Steeper Learning Curve*: Unification model requires different thinking - declarative constraints vs procedural logic
+* *Less Imperative*: Difficult to express procedural transformations like Helm value mapping with conditional logic
+* *No Native Lambda Functions*: Must encode logic as constraints
+* *Verbose Transformations*: Complex mapping functions require extensive boilerplate, reducing Service Maintainer velocity
+* *Limited Procedural Logic*: "If-then-else" patterns become constraint systems that are harder to read and maintain
+
+==== Decision
+
+*We use KCL.*
+
+==== Rationale
+
+1. *Lambda Functions*: Service Maintainers need to write Helm value mapping functions. KCL's lambda support makes this natural and concise.
+
+2. *Kubernetes-Native*: KCL is designed specifically for Kubernetes configuration, with built-in understanding of K8s resource structures.
+
+3. *Procedural Logic*: Helm value mapping often requires conditional logic. KCL handles this more naturally than CUE.
+
+4. *Simpler Mental Model*: For Service Maintainers and Framework Engineers, KCL's imperative style is closer to traditional programming, reducing learning curve.
+
+5. *Desired Pattern*: The composition function can load KCL-compiled ConfigMaps at runtime, providing clear separation between Framework (Go) and Service Maintainer (KCL).
+
+**Trade-off Accepted:** Smaller ecosystem and tooling compared to CUE, but better fit for our use case.
+
+=== 1.2: Service Orchestration - Crossplane 2.0 vs Kubernetes Operator
+
+==== Problem
+
+Need a service orchestration mechanism that:
+
+* Renders Helm charts based on plan selection
+* Manages service lifecycle (create, update, delete)
+* Handles connection secrets and billing integration
+* Allows Framework Engineers to maintain core logic in Go
+* Enables Service Maintainers to add services without touching Go
+
+==== Solutions
+
+===== Option A: Crossplane 2.0 with Composition Functions
+
+**Description:**
+
+Crossplane 2.0 introduces multiple types of functions (composition functions, operation functions) that allow Go-based functions to render resources dynamically.
+Composition functions execute in pipeline mode, receiving composite state and returning desired resources.
+
+**Architecture:**
+
+[source]
+----
+User creates Composite
+        ↓
+Crossplane executes Composition Function
+        ↓
+Function loads service config from ConfigMap (KCL-compiled)
+        ↓
+Function merges: base configuration values + runtime parameter values
+        ↓
+Function creates HelmRelease with merged Helm values
+        ↓
+Helm Provider renders and deploys chart
+----
+
+**Advantages:**
+
+* *Generic Function*: One composition function can handle either one service or all services at once (Framework Engineer writes once)
+* *Declarative Configuration*: Service Maintainers only write KCL, compiled to ConfigMaps
+* *Clear Separation*: Framework (Go function) vs Service Config (KCL) cleanly separated
+* *Native K8s Resource Model*: Uses XRDs, Compositions (standard Crossplane patterns)
+* *Composition Revisions*: Built-in support for versioning and gradual rollouts
+* *Provider Ecosystem*: Leverage existing Crossplane providers (Kubernetes, Helm, etc.)
+* *Status Aggregation*: Built-in status aggregation from composed resources
+
+**Disadvantages:**
+
+* *Learning Curve*: Crossplane concepts can be complex (XRD, Composition, CompositionRevisions) but team is already proficient
+* *Abstraction Overhead*: More layers (Composite → CompFunction/OperationFunction/Composition → Helm Release) vs direct operator
+* *Debugging Complexity*: Harder to trace through pipeline vs single operator reconcile loop
+* *Function Packaging*: Requires OCI image for each function version
+
+===== Option B: Custom Kubernetes Operator (operator-sdk)
+
+**Description:**
+
+Build a custom Kubernetes operator that directly reconciles service CRDs and renders Helm charts.
+
+**Architecture:**
+
+[source]
+----
+User creates CRD
+        ↓
+Operator watches CRD
+        ↓
+Reconcile loop triggered
+        ↓
+Operator loads service config (ConfigMap)
+        ↓
+Operator evaluates plan selection
+        ↓
+Operator renders Helm chart (using helm-sdk)
+        ↓
+Operator creates Helm Release (direct K8s resources)
+        ↓
+Operator updates status
+----
+
+**Advantages:**
+
+* *Simpler Mental Model*: Direct reconciliation loop, easier to understand control flow
+* *Faster Debugging*: Single operator, direct logging, easier to trace issues
+* *More Control*: Full control over reconciliation logic, status updates, error handling
+* *No Crossplane Dependency*: One less moving part in the system
+* *Familiar Pattern*: Standard operator pattern used across Kubernetes ecosystem
+
+**Disadvantages:**
+
+* *Framework Coupling*: Service configs still in ConfigMaps, but operator code might grow per-service logic
+* *No Composition Revisions*: Would need to build version management ourselves (complex)
+* *Reinventing Wheels*: Provider ecosystem (Helm, Kubernetes resources) already exists in Crossplane
+* *Status Aggregation*: Need to manually implement status propagation from child resources
+* *More Code to Maintain*: Operator logic, CRD management, status updates all custom
+* *No Framework Reuse*: Each new service potentially requires operator changes
+* *Migration*: Existing part from Crossplane ecosystem would be difficult to migrate.
+
+===== Options Not Investigated
+
+The following orchestration approaches were considered but did not meet the threshold for detailed investigation:
+
+* *Helm Operator (Flux)*: Flux's Helm controller reconciles HelmRelease resources but requires custom controllers for plan selection logic, connection secret generation, etc - essentially rebuilding Crossplane capabilities.
+
+* *Terraform Operator*: Terraform excels at infrastructure provisioning but adds unnecessary complexity for Kubernetes-native workloads.
+Requires maintaining Terraform modules alongside Helm charts, mixing declarative models.
+
+* *KubeVela*: Promising platform but immature ecosystem compared to Crossplane.
+Application-centric model doesn't align well with "Helm Chart in" vision. Similar capabilities to Crossplane but less adoption in managed service space.
+
+These options were excluded early because they either lack critical features (revision management, status aggregation, provider ecosystem) or introduce unnecessary abstraction layers without clear benefits over Crossplane 2.0 composition functions.
+
+==== Decision
+
+*We use Crossplane 2.0 with Composition Functions.*
+
+==== Rationale
+
+1. *Separation of Concerns*: Composition functions provide perfect separation - Framework Engineers write Go function once with KCL platform configuration, Service Maintainers only write KCL service configs.
+
+2. *Composition Revisions*: Crossplane has built-in support for composition revisions, enabling maintenance windows and gradual rollouts.
+Building this ourselves in an operator is complex.
+
+3. *Generic Function Pattern*: One composition function handles *all* services or *single* services.
+Service Maintainers add new services by creating KCL configs and ConfigMaps - no Go changes needed.
+This scales better than an operator with service-specific logic.
+
+4. *Provider Ecosystem*: Leverage Crossplane Helm provider instead of implementing Helm SDK ourselves.
+
+5. *Existing Investment*: Team already familiar with Crossplane.
+
+6. *Future Extensibility*: Composition pipeline allows adding more functions (e.g., validation function, cron operation functions, event based functions) without changing core logic.
+
+**Trade-off Accepted:** More abstraction layers and steeper initial learning curve, but better long-term maintainability and scalability.
+
+=== 1.3: Secret Management
+
+==== Problem
+
+Services need to securely store and distribute connection credentials (passwords, endpoints, TLS certificates) to Service Users in their claim namespaces.
+
+==== Solutions
+
+===== Option A: Crossplane Connection Secrets (Current)
+
+**Description:**
+
+Crossplane's native connection secret mechanism.
+Composition functions use `AddConnectionDetails()` to export credentials, which Crossplane writes to the claim namespace.
+
+**Advantages:**
+
+* *Native Crossplane*: Built-in mechanism, no additional dependencies
+* *Proven Pattern*: Existing appcat repository uses this, though architectural simplification is required
+* *Automatic Propagation*: Crossplane handles secret creation in composite namespace
+* *Lifecycle Management*: Secrets deleted when composite deleted
+* *Simple Integration*: Servala portal fetches secrets directly via K8s API
+
+**Disadvantages:**
+
+* *No Rotation*: Secrets are static, no automatic rotation
+* *No Centralization*: Each service instance has separate secret
+* *Limited Auditing*: No built-in audit trail for secret access
+
+===== Option B: External Secrets Operator + Vault/OpenBao
+
+**Description:**
+
+Use External Secrets Operator to sync secrets from a centralized secret store (Vault/OpenBao) to Kubernetes secrets.
+
+**Architecture:**
+
+[source]
+----
+Composition Function creates secret A in claim namespace with static content such as username
+        ↓
+Creates ExternalSecret CR such as VaultDynamicSecret with reference to secret A
+        ↓
+External Secrets Operator generates password and certificates
+        ↓
+Syncs from Vault to secret A in claim namespace
+----
+
+**Advantages:**
+
+* *Centralized Management*: All secrets in one place (Vault/OpenBao)
+* *Rotation Support*: Can implement automatic password rotation
+* *Auditing*: Vault provides detailed audit logs
+* *RBAC*: Fine-grained access control policies
+* *Encryption at Rest*: Vault encrypts secrets
+
+**Disadvantages:**
+
+* *Additional Dependency*: Requires Vault/OpenBao + External Secrets Operator
+* *Additional Dependency*: Static content has to be handled outside the operator
+* *Complexity*: More moving parts, harder to debug
+* *Operational Overhead*: (Vault/OpenBao) requires management, backup, HA setup
+
+==== Decision
+
+We use Crossplane Connection Secrets (continue current approach).
+
+==== Rationale
+
+1. *Proven Pattern*: Existing appcat repository uses Crossplane secret management though major simplification in secret propagation is necessary.
+
+2. *Simplicity*: No additional dependencies. Crossplane handles lifecycle automatically.
+
+3. *Service Credentials*: Secrets are service connection details (host, port, password). These don't require frequent rotation like API keys or tokens.
+
+4. *Servala Integration*: Servala portal already fetches secrets via K8s API. No changes needed.
+
+5. *Infrastructure Scope*: If secret rotation becomes required, it's an infrastructure concern (Vault can be added later).
+
+**Future Enhancement:**
+
+* Phase 2: Investigate External Secrets Operator for centralized secret management
+* Implement rotation policies for long-lived instances
+* Add audit trail for secret access
+
+
+=== 1.4: Cost Tracking and Billing
+
+==== Problem
+
+Need to track resource usage per service instance and bill customers accurately through Odoo.
+Bucket storage costs (backups) are included in service pricing, not billed separately to customers.
+
+**Key Context:**
+
+* Servala bills for *services* (Redis, PostgreSQL), not individual infrastructure components
+* Bucket costs are absorbed into service pricing
+* Need to prevent cost abuse (e.g., excessive restore operations driving up CSP charges)
+
+==== Current Implementation Status
+
+**What's Working:**
+
+* Composition functions create BillingService CRD for each service instance
+* AppCat Controller watches BillingService and sends events to Odoo (create, plan change, delete)
+
+**What's Missing:**
+
+* Servala portal integration to fetch billing data from Odoo
+
+**What's to be Removed:**
+
+* Prometheus-based metered billing
+
+==== Solution: Limit User Access to Backup/Restore Operations
+
+**Approach:**
+
+To prevent abuse of S3 operations (which  can generate high S3 API costs), limit direct user access to backup/restore functionality:
+
+* Users CANNOT configure very frequent backup schedules
+* Users CANNOT trigger scheduled restores
+* Backups are automatic or frequency configured based on service plan
+
+==== Alternative Solutions Considered
+
+**Usage Alerts + Fair Use Policy:** Alert customers exceeding restore thresholds. 
+
+**Monitor-Only:** Track bucket metrics for visibility, no enforcement.
+
+==== Decision
+
+*Use event-based billing with limits on backups and restores.*
+
+Service pricing includes bucket costs (storage + reasonable restore/backup operations).
+
+==== Rationale
+
+1. *Implementation Status*: Event-based billing already half-implemented (composition functions + AppCat Controller).
+
+2. *Simplicity*: No metered billing, no Prometheus dependency, no complex state management.
+
+3. *Cost Control*: Limiting user access prevents abuse without billing complexity.
+
+4. *Servala Integration Pending*: Servala Portal will fetch costs from Odoo, display in instance details.
+
+**Enhancement for Service Users:**
+
+Add cost information to composite status:
+
+[source,yaml]
+----
+apiVersion: vshn.appcat.vshn.io/v1
+kind: VSHNPostgreSQL
+metadata:
+  name: postgres-prod-1
+status:
+  conditions:
+  - type: Ready
+    status: "True"
+  billing:
+    plan: standard-4
+    monthlyCost: 50.00
+    currency: CHF
+    lastUpdated: "2024-12-02T10:00:00Z"
+    odooInvoiceID: INV-2024-001234
+----
+
+=== 1.5: Service Maintenance and Upgrades
+
+==== Problem
+
+Need automated maintenance workflows for:
+
+* Service instance upgrades
+* Backup and restore orchestration
+* Version checks and notifications
+* Maintenance window enforcement
+
+==== Current State
+
+* CronJob-based maintenance
+* VersionHandler tracks claim/composite/instance relationships
+* Manual chart version bumps in class/defaults.yml
+* Composition revisions for versioning
+* Revision policy: manual vs automatic
+* Maintenance CronJob switches revision during maintenance window
+* Configurable delayed production rollout
+* Hotfix job for urgent updates
+* Custom rollback scripts
+
+==== Solutions
+
+===== Option A: CronJob Pattern
+
+**Description:**
+
+Kubernetes CronJobs execute scheduled maintenance tasks at specified intervals.
+Jobs run containers that perform version checks, apply composition revision updates, and trigger service upgrades during maintenance windows.
+
+**Advantages:**
+
+* *Proven Pattern*: Used in component-appcat, works in production
+* *Simple*: Standard Kubernetes CronJob, easy to understand
+* *No Additional Dependencies*: Just a CronJob controller (built into K8s)
+* *Easy Debugging*: Job logs visible in `kubectl logs`
+
+**Disadvantages:**
+
+* *Limited Observability*: Job logs disappear after completion (need log aggregation)
+* *No Complex Workflows*: Difficult to express multi-step workflows (backup → upgrade → release → verify)
+* *Sequential Only*: Can't easily parallelize tasks
+
+===== Option B: Argo Workflows
+
+**Description:**
+
+Argo Workflows is a Kubernetes-native workflow engine that orchestrates multi-step operations as directed acyclic graphs (DAGs).
+Workflows define sequential or parallel steps with dependencies, conditional execution, and retry logic.
+Each workflow runs as pods executing container-based tasks.
+
+**Example Workflow:**
+
+[source,yaml]
+----
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  name: redis-upgrade-workflow
+spec:
+  entrypoint: upgrade-with-backup
+  templates:
+  - name: upgrade-with-backup
+    steps:
+    # Step 1: Backup
+    - name: create-backup
+      template: k8up-backup
+
+    # Step 2: Perform upgrade
+    - name: upgrade-instance
+      template: update-revision
+
+    # Step 3: Perform release
+    - name: release-instance
+      template: rollout-revision
+
+    # Step 4: Post-upgrade validation
+    - name: run-smoke-tests
+      template: smoke-tests
+----
+
+**Advantages:**
+
+* *Complex Workflows*: Multi-step workflows with dependencies (backup before upgrade)
+* *Excellent Observability*: Workflow UI shows step progress, logs, errors
+* *Retry Logic*: Built-in retry with exponential backoff
+* *Conditional Steps*: Skip steps based on conditions (e.g., skip backup if recent backup exists)
+* *DAG Support*: Parallel execution of independent tasks
+* *Audit Trail*: Workflow history persisted, easy to review what happened
+* *Comp Function Integration*: Workflows can be part of each instance
+* *Generic WorkflowTemplates*: WorkflowTemplates can defined cluster wide in KCL and easily referenced in Workflows
+
+**Disadvantages:**
+
+* *Additional Dependency*: Requires Argo Workflows installation and management
+* *Learning Curve*: Schedar team members need to learn workflow DSL (YAML-based)
+* *Operational Overhead*: Another operator to monitor, upgrade, secure
+* *Complexity*: Might be overkill for simple version checks
+
+===== Option C: Crossplane WatchOperation / CronOperation Functions
+
+**Description:**
+
+Crossplane operation functions (CronOperation, WatchOperation) extend composition pipelines with scheduled or event-driven execution.
+Operations trigger composition function steps at specified intervals or in response to resource changes, executing maintenance logic within the Crossplane reconciliation loop.
+
+**Example:**
+
+[source,yaml]
+----
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: vshnredis.vshn.appcat.vshn.io
+spec:
+  mode: Pipeline
+  pipeline:
+  # Normal rendering
+  - step: redis-func
+    functionRef:
+      name: function-appcat
+    input:
+      kind: ConfigMap
+      name: appcat-redis-func-config
+
+  # Maintenance operation (runs periodically)
+  - step: maintenance-check
+    functionRef:
+      name: function-appcat-maintenance
+    operationRef:
+      name: maintenance-cron
+----
+
+**Advantages:**
+
+* *No Additional Dependencies*: Built into Crossplane
+* *Tightly Integrated*: Direct access to composed resources and claim state
+* *Declarative*: Same function model as composition
+
+**Disadvantages:**
+
+* *Experimental*: CronOperation/WatchOperation still alpha in Crossplane
+* *Limited Observability*: Logs only in function pod, no workflow UI
+* *Complex Logic in Go*: Maintenance logic embedded in composition function code
+* *No Multi-Step Workflows*: Can't express backup -> upgrade -> verify easily
+
+==== Decision
+
+Use CronJob pattern (Option A).
+Phase 2: Reevaluate Crossplane Operations (Option C) vs Argo Workflows (Option B) for complex orchestration such as release and rollback.
+
+==== Rationale
+
+1. *Proven Pattern*: CronJob-based maintenance works in component-appcat production.
+
+2. *Simplicity*: No additional dependencies, standard Kubernetes pattern.
+
+3. *Composition Revisions*: Leverage ADR0030 pattern (revision selector + automatic policy) for upgrades during maintenance windows.
+
+4. *Good Enough*: Version checks and revision updates don't require complex multi-step workflows yet.
+
+**Phase 2 Deferred Decision:**
+
+When CronJob maintenance becomes insufficient for complex multi-step workflows (backup → upgrade → verify → rollback):
+
+* *Option B (Argo Workflows)*: Production-ready workflow engine with DAG orchestration and dedicated UI
+* *Option C (Crossplane Operations)*: Native Crossplane integration but currently alpha status
+
+Reevaluate based on Crossplane Operations maturity, actual workflow complexity needs, and operational burden.
+
+=== 1.6: Testing Strategy
+
+==== Problem
+
+Need comprehensive testing strategy covering:
+
+* Composition function logic (Go code)
+* Service configuration validation (KCL)
+* Full service lifecycle (create, update, delete, backup, restore)
+* Regression testing for configuration changes
+
+==== Solutions
+
+===== Testing Layers
+
+====== Layer 1: Go Unit Tests (Composition Functions)
+
+**Tool:** Go testing framework (`testing` package)
+
+**Coverage:**
+
+* Composition function logic
+* Helm value rendering
+* ConfigMap loading and parsing
+* Connection detail handling
+* All other managed resources during composition function life-cycle
+
+**Advantages:**
+
+* *Fast*: No cluster needed, runs in milliseconds
+* *Focused*: Tests specific logic units
+* *Easy to Debug*: Direct Go debugging with breakpoints
+* *CI-Friendly*: Quick feedback in pull requests
+
+====== Layer 2: Integration Tests (Full Lifecycle)
+
+**Tool:** Chainsaw (KUTTL successor)
+
+**Why Chainsaw over KUTTL:**
+
+* Better error messages and assertions
+* Maintained by Kyverno team (active development)
+* Declarative test scenarios (YAML-based)
+* Built-in cleanup steps
+* Improved resource matching and waiting
+
+**Coverage:**
+
+* Service creation (composite ready)
+* Helm Release verification
+* Connection secret creation
+* Billing Service management
+* Service upgrade (chart version change)
+* Service deletion (cleanup)
+* Day 2 operations tests
+
+**Example:**
+
+[source,yaml]
+----
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: redis-test
+spec:
+  steps:
+  # Step 1: Create Redis claim
+  - try:
+    - apply:
+        file: redis-claim.yaml
+    - assert:
+        file: redis-claim-assert.yaml
+
+  # Step 2: Verify Helm Release created
+  - try:
+    - assert: {}
+
+  # Step 3: Verify connection secret
+  - try:
+    - assert:
+        resource: {}
+
+  # Cleanup
+  - try:
+    - delete: {}
+----
+
+**Advantages:**
+
+* *Real Cluster*: Tests actual Crossplane behavior, Helm rendering
+* *Full Lifecycle*: Validates end-to-end flow
+* *Declarative*: Straight forward to write and maintain by Service Maintainers
+* *CI Integration*: Can run in Kind cluster in GitHub Actions during CI
+
+====== Layer 3: Golden Tests (Configuration Validation)
+
+**Tool:** KCL + Make targets + diff
+
+**Purpose:** Detect unintended manifest changes when KCL configuration changes.
+
+**Advantages:**
+
+* *Fast*: No cluster needed
+* *Regression Detection*: Catches accidental manifest changes
+* *CI-Friendly*: Quick validation in pull requests
+* *Hierarchy*: Testing multiple overrides, especially in custom distribution
+* Validate KCL compilation doesn't break
+* Catch unintended changes in generated manifests (e.g., namespace changed accidentally)
+* Run in PR checks for fast feedback
+
+**Disadvantages:**
+
+* *High Maintenance*: Need to update golden files on every intentional change
+* *Brittle*: Can fail on formatting changes
+* *Doesn't Test Behavior*: Only validates static output
+
+====== Decision on Golden Tests
+
+*Use golden tests on specific cases* - for validating KCL compilation only.
+
+**Recommendation:**
+
+* Use golden tests for critical paths like service, platform or distribution configurations
+* Update golden files as part of intentional changes
+
+==== Decision
+
+*Use three-layer testing:*
+
+1. *Go Unit Tests* (primary) - Test composition function logic
+2. *Chainsaw Integration Tests* (critical paths) - Test full service lifecycle
+3. *Golden Tests* (specific cases) - Validate KCL compilation
+
+==== Rationale
+
+1. *Fast Feedback*: Go unit tests run in CI for every commit, catch logic errors early.
+
+2. *Real Validation*: Chainsaw tests validate actual Crossplane behavior, Helm rendering, K8s API interactions.
+
+3. *Chainsaw Benefits*: Much better than KUTTL which often fails to deliver.
+
+4. *Golden Tests*: Lightweight addition for catching accidental manifest changes, but not primary testing.
+
+== Section 2: System Architecture
+
+=== 2.1 Repository Architecture
+
+The system is built on a three-repository model that separates configuration from runtime execution and orchestrates their deployment through distinct pipelines with appropriate security boundaries.
+
+==== Repository Model
+
+The architecture distributes responsibilities across three repositories:
+
+1. **Service Configuration Repositories** (multiple, publicly accessible)
+   - Contains service-specific KCL configurations defining plans, parameters, and Helm value mappings
+   - One repository per service (redis, postgres, mariadb, etc.)
+   - Open for community contributions
+   - No secrets or environment-specific configuration
+   - Output: Service bundles (OCI artifacts containing manifests and configuration)
+
+2. **Platform Infrastructure Repository** (single, access-restricted)
+   - Contains cluster profiles, base schemas, and orchestration logic
+   - Defines platform-enforced API structure for all services
+   - Manages deployment through lockfile-based version pinning
+   - Injects secrets at render time from Vault or CI variables
+   - Output: Rendered Kubernetes manifests for GitOps deployment
+
+3. **Runtime Components Repository** (single, semi-restricted)
+   - Contains Go implementation of composition functions, controllers, and exporters
+   - Generic components that work across all services
+   - Generates strongly-typed API clients from service schemas
+   - Output: Container images for composition function, controller, and SLI exporter
+
+==== Separation of Concerns
+
+Configuration and runtime are decoupled through well-defined contracts.
+Service configurations declare their requirements (required function version, Helm chart references) while runtime components gets configurations through input ConfigMap of Compositions.
+This separation enables independent versioning and deployment of services without requiring runtime code changes.
+
+==== Security Boundaries
+
+Access control enforces the separation model.
+Service repositories are publicly accessible to enable community contribution while platform configuration remains restricted to authorized engineers.
+Secrets never enter service configurations or runtime code - they are injected exclusively during platform pipeline execution in protected environments.
+
+==== Artifact Distribution
+
+Each repository produces distinct artifacts published to a shared OCI registry.
+Service repositories publish configuration bundles and the platform repository consumes these artifacts through version-pinned references in a lockfile.
+The registry serves as the distribution mechanism that decouples artifact producers from consumers.
+
+=== 2.2 Service Bundle Architecture
+
+Service bundles are self-contained configuration packages that define everything needed to deploy a managed service.
+Each bundle represents a specific service version and contains declarative manifests alongside pre-compiled configuration data.
+
+==== Bundle Composition
+
+A service bundle packages multiple artifact types into a single distributable unit.
+The bundle includes Custom Resource Definitions that establish the service API surface, ConfigMaps containing JSON configuration data generated by compiling KCL source files at build time, and metadata manifests describing dependencies and compatibility requirements.
+JSON schemas derived from the service API enable type generation for runtime components.
+
+==== Distribution Mechanism
+
+Bundles are distributed as OCI artifacts stored in container registries using standard registry protocols.
+The bundle format uses compressed tarballs containing directory-structured manifests, making extraction and application straightforward.
+
+==== Versioning Strategy
+
+Each service follows independent semantic versioning decoupled from platform or runtime component versions.
+A service can release new versions without coordinating with other services or requiring platform changes.
+Version tags follow both semantic versioning for human consumption and SHA-based immutable references for deployment reproducibility.
+The bundle metadata declares compatibility constraints with runtime component versions through version range specifications.
+
+==== Compatibility Contracts
+
+Bundles declare their requirements through structured metadata rather than direct coupling to runtime components.
+The required runtime function version is specified using semantic version constraints, allowing bundles to work with any compatible function version.
+Helm chart dependencies are explicitly declared with repository locations and version pins.
+The bundle validates compatibility during platform pipeline execution before deployment, preventing runtime failures from version mismatches.
+
+==== Bundle Lifecycle
+
+Bundles progress through distinct lifecycle phases from creation to deployment.
+The service repository pipeline compiles KCL configuration into static artifacts, packages them with generated schemas and manifests, and publishes to the registry with immutable identifiers.
+The platform pipeline pulls bundles based on lockfile references, validates compatibility with deployed components, and extracts contents for integration with environment-specific configuration before final deployment.
+
+=== 2.3 Platform Schema Enforcement
+
+The platform enforces structural consistency across all services through a base schema system that service configurations must extend.
+This compile-time validation ensures API uniformity while allowing service-specific customization.
+
+==== Base Schema Model
+
+The platform defines foundational schemas that establish common structure for all services.
+These base schemas specify required fields for sizing, backup configuration, maintenance windows, and observability settings.
+Services extend these base schemas rather than defining structure independently, ensuring consistent API surfaces across the service catalog.
+The extension model permits service-specific additions while mandating platform-required fields.
+
+==== Compilation and Validation
+
+Schema enforcement occurs at service build time through KCL's type system.
+When service configurations compile, the KCL compiler validates that service schemas properly extend platform base schemas and include all required fields.
+Compilation fails if services omit mandatory fields, use incorrect types, or violate constraint definitions.
+This build-time validation prevents malformed service definitions from entering the deployment pipeline.
+
+==== Type Generation Pipeline
+
+Validated schemas drive automatic type generation for runtime components.
+The compilation process exports JSON Schema representations from KCL service definitions.
+These JSON schemas feed code generation tools that produce strongly-typed structures (go language).
+The generated types maintain synchronization with service definitions through drift detection that fails builds when generated code diverges from schema sources.
+
+==== Constraint System
+
+Base schemas include validation constraints that enforce platform policies.
+Constraints specify allowed value ranges, format patterns, and dependency relationships between fields.
+Services inherit these constraints automatically when extending base schemas.
+
+==== Schema Versioning
+
+The platform publishes base schemas as versioned packages that services declare as dependencies.
+Schema versions follow semantic versioning principles - breaking changes increment major versions while additions increment minor versions.
+Services specify compatible schema version ranges in their dependency declarations, allowing controlled evolution of platform contracts without forcing simultaneous updates across all services.
+
+=== 2.4 Pipeline Architecture
+
+The architecture separates build, packaging, and deployment concerns across three distinct pipeline types that operate independently while coordinating through published artifacts and version declarations.
+
+==== Service Release Pipeline
+
+Service repositories execute build pipelines that validate, compile, and publish service configurations as distributable bundles.
+The pipeline validates KCL syntax and schema compliance, compiles service definitions to generate manifest templates and configuration data, and packages outputs into OCI artifacts.
+Version tagging in the service repository triggers pipeline execution, with each tagged version producing an immutable bundle artifact published to the OCI registry.
+The pipeline ensures service configurations are self-contained and include all necessary metadata for deployment without requiring access to source code repositories.
+
+==== Platform Orchestration Pipeline
+
+The platform repository orchestrates multi-service deployments through a pipeline that resolves dependencies, renders environment-specific configurations, and produces deployment-ready manifests.
+This pipeline reads the lockfile to determine which service bundle versions to pull for each target environment.
+It extracts bundles from the OCI registry, validates compatibility requirements, and applies environment-specific profiles that overlay cluster configurations onto service templates.
+Secret injection occurs during this render phase, integrating sensitive data from protected key-value stores without persisting secrets to version control.
+The pipeline outputs complete Kubernetes manifests to GitOps repositories where continuous deployment tooling synchronizes them to target clusters.
+
+==== AppCat Runtime Build Pipeline
+
+The runtime repository builds generic components that operate across all services without service-specific logic.
+This pipeline compiles composition functions, controllers, and exporters from source code, executes unit tests, and publishes container images to the registry.
+The build process includes code generation steps that consume JSON schemas from service bundles to produce strongly-typed client structures.
+Drift detection mechanisms fail the build if generated code diverges from published schemas, maintaining synchronization between runtime components and service APIs.
+
+==== Integration and Coordination
+
+Pipelines coordinate through artifact registries and version declarations rather than direct dependencies.
+Service pipelines publish bundles with compatibility requirements that specify minimum runtime component versions.
+Platform pipelines validate these requirements before rendering, preventing deployment of incompatible combinations.
+AppCat Runtime pipelines monitor service bundle publications to detect when schema changes necessitate regeneration of typed client code.
+This loose coupling allows independent evolution while maintaining compatibility guarantees.
+
+==== Deployment Propagation
+
+Service updates flow through environments via platform lockfile modifications (like commodore-defaults).
+New service bundle versions initially reference staging environments in the lockfile, enabling validation in pre-production clusters.
+After verification, platform engineers update production lockfile entries to reference validated bundle versions.
+This promotion model separates service development velocity from production deployment cadence, allowing careful control of what reaches production clusters while enabling rapid iteration in lower environments.
+
+=== 2.5 Runtime Composition Architecture
+
+The composition function operates as a generic rendering engine that transforms service instance requests into deployed workloads by discovering and interpreting service-specific configurations at runtime.
+
+==== Configuration Discovery
+
+When an instance creation request arrives, the composition function receives a reference to the service configuration through the Composition pipeline input.
+Each service bundle deploys configuration data as ConfigMap in an AppCat system namespace.
+The Composition manifest references the appropriate ConfigMap via `inputRef`, and Crossplane passes this reference to the function during pipeline execution.
+The function loads the referenced ConfigMap to retrieve service-specific configuration data that defines how to render instances of that service.
+This reference-based approach allows the function to support multiple services without requiring service-specific code or prior knowledge of service catalog contents.
+
+==== Request Processing
+
+The function receives instance specifications through the composition pipeline interface, extracting user-provided parameters such as plan selection, sizing preferences, and feature flags.
+It validates these parameters against the service's API schema, ensuring compliance with defined constraints before proceeding with rendering.
+
+==== Value Composition
+
+Rendering combines two configuration layers: Service defaults from compiled service configurations and user-provided parameter overrides.
+Service defaults are merged with user-provided parameters, where user parameters take precedence over defaults.
+This composition produces complete configuration sets that respect platform constraints while honoring user customization within allowed boundaries.
+
+==== Resource Generation
+
+The function generates Kubernetes resources by populating template structures with composed configuration values.
+For services deployed via Helm charts, it produces HelmRelease resources containing computed values that the Helm provider reconciles into running workloads.
+For additional resources, the function generates supporting objects such as backup schedules, monitoring configurations, and networking policies based on service configuration specifications.
+
+==== State Management
+
+The composition function maintains coherent resource sets across reconciliation cycles through state tracking mechanisms.
+It determines which resources to create, update, or delete by comparing desired state computed from current instance specifications against observed cluster state.
+The function preserves resource continuity during updates, ensuring modifications to instance parameters result in controlled resource changes rather than destructive replacements.
+
+==== Revision Tracking
+
+Each composition execution records revision metadata linking the generated resource set to specific service bundle versions and runtime component versions.
+This revision information enables change tracking, rollback capabilities, and compatibility analysis.
+When instance specifications change or service bundles update, the function evaluates whether existing resource sets require regeneration based on revision comparison.
+
+=== 2.6 Observability and Lifecycle Architecture
+
+The architecture provides comprehensive visibility into service health and automates operational workflows through integrated monitoring, cost tracking, and maintenance orchestration systems.
+
+==== Monitoring Integration
+
+Service instances expose operational metrics through standardized collection mechanisms that aggregate data for consumption by multiple audiences.
+Each service defines metric collection specifications as part of its configuration bundle, declaring which metrics to expose, how to scrape them, and what baseline values indicate healthy operation.
+The composition function generates monitoring resources during instance creation, deploying ServiceMonitor configurations that integrate with cluster-wide Prometheus installations.
+Metrics flow from service workloads through collection pipelines to time-series storage where they become available for querying, alerting, and visualization.
+
+==== Dashboard Provisioning
+
+Observability dashboards are generated from templates compiled during service bundle creation rather than hand-crafted per instance.
+Service configurations include dashboard definitions that the compilation process transforms into deployment-ready formats.
+When the composition function provisions an instance, it instantiates dashboard resources with instance-specific parameters, creating isolated views scoped to the appropriate namespace.
+Dashboard discovery mechanisms automatically register these resources with visualization platforms, making them accessible to authorized users without manual configuration.
+
+==== Cost Attribution
+
+Instance cost information derives from event-based tracking rather than continuous metering of resource consumption.
+The composition function generates billing resources during instance creation and lifecycle transitions, recording events such as provisioning, plan changes, and deletion.
+These billing resources integrate with external invoicing systems through the controller component, which forwards lifecycle events and plan metadata to billing platforms.
+Cost data flows back to instance status fields where management interfaces retrieve it for display, maintaining synchronization between operational state and financial records.
+
+==== Maintenance Orchestration
+
+Service updates progress through controlled revision transitions managed by maintenance scheduling systems.
+Composition revisions capture specific combinations of service configurations and runtime function versions, with each revision representing a deployable service variant.
+Automated maintenance processes monitor for new revisions and evaluate whether instances should migrate based on maintenance window definitions and revision policies.
+Scheduled jobs execute during designated time windows, updating revision selectors on instance resources to trigger controlled reconciliation that applies configuration changes or version upgrades.
+
+==== Backup Automation
+
+Data protection operates through scheduled backup execution integrated with instance lifecycle management.
+Service configurations declare backup requirements including schedule patterns, retention policies, and restoration procedures.
+The composition function generates backup schedule resources during instance provisioning, deploying them alongside workload resources to ensure data protection begins immediately.
+Backup executions integrate with object storage services for artifact persistence, while backup verification runs periodically to validate restoration viability.
+
+==== Status Propagation
+
+Instance status information aggregates data from multiple managed resources through composition function processing.
+The function observes the state of all resources associated with an instance, extracting health indicators, error conditions, and operational metadata.
+Status synthesis combines resource-level observations into instance-level summaries that reflect overall health and readiness.
+The function populates claim status fields with connection details, observability endpoints, cost information, and error messages, providing a unified view of instance state for consumption by management interfaces and automation systems.
+
+==== Alerting Integration
+
+Service health monitoring extends beyond metric collection to proactive notification through alerting rule deployment.
+Service configurations define alert conditions as part of their observability specifications, declaring metric thresholds and evaluation periods that indicate degraded operation.
+The composition function deploys alert rule resources alongside monitoring configurations, integrating them with cluster-wide alert management systems.
+Alert routing mechanisms direct notifications to incident management platforms where on-call engineers receive actionable information about service health degradation.
+
+== Section 3: Persona Solutions
+
+=== Service User
+
+==== Persona Description
+
+*Service User* is an end customer who provisions and uses services via the Servala portal.
+They need visibility into their running instances without direct cluster access.
+
+==== Requirements
+
+1. *Metrics Access*: View service-specific metrics (CPU, memory, connections, throughput)
+2. *Log Access*: View application logs for troubleshooting
+3. *Cost Visibility*: Understand current and projected costs
+4. *Connection Details*: Easily retrieve credentials and endpoints
+5. *Service Health*: Real-time status and SLI indicators
+
+==== Solution
+
+===== 1. Metrics Access via Grafana Dashboard
+
+**Problem:** Service Users need namespace-scoped access to metrics without full cluster visibility.
+
+**Solution:** KCL Dashboard Templates with Compile-Time Generation
+
+**How it Works:**
+
+1. **Framework Engineers** define reusable framework templates in KCL
+2. **Service Maintainer** writes dashboard definition in KCL (part of service bundle) using framework-provided templates for panels, queries, and layouts
+3. **Service bundle compilation** transforms KCL to Grafana JSON and packages it in a ConfigMap
+4. **Composition function** loads the pre-compiled JSON template from ConfigMap (deployed from service bundle) at instance creation
+5. **Function substitutes** instance-specific variables (namespace, instance name) into the template
+6. **Function creates** instance-specific dashboard resource with Grafana discovery label
+7. **Grafana operator** automatically discovers and imports the dashboard via GrafanaDashboard custom resource
+
+**Benefits:**
+
+* *Type-Safe*: KCL validates dashboard structure at build time
+* *Concise*: Framework templates abstract Grafana JSON boilerplate
+* *Consistent*: All dashboards follow the same patterns
+* *Maintainable*: Update all dashboards by modifying KCL templates and rebuilding
+
+===== 2. Log Access
+
+**Problem:** Service Users need filtered logs without access to other tenants' logs.
+
+**Solution:** Loki with Namespace Labels + Grafana Explore Links
+
+**How it Works:**
+
+1. **Service pods** emit logs to stdout/stderr with standard Kubernetes log metadata (namespace, pod name, labels)
+2. **Promtail** (or equivalent log collector) scrapes logs from all pods and adds labels (namespace, app, service)
+3. **Loki** stores logs with namespace-based label filtering ensuring tenant isolation
+4. **Composition function** generates Loki query URLs with namespace filter at instance creation
+5. **Function adds** log query URLs to composite status (lokiQuery, grafanaExploreURL)
+6. **Servala portal** displays logs by embedding Grafana Explore iframe or querying Loki API directly
+7. **RBAC enforcement** ensures Service Users can only query logs from their namespace
+
+**Benefits:**
+
+* *Namespace Isolation*: Automatic tenant separation through Kubernetes namespace boundaries
+* *No Additional Configuration*: Standard log collection, no per-service setup required
+* *Grafana Integration*: Seamless log viewing in Grafana Explore alongside metrics
+* *Query Flexibility*: Service Users can filter by time range, pod, severity level
+* *Cost Efficient*: Loki's label-based indexing keeps storage costs low
+
+===== 3. Comprehensive Service Status and Error Propagation
+
+**Problem:** Service Users need clear, actionable error messages when service provisioning fails, but Crossplane's default status propagation is limited and doesn't surface detailed errors from managed resources to composites.
+
+**Crossplane Default Behavior:**
+
+By default, Crossplane only propagates basic Ready/Synced conditions from managed resources to composites.
+When a HelmRelease fails, Service Users see:
+
+[source,yaml]
+----
+status:
+  conditions:
+  - type: Ready
+    status: "False"
+    reason: "ReconcileError"
+    message: "cannot compose resources"  # Not helpful!
+----
+
+This provides no visibility into:
+- Which managed resource failed (HelmRelease, ServiceMonitor, ConfigMap)
+- Why it failed (image pull error, validation error, resource quota exceeded)
+- How to fix it (actionable guidance)
+
+**How it Works:**
+
+The composition function aggregates status data from all managed resources and provides detailed error information in composite status fields.
+
+This enables Service Users to see:
+* Which specific resource failed (HelmRelease, ServiceMonitor, ConfigMap)
+* Why it failed (image pull error, validation error, resource quota exceeded)
+* How to fix it (actionable guidance based on error patterns)
+
+**Benefits:**
+
+* *Actionable Errors*: Service Users see exactly what failed and why
+* *Resource-Level Detail*: Visibility into which managed resource caused the failure
+* *Troubleshooting Guidance*: Composition function provides resolution steps for common errors
+* *Servala Portal Integration*: Portal can display errors with visual indicators and help documentation
+* *Faster Resolution*: Service Users and operators can quickly identify and fix issues
+
+===== Service User Workflow
+
+[source]
+----
+1. User Provisions Service (Servala Portal)
+   → Creates VSHNRedis composite
+   → Waits for Ready condition
+   → Displays connection details from status
+
+2. User Views Metrics (Servala Portal)
+   → Fetches status.metrics.dashboardURL
+   → Embeds Grafana dashboard
+
+3. User Views Logs (Servala Portal)
+   → Queries Loki with status.logs.lokiQuery
+   → Displays logs in portal UI
+
+4. User Views Cost (Servala Portal)
+   → Displays status.cost.monthlyCost
+   → Fetches detailed breakdown from Odoo
+
+5. User Troubleshoots Issue
+   → View metrics → identify high memory usage
+   → View logs → find error messages
+   → Adjust plan if needed (upgrade to larger plan)
+----
+
+**Example of Service Status Field:**
+
+[source,yaml]
+----
+status:
+  conditions: {}
+
+  # Metrics & Observability
+  metrics:
+    dashboardURL: "https://dashboards.cluster.servala.io/"
+    prometheusQuery: '{instance_namespace="namespace", app="redis-prod-1"}'
+
+  # Logs
+  logs:
+    lokiQuery: '{instance_namespace="namespace", app="redis-prod-1"}'
+    lokiURL: "https://logs.cluster.servala.io/"
+
+  # Billing & Cost
+  billing:
+    plan: "standard-2"
+    monthlyCost: 25.00
+    currency: "CHF"
+    billingPeriod: "2024-12"
+    odooInvoiceID: "INV-2024-001234"
+    sla: "guaranteed"
+----
+
+=== Service Maintainer
+
+==== Persona Description
+
+*Service Maintainer* adds new services, defines plans and Helm mappings. They work exclusively in KCL - no Go code changes needed.
+
+==== Requirements
+
+1. *Add New Service*: Add Helm-based service without touching Go code
+2. *Define Static Configuration*: Plans, SLA, chart versions, images, scheduling, backup policies - compiled at build time
+3. *Define Dynamic Configuration*: API parameters (XRD spec) for runtime customization - version selection, custom settings, backup schedules
+4. *Map Configuration to Helm Values*: Both static and dynamic configuration must map to Helm chart values
+5. *Provide Observability*: Use framework-provided definitions for metrics, dashboards, and alerts
+6. *Test Service*: Validate service configuration and lifecycle before deployment
+7. *Expose Typed API to Go*: Generate Go structs from the KCL API schema so composition functions stay type-safe without manual Go edits (codegen)
+8. *Single Source of Truth*: KCL schema drives CRD/XRD, ConfigMaps, and generated Go types to avoid drift
+
+==== Solution
+
+===== Service Repository Structure
+
+Service Maintainers work in dedicated service repositories, one per service, that are publicly accessible for community contributions.
+
+**Example Repository:** `appcat-service-redis/` (public)
+
+[source]
+----
+appcat-service-redis/
+├── kcl/
+│   ├── service.k           # Service metadata, XRD definition
+│   ├── plans.k             # Service-specific plans (standard-1, standard-2, etc.)
+│   ├── helm-values.k       # Compile-time: Plan → Helm mapping
+│   ├── parameters.k        # Runtime: XRD parameters → Helm mapping
+│   ├── observability.k     # Metrics, dashboards, alerts
+│   └── main.k              # Bundle entry point
+├── tests/
+│   ├── chainsaw/           # Integration tests
+│   └── golden/             # Golden test references
+├── kcl.mod                 # KCL dependencies (platform base schemas)
+└── .gitlab-ci.yml          # Service pipeline definition
+----
+
+**Key Points:**
+
+* **Separate Repository:** Each service has its own repository
+* **Public Access:** Service repositories are open for community contributions
+* **No Secrets:** Service repositories contain no secrets, environment-specific configs, or platform infrastructure
+* **Platform Dependencies:** Services import platform base schemas via `kcl.mod`
+* **Single Source of Truth:** KCL service schema produces all bundle artifacts (XRD, ConfigMaps, JSON schemas)
+
+===== Service Bundle Outputs
+
+The service repository pipeline compiles KCL configurations into a service bundle published to the OCI registry.
+
+**What the Service Pipeline Generates:**
+
+The service bundle packages multiple artifacts:
+
+* **XRD Manifests:** Custom Resource Definition establishing the service API surface, generated from KCL service schema
+* **ConfigMaps:** Pre-compiled service configuration containing plan definitions, Helm value mappings, and observability specifications
+* **JSON Schemas:** Type definitions exported from KCL schema as an intermediate format for Go type generation
+* **Bundle Metadata:** Manifest declaring Helm chart dependencies, required function versions, and compatibility constraints
+
+**Publication Flow:**
+
+The service pipeline publishes bundles to the OCI registry with semantic version tags (e.g., `registry.servala.io/appcat/redis:v1.2.3`).
+The platform repository references these bundles through lockfile entries to control deployment to staging and production environments (Section 2.4: Pipeline Architecture).
+
+**Cross-Repository Integration:**
+
+After a service bundle is published, Framework Engineers trigger the AppCat runtime repository build pipeline, which pulls the new bundle, extracts JSON schemas, and generates Go types for use in the composition function.
+This keeps the service repository free of Go code while enabling type-safe access in the composition function.
+
+===== Workflow: Service Maintainer
+
+**Example - Adding or updating a service:**
+
+[source]
+----
+1. Service Maintainer creates/updates service repository
+   → Repository: appcat-service-nextcloud (public)
+   → Defines service in KCL such as service.k, plans.k, helm-values.k, parameters.k, observability.k, etc
+   → Imports platform base schemas
+
+2. Tests locally
+   → Runs kcl run to compile and validate
+   → Reviews generated XRD and ConfigMap manifests
+   → Writes Chainsaw integration tests
+
+3. Commits and tags release
+
+4. Service pipeline runs automatically
+   → Validates KCL syntax and schema compliance
+   → Generates manifests (XRD, ConfigMap, JSON schemas)
+   → Runs tests (golden tests, Chainsaw integration tests)
+   → Packages service bundle (tarball with all manifests)
+   → Publishes to OCI registry: registry.servala.io/appcat/nextcloud:v1.0.0
+
+5. Notifies Framework Engineer
+   → Service bundle ready for deployment
+----
+
+=== Service Operator
+
+==== Persona Description
+
+*Service Operator* manages service instances, troubleshoots issues, performs maintenance, and responds to incidents.
+
+==== Requirements
+
+1. *Monitor Service Health*: View real-time status, SLI metrics, alerts
+2. *Troubleshoot Issues*: Access logs, metrics, events for debugging
+3. *Perform Maintenance*: Upgrade instances, apply patches during maintenance windows
+4. *Handle Incidents*: Respond to alerts, restore from backups
+5. *Manage Costs*: Review billing, optimize resource usage
+
+==== Solution
+
+===== 1. Monitor Service Health
+
+Service Operators monitor instance health through dashboards and alerts deployed automatically by the composition function.
+
+**Monitoring Approach:**
+
+The composition function generates ServiceMonitor resources during instance creation, integrating with cluster-wide Prometheus installations.
+Service-level indicators from the SLI Exporter provide availability, latency, and throughput metrics.
+AlertManager routes alerts to incident management platforms with on-call scheduling and mobile notifications.
+
+**Workflow:**
+
+[source]
+----
+1. Service Operator opens Grafana
+   → Selects "All Services" dashboard
+   → Views aggregated SLI metrics per service type
+
+2. Filters by cluster, namespace, service
+   → Sees instance-level metrics (CPU, memory, connections)
+   → Checks SLI: availability, latency, throughput
+
+3. Alert triggered
+   → "RedisHighMemoryUsage" for redis-instance-3
+   → Incident management platform notifies on-call operator
+   → Operator acknowledges and begins investigation
+----
+
+===== 2. Troubleshoot Issues
+
+Service Operators investigate and resolve issues using composite status fields, instance dashboards, logs, and direct cluster access.
+
+**Troubleshooting Approach:**
+
+Alerts from the incident management platform include links to runbooks with service-specific troubleshooting procedures.
+Service Operators begin by checking the composite status field which aggregates health indicators, error conditions, and operational metadata from all managed resources.
+This provides immediate diagnostic context before deeper investigation through Grafana dashboards and Loki log exploration.
+Direct cluster access via kubectl enables investigation and remediation when dashboard data indicates issues requiring intervention.
+
+**Workflow:**
+
+[source]
+----
+1. Alert received via incident management platform
+   → Alert includes instance details and runbook link
+   → Operator opens runbook for troubleshooting guidance
+
+2. Service Operator checks composite status field
+   → Retrieves composite resource via kubectl or cluster API
+   → Reviews status conditions, error messages, and resource states
+   → Identifies affected components (HelmRelease, ServiceMonitor, etc.)
+
+3. Service Operator investigates via Grafana
+   → Opens dashboard URL from status field
+   → Views instance metrics to confirm issue
+   → Explores logs via Loki query link from status field
+
+4. Service Operator resolves issue
+   → Applies fix based on runbook procedures
+   → Verifies metrics return to normal ranges
+   → Confirms composite status shows Ready condition
+
+5. Documents incident
+   → Updates runbook with resolution details
+   → Closes alert in incident platform
+----
+
+===== 3. Perform Maintenance
+
+Service Operators manage service updates through automated maintenance windows and manual intervention procedures.
+
+**Maintenance Approach:**
+
+Service instances define maintenance windows in their specifications.
+Automated maintenance processes monitor for new composition revisions deployed to the cluster via the platform pipeline.
+Scheduled jobs execute during maintenance windows, updating revision selectors to trigger controlled reconciliation that applies configuration changes or version upgrades.
+The SLI Exporter continues monitoring throughout the process, triggering alerts if upgrades fail.
+
+**Automated Maintenance:**
+
+[source]
+----
+1. Scheduled job runs during maintenance window
+   → Detects new composition revisions available in cluster
+
+2. Updates instances to latest revision
+   → Modifies composition revision selector
+   → Crossplane reconciles with new configuration
+   → Helm Provider applies updates
+
+3. Monitors upgrade completion
+   → SLI Exporter tracks health metrics
+   → Alerts on failures
+----
+
+**Manual Maintenance:**
+
+Service Operators manually trigger maintenance operations by patching composite resources to reference specific composition revisions.
+Runbooks document pre-checks, patch procedures, and verification steps for common maintenance scenarios including upgrades, configuration changes, and rollback operations.
+
+**Future Enhancements:**
+
+For complex multi-step maintenance workflows requiring coordinated upgrades with pre-checks and rollback capabilities, the framework will evaluate orchestration solutions such as Argo Workflows or Crossplane Operations when they reach production maturity.
+
+===== 4. Handle Incidents
+
+Service Operators respond to incidents using backup and restore capabilities integrated with instance lifecycle management.
+
+**Incident Response Approach:**
+
+The composition function generates backup schedule resources during instance provisioning, deploying them alongside workload resources to ensure data protection.
+Backup executions integrate with object storage services for artifact persistence.
+Service restoration supports both automatic restore (user-initiated via XRD) and manual restore (operator-triggered for complex recovery scenarios).
+
+**Automatic Restore (User-Initiated):**
+
+Some services support automatic restoration through the XRD specification, allowing Service Users to create a new instance that automatically restores from a broken instance's backup.
+The user specifies the source instance and backup snapshot in the restore parameters, and the composition function orchestrates the restoration during instance creation.
+
+[source]
+----
+1. Service User creates new instance with restore specification
+   → Specifies source instance name in restore parameters
+   → Optionally selects specific backup snapshot
+   → Composition function detects restore request
+
+2. Composition function orchestrates restoration
+   → Locates backup artifacts from source instance
+   → Provisions new instance infrastructure
+   → Restores data from backup during initialization
+
+3. Instance becomes ready
+   → Service User accesses restored instance
+   → Original broken instance remains for investigation
+----
+
+**Manual Restore (Operator-Triggered):**
+
+For complex recovery scenarios requiring direct intervention, Service Operators manually trigger restoration by creating restore resources that target specific backup snapshots and restoration methods.
+
+[source]
+----
+1. Incident detected
+   → Service Operator verifies issue through metrics and logs
+   → Confirms data corruption or loss requiring restoration
+
+2. Identifies recovery point
+   → Lists available backup snapshots
+   → Selects snapshot from before incident
+
+3. Initiates restoration
+   → Scales down workload to prevent writes
+   → Creates restore resource targeting selected snapshot
+   → Backup system restores data from object storage
+
+4. Validates restoration
+   → Scales up workload
+   → Verifies data integrity through metrics and smoke tests
+   → Notifies Service User of resolution
+----
+
+=== Framework Engineer
+
+==== Persona Description
+
+*Framework Engineer* maintains platform infrastructure, composition functions, KCL framework, CI/CD, and testing infrastructure.
+
+==== Requirements
+
+1. *Maintain Composition Function*: Generic Go function handling all services
+2. *Maintain KCL Framework*: Type schemas, distributions, profiles
+3. *Manage Platform*: Crossplane, providers, ArgoCD, AppCat components and other 3rd Operators such as CNPG
+4. *CI/CD Pipeline*: Automated testing, building, deployment
+5. *Documentation*: ADRs, runbooks, architecture diagrams
+
+==== Solution
+
+===== 1. Composition Function Architecture
+
+**Core Logic Flow:**
+
+Framework Engineer maintains the generic composition function that:
+
+1. Receives ConfigMap reference from Composition `inputRef` and loads service configuration
+2. Extracts composite parameters from Crossplane request and binds to generated Go types
+3. **Loads static configuration** containing pre-compiled Helm values
+4. **Applies dynamic overrides** by mapping composite parameters to Helm value paths
+5. **Merges values** with runtime parameters overriding default values
+6. Uses `ApplyState()` with a generated/templated `ServiceState` to register all desired composed resources with consistent naming/ownership
+7. Populates connection details and kube options, then `ObserveState()` to bind observed objects back to typed state
+8. Updates claim status with observability URLs
+9. Returns desired state to Crossplane
+
+The function is generic - it handles all services by loading service-specific configuration from ConfigMaps deployed by the platform pipeline.
+
+**Configuration Structure:**
+
+Service configurations are pre-compiled during bundle build and stored as JSON in ConfigMaps.
+The function reads static plan-based defaults and dynamic parameter mappings, merging them at runtime based on user selections.
+
+**Desired/Observed State Management (`ApplyState`):**
+
+* `ServiceState` (desired + observed fields) is **declared in KCL** (resource manifest + API schema) and codegenerated to Go
+* The composition function uses merged Helm values and the generated “populate desired” helper to fill the `ServiceState` objects, then calls `ApplyState()` to register them with consistent naming/ownership and kube options
+* `ObserveState(state)` hydrates the observed portion from the Crossplane request back into the typed struct for status updates and decisions
+* This pattern centralizes naming, ownership annotations, kube options, readiness handling, and connection detail propagation without per-service boilerplate, even when resources are conditional (driven by the manifest)
+
+====== Framework Engineer Responsibilities
+
+* **Configuration Merge Logic**: Load pre-compiled JSON from ConfigMaps, apply dynamic parameter mappings, and merge with runtime overrides
+* **State Management**: Maintain `ApplyState`/`ObserveState` helpers for type-safe resource registration and observation across services
+* **ConfigMap Schema Definition**: Define JSON structure that Service Maintainers' KCL compiles to (static values, dynamic mappings, observability config)
+* **Validation and Error Handling**: Ensure ConfigMap structure is valid and provide clear error messages for configuration failures
+* **Backwards Compatibility**: Support services with varying ConfigMap schemas as the framework evolves
+
+===== 2. KCL Framework Maintenance
+
+Framework Engineers maintain the platform repository containing base schemas, distributions, profiles, and platform infrastructure definitions.
+
+**Example - Platform Repository Structure:**
+
+[source]
+----
+appcat-platform/
+├── kcl/
+│   ├── defs/                # Framework Engineer maintains
+│   │   ├── base.k           # PlanSpec, ServiceSpec schemas
+│   │   └── helm.k           # HelmSpec, HelmValueMapping schemas
+│   ├── distributions/       # Framework Engineer maintains
+│   │   ├── kubernetes.k     # Vanilla Kubernetes
+│   │   └── openshift.k      # + SCC, Routes, OLM
+│   ├── platform/            # Framework Engineer maintains
+│   │   ├── crossplane.k     # Crossplane installation
+│   │   ├── providers.k      # Providers (Kubernetes, Helm)
+│   │   └── appcat.k         # AppCat controller, SLI exporter, API Server
+│   ├── profiles/            # Framework Engineer maintains
+│   │   ├── servala-prod.k   # Production cluster config
+│   │   └── servala-staging.k # Staging cluster config
+│   └── argocd/              # Framework Engineer maintains
+│       └── main.k           # Root app, ApplicationSet
+├── lockfile.yaml            # Service version pins
+└── .gitlab-ci.yml           # Platform pipeline
+----
+
+**Type Schemas:**
+
+Framework Engineer defines KCL type schemas in `defs/base.k` that provide structure and validation for service configurations:
+
+* *PlanSpec*: Defines service plan structure (name, CPU, memory, storage, replicas, description)
+* *ObservabilitySpec*: Defines metrics configuration, dashboard templates, and alert rules
+* *OtherServiceSpec*: Defines other service definition such as metadata, Helm chart info, connection secrets, SLA, etc
+
+These schemas ensure Service Maintainers create valid, type-safe configurations that the composition function can consume.
+
+===== 3. Platform Component Management
+
+**Platform Components:**
+
+The platform section generates the following manifests:
+
+1. Crossplane 2.0
+   - Configuration: function-enabled, composition pipelines
+
+2. Crossplane Providers
+   - provider-kubernetes (for K8s resources)
+   - provider-helm (for Helm releases)
+
+3. AppCat Components
+   - AppCat Controller (webhooks, event forwarding, Odoo integration)
+   - SLI Exporter (probes, Prometheus metrics)
+   - Composition Functions (function-appcat OCI image)
+
+4. ArgoCD
+   - Root app (bootstrap)
+   - Platform app (Crossplane, providers)
+   - Services ApplicationSet (service apps)
+
+===== 4. CI/CD and Repository Architecture
+
+The CI/CD architecture is built on three separate repositories with distinct access controls, responsibilities, and security boundaries.
+
+====== Repository 1: Service Repositories (n repositories - PUBLIC/OPEN)
+
+**Purpose:** Service-specific KCL configuration, tests, and lifecycle management.
+
+**Access Control:** Public (GitHub) or open GitLab repositories. Service Maintainers and community contributors have write access.
+
+**Security Boundary:** Service repositories contain NO secrets, NO environment-specific profiles, NO production configurations.
+They reference shared type schemas from a common definitions package but never access restricted platform configurations.
+
+**Pipeline Stages:**
+
+1. **Lint**: KCL syntax validation and formatting checks
+2. **Generate**: Compile KCL to CRD/XRD manifests and ConfigMaps. Fail if generated output differs from committed files (drift detection).
+3. **Golden Tests**: Compare generated manifests against golden reference files to catch unintended changes
+4. **Unit Tests**: Validate KCL logic, constraint checking, and compilation correctness
+5. **E2E Tests**: Execute Chainsaw integration tests in ephemeral Kind cluster
+   - Required on tags/releases
+   - Optional on merge requests (triggered via label)
+6. **Package**: Create service bundle artifact containing CRDs, XRDs, ConfigMaps, generated Go type schemas, and manifest metadata
+7. **Publish**: Push service bundle to registry with semantic version tag and git SHA tag
+
+**Versioning Strategy:** Each service is independently versioned using semantic versioning. A new service release does not require changes to other services or the platform repository.
+
+**Bundle Format:** Service bundle is a self-contained OCI artifact or tarball containing:
+
+* CRD/XRD manifests
+* ConfigMaps with compiled service configuration
+* Generated Go type schemas (JSON Schema intermediate format)
+* Manifest file declaring Helm chart versions, dependencies, and resource definitions
+
+**Registry Publishing:** Bundles are published to a public or shared registry accessible to both Service Maintainers and the platform pipeline. Example: `registry.servala.io/appcat/redis:v1.2.3` and `registry.servala.io/appcat/redis:v1.2.3-abc123`.
+
+====== Repository 2: Platform KCL Repository (1 repository - RESTRICTED)
+
+**Purpose:** Platform infrastructure, profiles, orchestration, and secret management.
+
+**Access Control:** Restricted GitLab repository with protected branches.
+Only Framework Engineers have write access.
+Protected jobs require manual approval for production deployments.
+
+**Security Boundary:** This repository contains environment-specific configurations and references to secrets.
+Secrets themselves are NEVER committed to git - they are injected at pipeline runtime from GitLab CI variables or Vault.
+
+**Example Pipeline Stages:**
+
+1. **Pull Bundles**: Fetch service bundles from registry based on lockfile version pins
+2. **Apply Profiles**: Merge service configurations with environment-specific profiles (staging vs production)
+3. **Inject Secrets**: Retrieve secrets from GitLab CI variables or Vault and inject into rendered manifests at runtime
+4. **Render Platform**: Generate Crossplane, provider, and ArgoCD manifests with profile overrides
+5. **Render Services**: Generate service-specific compositions, XRDs, and ConfigMaps with environment context
+6. **Mint Revision Labels**: Create composition revision labels derived from service version and function image version
+7. **Deploy Staging**: Automatically deploy rendered manifests to staging environment via ArgoCD
+8. **Deploy Production**: Manually approved deployment to production environment via ArgoCD (protected job)
+
+**Lockfile Management:** The lockfile is the authoritative record of which service bundle versions are deployed to which environments.
+Framework Engineers update the lockfile when promoting a service from staging to production.
+
+**Example - Lockfile Structure:**
+
+[source]
+----
+services:
+  redis:
+    staging:
+      bundle: registry.servala.io/appcat/redis:v1.2.3
+    production:
+      bundle: registry.servala.io/appcat/redis:v1.2.2
+  postgres:
+    staging:
+      bundle: registry.servala.io/appcat/postgres:v2.0.1
+    production:
+      bundle: registry.servala.io/appcat/postgres:v2.0.1
+platform:
+  function-appcat:
+    staging: registry.servala.io/appcat/function:v0.5.0
+    production: registry.servala.io/appcat/function:v0.4.0
+----
+
+**Profile Application:** Profiles contain cluster-specific overrides such as resource quotas, storage classes, ingress configurations, backup schedules, and maintenance windows. Profiles are applied as overlays on top of service bundle defaults.
+
+====== Repository 3: AppCat Go Runtime Repository
+
+**Purpose:** Generic composition function, controllers, and runtime components written in Go.
+
+**Access Control:** Internal GitLab repository accessible to Framework Engineers and approved contributors.
+Less restrictive than platform repository since it contains no secrets or configurations.
+
+**Example Pipeline Stages:**
+
+1. **Codegen**: Generate Go types from service KCL schemas by pulling service bundles
+2. **Drift Check**: Fail if generated Go types differ from committed code
+3. **Lint**: Go code linting and formatting
+4. **Unit Tests**: Go unit tests for composition logic, state management, and Helm rendering
+5. **Build Images**: Build OCI images for function-appcat, appcat-controller, and sli-exporter
+6. **Publish Images**: Push images to registry with version tags
+
+**Code Generation Strategy:** The composition function must have Go types corresponding to each service's KCL schema (XRD spec and status fields).
+These types are generated from the JSON Schema intermediate format included in service bundles.
+The codegen pipeline pulls bundles based on the platform lockfile or latest versions, generates Go types, and commits them to the repository.
+Drift detection ensures the committed types match the generated output.
+
+**Generic Function Pattern:** The composition function is generic - a single Go binary handles all services.
+It loads service-specific configuration from ConfigMaps at runtime, reads pre-compiled JSON containing static plan values and dynamic parameter mappings, and merges them based on user selections.
+The function never contains service-specific logic.
+
+**Versioning Independence:** Runtime components are versioned independently from services.
+A single function version (e.g., `v0.5.0`) can handle multiple service versions (e.g., `redis:v1.2.3` and `postgres:v2.0.1`).
+Runtime images are rebuilt only when Go code changes, not on every service release.
+
+===== 5. Documentation Maintenance
+
+Framework Engineers maintain comprehensive documentation covering architecture decisions, operational procedures, and system design.
+
+**Operational Runbooks:**
+
+Provide step-by-step procedures for common operational tasks and incident response scenarios.
+Runbooks cover composition function troubleshooting, platform component upgrades, distribution configuration, backup and restore procedures, and incident response workflows.
+Each runbook includes prerequisites, detailed steps, verification procedures, and rollback instructions.
+
+**Architecture Diagrams:**
+
+Maintain visual representations of system architecture, data flows, and component interactions.
+Diagrams illustrate overall architecture, service provisioning flows, upgrade workflows, and persona interactions with the system.
+Diagrams use standardized notation and are kept synchronized with architectural changes.
+
+===== 6. Testing Infrastructure
+
+Framework Engineers maintain testing infrastructure across all three repositories as defined in the testing strategy.
+
+**Responsibilities:**
+
+* **Unit Tests**: Maintain Go unit tests for composition function logic in the runtime repository
+* **Integration Test Framework**: Provide Chainsaw test templates and patterns that Service Maintainers instantiate for their services
+* **Golden Test Infrastructure**: Maintain tooling for KCL compilation validation across distributions and profiles
+* **Test Fixtures**: Provide reusable test data templates for common scenarios and edge cases
