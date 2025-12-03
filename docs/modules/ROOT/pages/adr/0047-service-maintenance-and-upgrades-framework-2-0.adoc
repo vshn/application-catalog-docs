@@ -1,0 +1,184 @@
+= ADR 0047 - Service Maintenance and Upgrades (Framework 2.0)
+:adr_author: Gabriel Saratura
+:adr_owner: Schedar
+:adr_reviewers: Schedar
+:adr_date:
+:adr_upd_date:
+:adr_status: draft
+:adr_tags: framework,framework2,maintenance,upgrades,crossplane,workflows,cronoperations
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+The decision selects Kubernetes native https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/[CronJobs] to orchestrate maintenance and upgrades with possible use of https://argoproj.github.io/workflows/[ArgoCD Workflows] or https://docs.crossplane.io/latest/operations/operation/[Crossplane Operations] in the future in case of growing complexity.
+====
+
+== Problem
+
+Need automated maintenance workflows for:
+
+* Service instance upgrades
+* Backup and restore orchestration
+* Version checks and notifications
+* Maintenance window enforcement
+* Maintenance suspension
+
+== Current State
+
+* CronJob-based maintenance
+* VersionHandler tracks claim/composite/instance relationships
+* Manual chart version bumps in class/defaults.yml
+* Composition revisions for versioning
+* Revision policy: manual vs automatic
+* Maintenance CronJob switches revision during maintenance window
+* Configurable delayed production rollout
+* Hotfix job for urgent updates
+* Custom rollback scripts
+
+== Solutions
+
+=== Option A: CronJob Pattern
+
+**Description:**
+
+https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/[Kubernetes CronJobs] execute scheduled maintenance tasks at specified intervals.
+Jobs run containers that perform version checks, apply composition revision updates, and trigger service upgrades during maintenance windows.
+
+**Advantages:**
+
+* *Proven Pattern*: Used in component-appcat, works in production
+* *Simple*: Standard Kubernetes CronJob, easy to understand
+* *No Additional Dependencies*: Just a CronJob controller (built into K8s)
+* *Easy Debugging*: Job logs visible in `kubectl logs`
+
+**Disadvantages:**
+
+* *Limited Observability*: Job logs disappear after completion (need log aggregation)
+* *No Complex Workflows*: Difficult to express multi-step workflows (backup → upgrade → release → verify)
+* *Sequential Only*: Can't easily parallelize tasks
+
+=== Option B: Argo Workflows
+
+**Description:**
+
+https://argoproj.github.io/workflows/[Argo Workflows] is a Kubernetes-native workflow engine that orchestrates multi-step operations as directed acyclic graphs (DAGs).
+Workflows define sequential or parallel steps with dependencies, conditional execution, and retry logic.
+Each workflow runs as pods executing container-based tasks.
+
+**Example Workflow:**
+
+[source,yaml]
+----
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  name: redis-upgrade-workflow
+spec:
+  entrypoint: upgrade-with-backup
+  templates:
+  - name: upgrade-with-backup
+    steps:
+    # Step 1: Backup
+    - name: create-backup
+      template: k8up-backup
+
+    # Step 2: Perform upgrade
+    - name: upgrade-instance
+      template: update-revision
+
+    # Step 3: Perform release
+    - name: release-instance
+      template: rollout-revision
+
+    # Step 4: Post-upgrade validation
+    - name: run-smoke-tests
+      template: smoke-tests
+----
+
+**Advantages:**
+
+* *Complex Workflows*: Multi-step workflows with dependencies (backup before upgrade)
+* *Excellent Observability*: Workflow UI shows step progress, logs, errors
+* *Retry Logic*: Built-in retry with exponential backoff
+* *Conditional Steps*: Skip steps based on conditions (for example, skip backup if recent backup exists)
+* *DAG Support*: Parallel execution of independent tasks
+* *Audit Trail*: Workflow history persisted, easy to review what happened
+* *Comp Function Integration*: Workflows can be part of each instance
+* *Generic WorkflowTemplates*: WorkflowTemplates can defined cluster wide in KCL and easily referenced in Workflows
+* *Convenient UI*: ServiceOperators can handle maintenance directly in the ArgoCD UI
+
+**Disadvantages:**
+
+* *Additional Dependency*: Requires Argo Workflows installation and management
+* *Learning Curve*: Schedar team members need to learn workflow DSL (YAML-based)
+* *Operational Overhead*: Another operator to monitor, upgrade, secure
+* *Complexity*: Might be overkill for simple version checks
+
+=== Option C: Crossplane WatchOperation / CronOperation Functions
+
+**Description:**
+
+https://docs.crossplane.io/latest/operations/operation/[Crossplane operation functions] (CronOperation, WatchOperation) extend composition pipelines with scheduled or event-driven execution.
+Operations trigger composition function steps at specified intervals or in response to resource changes, executing maintenance logic within the Crossplane reconciliation loop.
+
+**Example:**
+
+[source,yaml]
+----
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: vshnredis.vshn.appcat.vshn.io
+spec:
+  mode: Pipeline
+  pipeline:
+  # Normal rendering
+  - step: redis
+    functionRef:
+      name: function-appcat
+
+  # Maintenance operation (runs periodically)
+  - step: maintenance-check
+    functionRef:
+      name: function-appcat-maintenance
+    operationRef:
+      name: maintenance-cron
+----
+
+**Advantages:**
+
+* *No Additional Dependencies*: Built into Crossplane
+* *Tightly Integrated*: Direct access to composed resources and claim state
+* *Declarative*: Same function model as composition
+
+**Disadvantages:**
+
+* *Experimental*: CronOperation/WatchOperation still alpha in Crossplane
+* *Complex Logic in Go*: Maintenance logic embedded in composition function code
+* *No Multi-Step Workflows*: Can't express backup -> upgrade -> verify easily
+
+== Decision
+
+Use CronJob pattern (Option A).
+Phase 2: Reevaluate Crossplane Operations (Option C) vs Argo Workflows (Option B) for complex orchestration such as release and rollback.
+
+=== Rationale
+
+1. *Proven Pattern*: CronJob-based maintenance works in component-appcat production.
+
+2. *Simplicity*: No additional dependencies, standard Kubernetes pattern.
+
+3. *Composition Revisions*: Leverage link:0030-function-revisions.adoc[ADR0030] pattern (revision selector + automatic policy) for upgrades during maintenance windows.
+
+4. *Good Enough*: Version checks and revision updates don't require complex multi-step workflows yet.
+
+**Phase 2 Deferred Decision:**
+
+When CronJob maintenance becomes insufficient for complex multi-step workflows (backup → upgrade → verify → rollback):
+
+* *Option B (Argo Workflows)*: Production-ready workflow engine with DAG orchestration and dedicated UI
+* *Option C (Crossplane Operations)*: Native Crossplane integration but currently alpha status
+
+Reevaluate based on Crossplane Operations maturity, actual workflow complexity needs, and operational burden.

@@ -1,0 +1,135 @@
+= ADR 0045 - Service Orchestration: Crossplane 2.x
+:adr_author: Gabriel Saratura
+:adr_owner: Schedar
+:adr_reviewers: Schedar
+:adr_date:
+:adr_upd_date:
+:adr_status: draft
+:adr_tags: framework,framework2,crossplane,composition,orchestration
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+This ADR defines the service orchestration mechanism for AppCat Framework 2.0, evaluating Crossplane 2.x composition functions against a custom Kubernetes operator.
+
+The decision selects https://www.crossplane.io/[Crossplane] 2.0 with composition functions as the orchestration layer, providing generic service management with built-in revision control and clear separation between framework code (https://go.dev/[Go]) and service configuration (https://www.kcl-lang.io/[KCL]).
+====
+
+== Context
+
+=== Problem Statement
+
+The AppCat Framework 2.0 requires a service orchestration mechanism that:
+
+* Renders Helm charts based on service configuration and user-selected parameters
+* Manages complete service lifecycle (create, update, delete)
+* Handles connection secrets and billing/maintenance/backup/metrics integration
+* Allows Framework Engineers to maintain core logic in Go
+* Enables Service Maintainers to add new services without touching Go code
+* Provides versioning and revision management for controlled rollouts
+
+=== Architectural Context
+
+The framework architecture separates concerns across three layers:
+
+1. **Framework Engineers** maintain the orchestration runtime (Go composition functions)
+2. **Service Maintainers** define service configurations (KCL compiled managed resource objects)
+3. **Service Users** consume services via declarative API (XRD/Composite resources)
+
+The orchestration layer sits at the boundary between framework runtime and service configuration, responsible for:
+
+* Loading service configurations at runtime
+* Merging static defaults with dynamic user parameters
+* Generating Kubernetes resources (HelmRelease, K8up backup schedules, ServiceMonitor, secrets, etc.)
+* Tracking revisions for upgrade workflows
+* Propagating status and errors to users
+
+== Options
+
+=== Option A: Crossplane 2.x with Composition Functions
+
+==== Description
+
+https://www.crossplane.io/[Crossplane] 2.0 composition functions execute in pipeline mode during reconciliation, receiving composite state and returning desired resources.
+A single generic function handles all services by loading service-specific configuration Kubernetes like object (ex:, `RedisServiceConfig`) at runtime, merging user parameters, and generating resources.
+Other functions can be added to increase framework quality such as increased service resilience and error handling.
+
+==== Advantages
+
+* **Generic Function Pattern**: Single function handles all services without Go code changes
+* **Built-in Composition Revisions**: Native versioning and gradual rollout capabilities
+* **Clear Separation**: Framework code (Go) completely separated from service configuration (KCL)
+* **Provider Ecosystem**: Leverage existing Crossplane providers (Helm, SQL) instead of custom implementations
+* **Status Aggregation**: Automatic status propagation from managed resources
+* **Existing Team Knowledge**: Team already proficient with Crossplane patterns
+
+==== Disadvantages
+
+* **Learning Curve**: Crossplane concepts (XRD, Composition, Revisions) require initial learning investment, though team already has experience
+* **Abstraction Overhead**: Multiple layers (Composite → Composition Function → HelmRelease → Helm Chart) vs direct operator reconcile loop
+* **Debugging Complexity**: Tracing issues through pipeline requires understanding Crossplane request/response flow and function logs
+* **Function Packaging**: Each function version requires OCI image build and registry push
+* **Performance**: Function invoked via gRPC adds latency compared to in-process operator reconciliation
+
+=== Option B: Custom Kubernetes Operator
+
+==== Description
+
+Build a custom Kubernetes operator using https://github.com/operator-framework/operator-sdk[operator-sdk] that directly reconciles service CRDs and renders Helm charts.
+The operator would either use per-service controllers or a generic controller loading service configuration at runtime, with custom implementations for revision management and upgrade workflows.
+
+==== Advantages
+
+* **Simpler Mental Model**: Direct reconciliation loop easier to understand than pipeline abstraction
+* **Faster Debugging**: Single operator process, direct logging, simpler to trace issues with standard Go debugging
+* **More Control**: Full control over reconciliation logic, status updates, error handling, retry behavior
+* **No Crossplane Dependency**: One less external dependency to manage and upgrade
+* **Familiar Pattern**: Standard operator pattern widely used across Kubernetes ecosystem
+* **Performance**: In-process reconciliation potentially faster than gRPC function invocation
+
+==== Disadvantages
+
+* **Framework Coupling**: Risk of service-specific logic creeping into operator code over time
+* **No Built-in Revisions**: Must implement version management, gradual rollouts, and revision tracking ourselves (complex)
+* **Reinventing Wheels**: Helm integration, status aggregation, provider patterns already exist in Crossplane
+* **More Code to Maintain**: Custom implementations needed for operator, CRD management, status propagation, connection secrets all custom implementations
+* **Migration Cost**: Existing Crossplane investment (team knowledge, component-appcat patterns) cannot be leveraged
+* **Revision Management**: Composition revisions essential for maintenance workflows would require significant custom development
+
+=== Options Not Investigated
+
+The following orchestration approaches were considered but excluded early as they do not meet core requirements:
+
+* **https://fluxcd.io/[Helm Operator (Flux)]**: Flux's Helm controller reconciles HelmRelease resources but lacks service configuration logic, connection secret generation, billing integration - essentially requires rebuilding Crossplane capabilities.
+
+* **https://developer.hashicorp.com/terraform[Terraform Operator]**: Terraform excels at cloud infrastructure provisioning but adds unnecessary complexity for Kubernetes-native workloads.
+Requires maintaining Terraform modules alongside Helm charts, mixing declarative models, and does not provide native Kubernetes resource management.
+
+* **https://kubevela.io/[KubeVela]**: Application-centric platform with promising capabilities but immature ecosystem compared to Crossplane.
+Application model doesn't align with "Helm Chart in" vision, and has less adoption in managed service space.
+Provides similar capabilities to Crossplane but with smaller community and fewer production deployments.
+
+These options lack critical features (revision management, status aggregation, provider ecosystem) or introduce unnecessary abstraction layers without clear benefits over Crossplane 2.x composition functions.
+
+== Decision
+
+**We use Crossplane 2.x with Composition Functions** as the service orchestration mechanism for AppCat Framework 2.x.
+
+=== Rationale
+
+The decision prioritizes long-term maintainability and scalability over short-term simplicity:
+
+1. **Built-in Revision Management**: Crossplane composition revisions provide native versioning and gradual rollout capabilities essential for maintenance workflows.
+Building equivalent functionality in a custom operator would be complex and require significant ongoing maintenance.
+
+2. **Generic Function Pattern**: A single composition function handles all services by loading runtime configuration, eliminating the need for service-specific Go code.
+This enables Service Maintainers to add services independently while keeping the framework stable.
+
+3. **Leverage Existing Ecosystem**: Crossplane providers (Helm, SQL) provide mature implementations for chart rendering, resource management, and status aggregation.
+Reimplementing these capabilities in a custom operator offers no clear benefit.
+
+4. **Existing Team Knowledge**: The team is already proficient with Crossplane from component-appcat, reducing adoption risk and enabling faster implementation.
+
+**Trade-off Accepted:** We accept higher abstraction complexity in exchange for built-in revision management, provider ecosystem leverage, and generic function scalability.

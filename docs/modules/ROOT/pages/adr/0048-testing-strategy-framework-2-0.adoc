@@ -1,0 +1,216 @@
+= ADR 0048 - Testing Strategy (Framework 2.0)
+:adr_author: Gabriel Saratura
+:adr_owner: Schedar
+:adr_reviewers: Schedar
+:adr_date:
+:adr_upd_date:
+:adr_status: draft
+:adr_tags: framework,framework2,testing,crossplane
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+Use a five-layer testing strategy: Go unit tests, integration tests for composition function pipelines, https://docs.crossplane.io/latest/cli/command-reference/#render[Crossplane beta renderer] diffs, https://kyverno.github.io/chainsaw/latest/[Chainsaw] end-to-end tests on ephemeral clusters before release/tag, and targeted golden tests for critical paths.
+====
+
+== Problem
+
+Need comprehensive testing strategy covering:
+
+* Composition function logic (Go code)
+* Service configuration validation (KCL)
+* Full service lifecycle (create, update, delete, backup, restore)
+* Regression testing for configuration changes
+
+=== Solutions
+
+==== Layer 1: Go Unit Tests (Framework Engineers)
+
+**Tool:** Go testing framework (`testing` package)
+
+**Coverage:**
+
+* Composition function logic
+* Helm value rendering
+* Custom resource input object loading and parsing
+* Connection detail handling
+* All other managed resources during composition function life-cycle
+
+**Advantages:**
+
+* *Fast*: No cluster needed, runs in milliseconds
+* *Focused*: Tests specific logic units
+* *Easy to Debug*: Direct Go debugging with breakpoints
+* *CI-Friendly*: Quick feedback in pull requests
+
+**Disadvantages:**
+
+* Limited to testing individual function logic in isolation
+* Cannot validate interactions between multiple composition functions
+
+==== Layer 2: Integration Tests (Framework Engineers)
+
+**Tool:** Crossplane function runner or Go integration tests with mock Crossplane pipeline
+
+**Purpose:** Test interactions between multiple composition functions in a pipeline, validating data flow, resource dependencies, and function orchestration without requiring a live cluster.
+
+**Coverage:**
+
+* Multiple composition functions in sequence
+* Data passing between composition functions (context, connection details)
+* Resource dependency ordering
+* Pipeline-level error handling
+* Shared resource mutations across functions
+* Composition function chain behavior
+
+**Advantages:**
+
+* *No Cluster Needed*: Fast feedback without infrastructure
+* *Pipeline Validation*: Tests realistic function interactions
+* *Framework-Focused*: Validates composition architecture
+* *CI-Friendly*: Faster than e2e, more realistic than unit tests
+* *Debugging*: Can inspect intermediate pipeline states
+
+**Disadvantages:**
+
+* More complex setup than unit tests
+* Requires maintaining realistic pipeline configurations
+* Doesn't test actual Kubernetes API interactions
+* Need cumbersome testing fixtures to emulate Crossplane grpc requests
+
+==== Layer 3: Crossplane Beta Renderer Diffs (Service Maintainers)
+
+**Tool:** https://docs.crossplane.io/latest/cli/command-reference/#render[Crossplane beta renderer] (pipeline mode) with diffing
+
+**Purpose:** Render composition function output without a live cluster and produce diffs against expected resources, catching rendering regressions early.
+
+**Coverage:**
+
+* Composition function output objects (HelmRelease, ServiceMonitor, secrets, extra resources)
+* KCL-compiled configuration inputs and parameter permutations
+* Detection of unintended resource additions/removals/field changes
+
+**Advantages:**
+
+* *No Cluster Needed*: Fast feedback, ideal for PR checks
+* *Deterministic Diffs*: Surfaces drift in rendered resources before e2e
+* *Service Maintainer Friendly*: Works directly from KCL outputs and inputs
+* *Crossplane-Aligned*: Uses Crossplane-provided renderer and helpers
+
+==== Layer 4: End-to-End Tests (Service Maintainers and Framework Engineers)
+
+**Tool:** https://kyverno.github.io/chainsaw/latest/[Chainsaw]
+
+**Why Chainsaw over KUTTL:**
+
+* Better error messages and assertions
+* Maintained by Kyverno team (active development)
+* Declarative test scenarios (YAML-based)
+* Built-in cleanup steps
+* Improved resource matching and waiting
+
+**Coverage:**
+
+* Service creation (composite ready)
+* Helm Release verification
+* Connection secret creation
+* Billing Service management
+* Service upgrade (chart version change)
+* Service deletion (cleanup)
+* Upgrade tests
+* Regression tests
+* Connection tests (already exist)
+* Other Day 2 operations tests
+
+**Example:**
+
+[source,yaml]
+----
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: redis-test
+spec:
+  steps:
+  # Step 1: Create Redis claim
+  - try:
+    - apply:
+        file: redis-claim.yaml
+    - assert:
+        file: redis-claim-assert.yaml
+
+  # Step 2: Verify Helm Release created
+  - try:
+    - assert: {}
+
+  # Step 3: Verify connection secret
+  - try:
+    - assert:
+        resource: {}
+
+  # Cleanup
+  - try:
+    - delete: {}
+----
+
+**Advantages:**
+
+* *Real Cluster*: Tests actual Crossplane behavior, Helm rendering
+* *Full Lifecycle*: Validates end-to-end flow
+* *Declarative*: Straight forward to write and maintain by Service Maintainers
+* *CI Integration*: Can run in Kind cluster in GitHub Actions during CI (https://miro.com/app/board/uXjVJiczJH0=/?moveToWidget=3458764652887798727&cot=14[further evaluation is necessary])
+
+==== Layer 5: Golden Tests (Configuration Validation)
+
+**Tool:** https://www.kcl-lang.io/[KCL] + Make targets + diff
+
+**Purpose:** Detect unintended manifest changes when KCL configuration changes.
+
+**Advantages:**
+
+* *Fast*: No cluster needed
+* *Regression Detection*: Catches accidental manifest changes
+* *CI-Friendly*: Quick validation in pull requests
+* *Hierarchy*: Testing multiple overrides, especially in cluster catalog generations (profiles)
+* Validate KCL compilation doesn't break
+* Catch unintended changes in generated manifests (for example, namespace changed accidentally)
+* Run in PR checks for fast feedback
+
+**Disadvantages:**
+
+* *High Maintenance*: Need to update golden files on every intentional change
+* *Brittle*: Can fail on formatting changes
+* *Doesn't Test Behavior*: Only validates static output
+
+**Decision on Golden Tests:**
+
+*Use golden tests on specific cases* - for validating https://www.kcl-lang.io/[KCL] compilation only.
+
+**Recommendation:**
+
+* Use golden tests for critical paths like service, platform or distribution configurations
+* Update golden files as part of intentional changes
+
+==== Decision
+
+*Use five-layer testing:*
+
+1. *Go Unit Tests* (primary) - Test composition function logic
+2. *Integration Tests* - Test composition function pipeline interactions
+3. *Crossplane Beta Renderer Diffs* - Validate rendered resources without a cluster
+4. *Chainsaw End-to-End Tests* (critical paths) - Test full service lifecycle
+5. *Golden Tests* (specific cases) - Validate KCL compilation
+
+==== Rationale
+
+1. *Fast Feedback*: Go unit tests, integration tests, and renderer diffs run in CI for every commit, catching logic, pipeline, and rendering errors early without a cluster.
+
+2. *Pipeline Validation*: Integration tests bridge the gap between isolated unit tests and full e2e tests, validating composition function interactions and data flow without cluster overhead.
+
+3. *Real Validation*: Chainsaw tests validate actual Crossplane behavior, Helm rendering, K8s API interactions.
+
+4. *Renderer Diffs*: Crossplane beta renderer provides deterministic diffs to spot unintended resource changes before e2e runs.
+
+5. *Golden Tests*: Lightweight addition for catching accidental manifest changes, but not primary testing.

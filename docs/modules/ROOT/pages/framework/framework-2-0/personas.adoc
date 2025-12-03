@@ -1,0 +1,21 @@
+= Framework 2.0 Personas
+:navtitle: Personas
+
+Framework 2.0 is designed around four key personas, each with distinct responsibilities and requirements.
+These personas are based on xref:adr/0039-servala-framework-requirements.adoc[ADR 0039 - Servala Framework Requirements].
+
+== Overview
+
+The framework addresses the needs of different stakeholders in the platform ecosystem:
+
+* **Service User**: End customers using services
+* **Service Maintainer**: Engineers adding and configuring services
+* **Service Operator**: Operations team managing service instances
+* **Framework Engineer**: Platform AppCat team maintaining core infrastructure
+
+== Personas
+
+* xref:framework/framework-2-0/personas/service-user.adoc[Service User] - End customers who provision and use services
+* xref:framework/framework-2-0/personas/service-maintainer.adoc[Service Maintainer] - Engineers who add new services using KCL
+* xref:framework/framework-2-0/personas/service-operator.adoc[Service Operator] - Operations team managing instances across tenants
+* xref:framework/framework-2-0/personas/framework-engineer.adoc[Framework Engineer] - Platform team maintaining infrastructure and tooling

@@ -95,6 +95,13 @@
 ** xref:framework/ci-cd.adoc[]
 ** xref:framework/working_with_functions.adoc[]
 ** xref:framework/slareports.adoc[]
+** xref:framework/framework-2-0/index.adoc[]
+*** xref:framework/framework-2-0/personas.adoc[]
+**** xref:framework/framework-2-0/personas/service-user.adoc[]
+**** xref:framework/framework-2-0/personas/service-maintainer.adoc[]
+**** xref:framework/framework-2-0/personas/service-operator.adoc[]
+**** xref:framework/framework-2-0/personas/framework-engineer.adoc[]
+*** xref:framework/framework-2-0/testing.adoc[]
 ** xref:framework/non-converged.adoc[]
 ** Billing
 *** xref:framework/cloud-usage-reporting.adoc[]

@@ -1,0 +1,15 @@
+= Service User
+:navtitle: Service User
+
+Service Users are end customers who provision and use services via the Servala portal.
+They need visibility into their running instances without direct cluster access.
+
+== Requirements
+
+As a Service User I can:
+
+* Access service-specific metrics (CPU, memory, connections, throughput)
+* View application logs for troubleshooting
+* Understand current and projected costs
+* Retrieve credentials and endpoints easily
+* See real-time service health and SLI indicators

@@ -1,0 +1,102 @@
+= ADR 0044 - Configuration Language: KCL vs CUE
+:adr_author: Gabriel Saratura
+:adr_owner: Schedar
+:adr_reviewers: Schedar
+:adr_date:
+:adr_upd_date:
+:adr_status: draft
+:adr_tags: framework,framework2,kcl,cue,configuration
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+We choose https://www.kcl-lang.io/[KCL] over https://cuelang.org/[CUE] for type-safe, constraint-based configuration tool.
+KCL satisfies our needs for service definitions, helm release mapping, and platform schemas in Framework 2.0.
+====
+
+== Problem
+
+Need a type-safe, constraint-based configuration language for defining service plans, Helm value mappings, and cluster configurations.
+Must support validation, composition, and reusability while being maintainable by Service Maintainers and Framework Engineers, and align with how each persona works:
+
+* *Service Maintainer*: author services and define parameter-to-Helm mappings without Go, with clear validation errors and minimal boilerplate.
+* *Framework Engineer*: enforce platform base schemas, facilitates generation of service bundles, handles platform resources via appcat-catalogs in GitOps style.
+* *Service Operator*: rely on consistent API surfaces for troubleshooting and upgrades; need deterministic mappings and readable errors when validation fails.
+* *Service User*: see only safe, validated parameters in the portal; prevent invalid combinations from ever reaching the runtime.
+
+=== Solutions
+
+==== Option A: KCL (Kubernetes Configuration Language)
+
+**Description:**
+
+https://www.kcl-lang.io/[KCL] is a constraint-based configuration language designed for Kubernetes.
+Features include strong typing with compile-time validation, lambda functions for transformations, and native Kubernetes resource understanding.
+
+**Advantages:**
+
+* *Strong Typing*: Compile-time validation of schemas and data structures catches configuration errors before deployment
+* *Constraint-Based*: Define validation rules and constraints (for example, CPU must match regex pattern, memory within allowed ranges)
+* *Built for Kubernetes*: Native understanding of Kubernetes resource structures reduces boilerplate
+* *Lambda Functions*: Natural expression of parameters/plan-to-Helm-value mapping functions, critical for service configuration
+* *Good Error Messages*: Clear validation errors with line numbers guide Service Maintainers to issues
+* *Managed Resources Support*: Import system enables base configurations with distribution-specific overrides
+* *Override Pattern*: Kapitan style of resolving hierarchical configuration structure in the platform repository
+* *Active Development*: Backed by Ant Group with growing community and ecosystem
+
+**Disadvantages:**
+
+* *Smaller Ecosystem*: Fewer tools and IDE support compared to more established languages like CUE
+* *Learning Curve*: Service Maintainers/Framework Engineers need to learn new syntax and constraint-based thinking
+* *Less Mature*: Newer language with potential for breaking changes as it evolves
+* *Limited Resources*: Fewer tutorials and examples
+
+==== Option B: CUE (Configure Unify Execute)
+
+**Description:**
+
+https://cuelang.org/[CUE] is a data constraint language where types and values are unified.
+Configurations compose through constraint unification.
+Excels at validation but lacks native lambda functions - transformation logic must be expressed through constraint systems, making some operations such as Helm value mappings verbose.
+
+**Advantages:**
+
+* *Unification Model*: Types and values unified - constraints automatically propagate and validate across compositions
+* *Exceptional Data Validation*: Catch configuration errors through mathematical constraint solving before any runtime execution
+* *Mature Tooling*: Language Server Protocol, IDE support, comprehensive CLI tools
+* *Constraint Propagation*: Automatically validates that all configuration layers satisfy constraints without explicit checks
+* *Export Flexibility*: Can export to multiple formats (JSON, YAML, Protocol Buffers) natively
+
+**Disadvantages:**
+
+* *Steep Learning Curve*: Unification model requires different thinking - declarative constraints vs procedural logic
+* *Less Imperative*: Difficult to express procedural transformations like Helm value mapping with conditional logic
+* *No Native Lambda Functions*: Must encode logic as constraints
+* *Verbose Transformations*: Complex mapping functions require extensive boilerplate, reducing Service Maintainer velocity
+* *Limited Procedural Logic*: "If-then-else" patterns become constraint systems that are harder to read and maintain
+
+=== Decision
+
+*We use KCL.*
+
+==== Rationale
+
+1. *Lambda Functions*: Service Maintainers need to define their services with constraints defined by Framework Engineers. KCL's lambda support makes this natural and concise.
+
+2. *Kubernetes-Native*: KCL is designed specifically for Kubernetes configuration, with built-in understanding of K8s resource structures.
+
+3. *Procedural Logic*: Custom Service configuration often requires conditional logic. KCL handles this more naturally than CUE.
+
+4. *Simpler Mental Model*: For Service Maintainers and Framework Engineers, KCL's imperative style is closer to traditional programming, reducing learning curve.
+
+5. *Crossplane Integration*: KCL Crossplane https://artifacthub.io/packages/kcl/kcl-module/crossplane[modules] available for Service Maintainers.
+
+6. *Override and Packaging Fit*: KCL works with profile overrides (Kapitan substitution).
+
+7. *Error Quality for Maintainers*: KCL's validation errors help Service Maintainers debug services quickly, reducing turnaround time versus CUE’s more abstract unification errors.
+
+8. *Future Service Evolution*: As Framework 2.0 targets a single generic composition function consuming unstructured inputs, keeping service logic in KCL avoids per-service Go changes while still providing expressive mapping hooks.
+
+**Trade-off Accepted:** Smaller ecosystem and tooling compared to CUE, but better fit for our use case.
