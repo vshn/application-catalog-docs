@@ -197,4 +197,8 @@
 
 `database,service`
 |draft | |2026-01-14
+|xref:adr/0049-strimzi-operator-for-kafka.adoc[]
+
+`kafka,service`
+|draft |2025-12-05 |2025-12-05
 |===
