@@ -390,11 +390,50 @@ The Commodore components handle:
 
 === Backup and Recovery
 
-Backup and especially restoration of Kafka clusters is complex due to the distributed nature of Kafka. However, we implement a minimal backup strategy.
+Backup and recovery of Kafka require careful consideration because Kafka is a distributed system where durability is primarily provided by replication. The platform objective is to provide a reliable emergency restore capability while encouraging application teams to adopt patterns that reduce reliance on point-in-time restores (idempotent processing, event sourcing, tiered retention, compacted topics, etc.).
 
-* Regular snapshots of Kafka data volumes
-* Snapshots include backups of the Schema Registry topics
-* Documentation of the backup and restore procedures
+Scope and Responsibility::
+*Platform*: provide PV snapshot capability for Kafka PVCs, configuration for snapshot retention/rotation, a documented emergency restore playbook, and tools for cluster-level restores. The platform will also snapshot Schema Registry storage and configuration where possible.
+*Application Teams*: own application-level recovery requirements (single-topic or message-level restores), define RPO/RTO needs, and adopt application patterns that avoid the need for frequent restores.
+
+Snapshot Frequency & RPO Options::
+* **Daily snapshots (default)** — RPO ≈ 24 hours. Reasonable for most use cases; minimal storage cost.
+* **Hourly snapshots (optional)** — RPO ≈ 1 hour. Enable for mission-critical clusters where acceptable.
+
+
+RTO Expectations (high level)::
+* **Full cluster restore**: dependent on cluster size and I/O performance — expect several hours for small clusters, longer for larger clusters. Restoration includes PV restore time, broker startup, partition leader elections and potential rebalancing.
+* **Single-topic / message restores**: may require custom tooling or manual processes; expect non-trivial effort and longer RTOs.
+
+
+Notes on Single-Topic / Message-Level Recovery::
+* This is not natively supported by PV snapshots. Typical approaches include:
+   - Restoring an entire broker state and extracting topic data via consumer tooling (time-consuming).
+   - Using MirrorMaker/replication clusters to copy topic data before destructive maintenance (proactive strategy).
+   - Exporting topic data into an external store for ad-hoc restore (requires per-application design).
+* These approaches have trade-offs in cost, complexity and RTO; platform-level support is limited to emergency workflows and guidance.
+
+
+Limitations and Caveats::
+* PV snapshots are **platform-level emergency** tools — they are suitable for full-cluster rollback but are poor at single-message or point-in-time restores for specific topics.
+* Snapshot consistency across multiple broker PVs depends on snapshot provider capabilities (some providers offer volume group snapshots; others do not). Document the guarantees for each CSP.
+* Restores may cause data loss up to the snapshot age (RPO) and require manual reconciliation in applications.
+
+Operational Recommendations::
+* **Enable PV snapshots** (with sensible retention) for Kafka PVCs by default and document the provider-specific semantics.
+* **Test restores regularly** (quarterly) and maintain a runbook with exact steps and expected timings.
+* **Expose schema registry backup** — ensure Apicurio/Schema Registry storage is included in snapshots or export schema artifacts periodically.
+* **Encourage application patterns** that minimise platform restore needs (idempotent consumers, compacted topics for critical keys, event sourcing patterns, consumer-side checkpoints).
+
+
+
+NOTE: If higher frequency or point-in-time recovery is required, an additional application-level solution can be implemented (e.g., MirrorMaker replication, topic export tools, Kafka Connect sink to S3 etc.). Such solutions are outside the platform scope.
+
+
+=== Operator Read-Only / UI Safeguards
+
+* Deploy AKHQ (or any Kafka UI) in **read-only** mode for production clusters to prevent accidental destructive operations (topic deletion, ACL changes) from the UI.
+* Restrict UI access with authentication, network policies and/or ingress restrictions; grant UI access only to troubleshooting groups.
 
 
 == Further Reading
