@@ -1,10 +1,10 @@
 = Restore
 
 VSHNMariadb backups are performed using k8up.
- 
+
 To restore a VSHNMariaDB backup the following tools are needed:
 
-* https://github.com/mfuentesg/ksd[GitHub - mfuentesg/ksd: kubernetes secret decoder] 
+* https://github.com/mfuentesg/ksd[GitHub - mfuentesg/ksd: kubernetes secret decoder]
 * https://k8up.io/[K8up]
 * https://restic.net/[Restic]
 * `alias k=kubectl` && `alias ka='kubectl --as cluster-admin`
@@ -38,7 +38,7 @@ Once configured, test if everything works by sourcing the env file: `source rest
 To restore locally and check the files, You can use:
 [source,bash]
 ----
-`mbstream -x < ../vshn-mariadb-vshn-testing-wzdmf-mariadb-galera.xb` 
+`mbstream -x < ../vshn-mariadb-vshn-testing-wzdmf-mariadb-galera.xb`
 ----
 It will create a local directory called restore. You can afterward test the dump locally using `docker` or `mariadb` itself.
 Perform actual restore:
@@ -51,3 +51,195 @@ Perform actual restore:
 `k rollout restart sts widera-testing-wzdmf`
 `watch -n 0.5 kubectl get pods` to verify if You databse is back again
 ----
+
+== Restore a single database
+
+This procedure allows you to restore a specific database from a backup to a running VSHNMariaDB instance. This is useful when you only need to recover one database instead of restoring an entire instance.
+
+=== Overview
+
+The restore process involves the following steps:
+
+1. Create a temporary VSHNMariaDB instance for the restore
+2. Restore the full backup into this temporary instance using the standard restore procedure above
+3. Fix the root credentials on the temporary instance (the new instance credentials won't match the backup)
+4. Copy the specific database from the temporary instance to your target instance
+5. Clean up by deleting the temporary instance
+
+=== Prerequisites
+
+* A running VSHNMariaDB instance (the target where you want to restore the database)
+* Access to the backup you want to restore from
+
+=== Procedure
+
+First, create a new temporary VSHNMariaDB instance and restore the full backup into it using the steps documented above in "Restoring VSHNMariaDB backup".
+
+The credentials of the temporary instance will not match the credentials from the backup, preventing the pod from starting due to healthcheck failures. To resolve this, connect to the database using the credentials from the temporary instance's secret, then change the root password to match the credentials from the backup:
+
+[source,bash]
+----
+SET PASSWORD FOR 'root'@'%' = 'auth_string';
+----
+
+After restarting the pod, the temporary instance should start successfully with the restored data.
+
+Next, use the following script to copy the specific database from the temporary instance to your target instance.
+
+The script performs the following actions:
+
+* Creates a temporary pod with the MariaDB client tools
+* Connects the pod to both the temporary instance (source) and target instance (destination)
+* Uses `mariadb-dump` to export the database from the temporary instance
+* Pipes the dump directly into the target instance
+* Displays table statistics before and after to verify the migration
+* Cleans up the temporary pod when finished
+
+Run the script with the following parameters:
+
+[source,bash]
+----
+./restore-single-db.sh <SECRET_NAME_FROM> <SECRET_NAME_TO> <NAMESPACE>
+----
+
+Where:
+
+* `SECRET_NAME_FROM`: The secret name of the temporary instance containing the restored backup
+* `SECRET_NAME_TO`: The secret name of the target instance where you want to restore the database
+* `NAMESPACE`: The namespace where both instances are running
+
+[source,bash]
+----
+#!/usr/bin/bash
+
+set -e
+
+function ka() {
+    kubectl --as "system:admin" "$@"
+}
+
+SECRET_NAME_FROM=$1
+if [[ -z "$SECRET_NAME_FROM" ]]; then
+  read -rp "Enter the secret name to copy the database from: " SECRET_NAME_FROM
+fi
+if [[ -z "$SECRET_NAME_FROM" ]]; then
+  echo "Error: secret name cannot be empty."
+  exit 1
+fi
+
+SECRET_NAME_TO=$2
+if [[ -z "$SECRET_NAME_TO" ]]; then
+  read -rp "Enter the secret name to copy the database to: " SECRET_NAME_TO
+fi
+if [[ -z "$SECRET_NAME_TO" ]]; then
+  echo "Error: secret name cannot be empty."
+  exit 1
+fi
+
+NAMESPACE=$3
+if [[ -z "$NAMESPACE" ]]; then
+    read -rp "Enter the namespace to perform the action in: " NAMESPACE
+fi
+if [[ -z "$NAMESPACE" ]]; then
+  echo "Error: Namespace cannot be empty."
+  exit 1
+fi
+
+DB_NAME=$(ka --namespace "$NAMESPACE" get secret "$SECRET_NAME_FROM" -ojson | jq -r '.data.MARIADB_DB' | base64 -d)
+if [[ -z "$DB_NAME" ]]; then
+  echo "Error: DB_NAME not found."
+  exit 1
+fi
+
+POD_NAME="mariadb-dump-pod-${RANDOM}"
+
+echo "Creating MariaDB dump pod '$POD_NAME' in namespace '$NAMESPACE'..."
+
+cat <<EOF | ka --namespace "$NAMESPACE"  apply -f -
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  name: $POD_NAME
+spec:
+  containers:
+  - name: mariadb
+    image: mariadb:11.8
+    command:
+    - tail
+    - "-f"
+    - /dev/null
+    envFrom:
+    - secretRef:
+        name: $SECRET_NAME_FROM
+    env:
+    - name: TO_MARIADB_HOST
+      valueFrom:
+        secretKeyRef:
+          name: $SECRET_NAME_TO
+          key: MARIADB_HOST
+    - name: TO_MARIADB_DB
+      valueFrom:
+        secretKeyRef:
+          name: $SECRET_NAME_TO
+          key: MARIADB_DB
+    - name: TO_MARIADB_USERNAME
+      valueFrom:
+        secretKeyRef:
+          name: $SECRET_NAME_TO
+          key: MARIADB_USERNAME
+    - name: TO_MARIADB_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: $SECRET_NAME_TO
+          key: MARIADB_PASSWORD
+  restartPolicy: Never
+EOF
+
+echo "Waiting for pod '$POD_NAME' to be ready..."
+ka wait --for=condition=ready pod/"$POD_NAME" --namespace="$NAMESPACE" --timeout=300s
+
+if [[ $? -ne 0 ]]; then
+  echo "Error: Pod '$POD_NAME' did not become ready in time. Exiting."
+  ka delete pod "$POD_NAME" --namespace="$NAMESPACE"
+  exit 1
+fi
+
+echo "Pod '$POD_NAME' is ready. Running mariadb-dump..."
+
+echo "Running mariadb-dump from pod '$POD_NAME' for database '$DB_NAME'..."
+
+echo "Tables and their stats in old db"
+ka exec "$POD_NAME" --namespace="$NAMESPACE" -- \
+  sh -c "mariadb --host=\"\$MARIADB_HOST\" --user=\"\$MARIADB_USERNAME\" --password=\"\$MARIADB_PASSWORD\" \"\$MARIADB_DB\" --skip-ssl -t \
+  -e \"SELECT CONCAT('SELECT * FROM (', GROUP_CONCAT(CONCAT('SELECT ''', table_name, ''' AS table_name, COUNT(*) AS row_count FROM ', table_name) SEPARATOR ' UNION ALL '), ') AS test ', ' ORDER BY row_count DESC,table_name ') FROM information_schema.tables WHERE table_schema = DATABASE() INTO @sql_statement; PREPARE stmt FROM @sql_statement; EXECUTE stmt; DEALLOCATE PREPARE stmt;\""
+
+ka exec "$POD_NAME" --namespace="$NAMESPACE" -- \
+    sh -c "mariadb-dump --host=\"\$MARIADB_HOST\" --user=\"\$MARIADB_USERNAME\" --password=\"\$MARIADB_PASSWORD\" \"\$MARIADB_DB\" --add-drop-table --skip-ssl --skip-lock-tables 2>/dev/null \
+       | mariadb --host=\"\$TO_MARIADB_HOST\" --user=\"\$TO_MARIADB_USERNAME\" --password=\"\$TO_MARIADB_PASSWORD\" \"\$TO_MARIADB_DB\" --skip-ssl"
+
+echo "Tables and their stats in new db"
+ka exec "$POD_NAME" --namespace="$NAMESPACE" -- \
+  sh -c "mariadb --host=\"\$TO_MARIADB_HOST\" --user=\"\$TO_MARIADB_USERNAME\" --password=\"\$TO_MARIADB_PASSWORD\" \"\$TO_MARIADB_DB\" --skip-ssl -t \
+  -e \"SELECT CONCAT('SELECT * FROM (', GROUP_CONCAT(CONCAT('SELECT ''', table_name, ''' AS table_name, COUNT(*) AS row_count FROM ', table_name) SEPARATOR ' UNION ALL '), ') AS test ', ' ORDER BY row_count DESC,table_name ') FROM information_schema.tables WHERE table_schema = DATABASE() INTO @sql_statement; PREPARE stmt FROM @sql_statement; EXECUTE stmt; DEALLOCATE PREPARE stmt;\""
+
+if [[ $? -ne 0 ]]; then
+  echo "Error: mariadb-dump failed. Check pod logs for details."
+  ka logs "$POD_NAME" --namespace="$NAMESPACE"
+  echo "Pod '$POD_NAME' retained for debugging. Delete manually when done."
+  exit 1
+fi
+
+echo "Database '$DB_NAME' successfully migrated"
+
+echo "Deleting pod '$POD_NAME'..."
+ka delete pod "$POD_NAME" --namespace="$NAMESPACE" --grace-period=0 --force
+
+if [[ $? -eq 0 ]]; then
+  echo "Pod '$POD_NAME' deleted successfully."
+else
+  echo "Warning: Failed to delete pod '$POD_NAME'. You may need to delete it manually."
+fi
+----
+
+After the script completes successfully, the database has been copied from the temporary instance to your target instance. You can now deprovision the temporary restore instance as it is no longer needed.
