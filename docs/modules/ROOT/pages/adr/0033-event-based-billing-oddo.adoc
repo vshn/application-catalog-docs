@@ -24,7 +24,6 @@ For sending billing events to Odoo (https://docs.central.vshn.ch/event-billing.h
 . [[odoo-sync-state]] Provide a way to verify sync state between Odoo and the Kubernetes cluster.
 . Do not lose any event (created, deleted, scaled), as this has a direct financial impact.
 
-
 == Solution Options
 
 After careful evaluation, the two most promising solutions for implementing event-based billing are:
@@ -163,7 +162,7 @@ Centralizing CRs in one namespace enhances organization, improves security, and 
 
 A resource is considered `Synced` only when **all** `.status.events[].state` values are `sent`.
 
-There is currently no need to limit the number of stored events, as the expected volume per CR is low and manageable.
+Because it can track multiple products per instance, a configurable limit per product should be implemented.
 
 ==== Billing CR Example
 
@@ -181,31 +180,40 @@ metadata:
 spec:
   keepAfterDeletion: 365                         #<5>
   odoo:                                          #<6>
-    instanceID: "a"
+    instanceID: "a"                              #<7>
     salesOrderID: "SO0042"
-    itemDescription: "Human readable description"
-    itemGroupDescription: "My Item Group"
-    unitID: "vshn_event_billing.uom_instance_hour"
+    organization: "foo"
+    items:                                       #<8>
+    - itemDescription: "Human readable description"
+      itemGroupDescription: "My Item Group"
+      unitID: "yunit"
+      productID: "Y"
+      value: "42"                                #<9>
+    - itemDescription: "Human readable description"
+      itemGroupDescription: "My Item Group"
+      unitID: "xunit"
+      productID: "X"
+      value: "1337"
 status:
-  events:                                        #<7>
+  events:                                        #<10>
     - type: "deleted"
       productId: "Y"
-      size: "3"
+      value: "3"
       timestamp: "2025-06-20T13:00:00Z"
-      state: "sent|pending|failed"               #<8>
+      state: "sent|pending|failed"
     - type: "scaled"
       productId: "Y"
-      size: "3"
+      value: "3"
       timestamp: "2025-05-20T13:00:00Z"
       state: "sent|pending|failed"
     - type: "scaled"
       productId: "Y"
-      size: "2"
+      value: "2"
       timestamp: "2025-04-20T13:00:00Z"
       state: "sent|pending|failed"
     - type: "created"
       productId: "X"
-      size: "1"
+      value: "1"
       timestamp: "2025-03-20T13:00:00Z"
       state: "sent|pending|failed"
   conditions:
@@ -225,8 +233,10 @@ status:
 <4> A finalizer from the controller to protect from accidental deletion.
 <5> The field defines after how many days the CR should be deleted after the service is removed.
 <6> The `spec.odoo` section contains static metadata, consistent across all events.
-<7> The `status.events` array holds dynamic billing event fields, typically following lifecycle changes.
-<8> The `state` field tracks event delivery status to Odoo: `sent`, `pending`, or `failed`.
+<7> The ID needs to be unique for each instance, using the composite name ensures this uniqueness.
+<8> List of products belonging to this instance.
+<9> `spec.value` for a generic naming, as not all product quantities can be described as a size.
+<10> Events track the state of each of the products associated.
 
 [NOTE]
 ====
