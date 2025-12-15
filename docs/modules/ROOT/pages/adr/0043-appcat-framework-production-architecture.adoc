@@ -972,6 +972,7 @@ When an instance creation request arrives, the composition function receives a r
 Each service bundle deploys configuration data as an `AppCatServiceConfig` object in an AppCat system namespace.
 The Composition manifest references the appropriate object via `inputRef`, and Crossplane passes this reference to the function during pipeline execution.
 The function loads the referenced object to retrieve service-specific configuration data that defines how to render instances of that service.
+Future investigation: instead of pre-deploying the `AppCatServiceConfig` into the cluster, the function could pull the object from the service bundle’s OCI artifact at runtime (content-addressed), keeping the cluster lean and still using Crossplane’s unstructured helpers to render it.
 This reference-based approach allows the function to support multiple services without requiring service-specific code or prior knowledge of service catalog contents.
 
 ==== Request Processing
