@@ -1150,6 +1150,7 @@ This provides no visibility into:
 **How it Works:**
 
 The composition function aggregates status data from all managed resources and provides detailed error information in composite status fields.
+Framework Engineers can further push rich status to the composite by using Crossplane https://github.com/crossplane-contrib/function-extra-resources[function extra resources] (e.g., injecting pods/sidecars for observation) combined with the composition function to update composite status directly.
 
 This enables Service Users to see:
 * Which specific resource failed (HelmRelease, ServiceMonitor, configuration object)
