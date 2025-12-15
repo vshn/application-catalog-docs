@@ -1010,6 +1010,8 @@ This reference-based approach allows the function to support multiple services w
 
 The function receives instance specifications through the composition pipeline interface, extracting user-provided parameters such as plan selection, sizing preferences, and feature flags.
 It validates these parameters against the service's API schema, ensuring compliance with defined constraints before proceeding with rendering.
+Validating Webhooks defined as https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/[dynamic admission validations] are part of KCL/service bundle to enforce runtime checks.
+The composition function can surface those manifests so clusters apply them, leveraging Kubernetes extensible admission controllers.
 
 ==== Value Composition
 
