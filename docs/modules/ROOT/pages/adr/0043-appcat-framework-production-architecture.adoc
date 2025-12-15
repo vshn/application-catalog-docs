@@ -20,7 +20,7 @@ The architecture establishes clear separation between Framework Engineers (Go + 
 * *Secret Management:* Continue with Crossplane connection secrets
 * *Cost Tracking:* Keep existing BillingService CRD → Odoo integration
 * *Maintenance:* Composition revisions with CronJobs (MVP), investigate Argo Workflows and Crossplane Operations (Phase 2)
-* *Testing:* Chainsaw end-to-end tests + Go unit tests + optional golden tests
+* *Testing:* Go unit tests + Crossplane beta renderer diffs + Chainsaw end-to-end tests + optional golden tests
 
 ====
 
@@ -78,7 +78,7 @@ This section provides a quick overview of all major architectural decisions. See
 |Argo Workflows, Crossplane WatchOperation/CronOperation Functions
 
 |*Testing Strategy*
-|Three-layer testing: Go unit tests + Chainsaw end-to-end tests + Golden tests
+|Four-layer testing: Go unit tests + Crossplane beta renderer diffs + Chainsaw end-to-end tests + Golden tests
 |Go unit tests, KUTTL end-to-end tests, Golden tests
 
 |===
@@ -700,7 +700,28 @@ Need comprehensive testing strategy covering:
 
 * Need cumbersome testing fixtures to emulate Crossplane grpc requests
 
-====== Layer 2: End-to-End Tests (Full Lifecycle)
+====== Layer 2: Crossplane Beta Renderer Diffs (Composition Output)
+
+**Tool:** Crossplane beta renderer (pipeline mode) with diffing
+
+**Purpose:** Render composition function output without a live cluster and produce diffs against expected resources, catching rendering regressions early.
+
+**Coverage:**
+
+* Composition function output objects (HelmRelease, ServiceMonitor, secrets, extra resources)
+* KCL-compiled `AppCatServiceConfig` inputs and parameter permutations
+* Detection of unintended resource additions/removals/field changes
+
+**Advantages:**
+
+* *No Cluster Needed*: Fast feedback, ideal for PR checks
+* *Deterministic Diffs*: Surfaces drift in rendered resources before e2e
+* *Service Maintainer Friendly*: Works directly from KCL outputs and inputs
+* *Crossplane-Aligned*: Uses Crossplane-provided renderer and helpers
+
+**Example:** Run renderer against a sample claim + `AppCatServiceConfig`, store expected YAML, and diff on PR to catch changes in HelmRelease values or generated resources.
+
+====== Layer 3: End-to-End Tests (Full Lifecycle)
 
 **Tool:** Chainsaw
 
@@ -763,7 +784,7 @@ spec:
 * *Declarative*: Straight forward to write and maintain by Service Maintainers
 * *CI Integration*: Can run in Kind cluster in GitHub Actions during CI
 
-====== Layer 3: Golden Tests (Configuration Validation)
+====== Layer 4: Golden Tests (Configuration Validation)
 
 **Tool:** KCL + Make targets + diff
 
@@ -796,19 +817,20 @@ spec:
 
 ==== Decision
 
-*Use three-layer testing:*
+*Use four-layer testing:*
 
 1. *Go Unit Tests* (primary) - Test composition function logic
-2. *Chainsaw End-to-End Tests* (critical paths) - Test full service lifecycle
-3. *Golden Tests* (specific cases) - Validate KCL compilation
+2. *Crossplane Beta Renderer Diffs* - Validate rendered resources without a cluster
+3. *Chainsaw End-to-End Tests* (critical paths) - Test full service lifecycle
+4. *Golden Tests* (specific cases) - Validate KCL compilation
 
 ==== Rationale
 
-1. *Fast Feedback*: Go unit tests run in CI for every commit, catch logic errors early.
+1. *Fast Feedback*: Go unit tests and renderer diffs run in CI for every commit, catching logic and rendering errors early without a cluster.
 
 2. *Real Validation*: Chainsaw tests validate actual Crossplane behavior, Helm rendering, K8s API interactions.
 
-3. *Chainsaw Benefits*: Much better than KUTTL which often fails to deliver.
+3. *Renderer Diffs*: Crossplane beta renderer provides deterministic diffs to spot unintended resource changes before e2e runs.
 
 4. *Golden Tests*: Lightweight addition for catching accidental manifest changes, but not primary testing.
 
