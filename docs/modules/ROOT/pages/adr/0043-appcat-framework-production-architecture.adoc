@@ -1311,9 +1311,10 @@ The service repository pipeline compiles KCL configurations into a service bundl
 The service bundle packages multiple artifacts:
 
 * **XRD Manifests:** Custom Resource Definition establishing the service API surface, generated from KCL service schema
-* **`AppCatServiceConfig` objects:** Pre-compiled service configuration containing plan definitions, Helm value mappings, and observability specifications
+* **Configuration objects:** Pre-compiled service configuration containing plan definitions, Helm value mappings, and observability specifications
 * **JSON Schemas:** Type definitions exported from KCL schema for validation, documentation, and portal tooling
 * **Bundle Metadata:** Manifest declaring Helm chart dependencies, required function versions, and compatibility constraints
+* **Third-Party Dependencies:** Services can declare external dependencies (e.g., other service bundles they consume); the platform pipeline resolves these via bundle metadata and lockfile pins.
 
 **Publication Flow:**
 
