@@ -189,7 +189,7 @@ Excels at validation but lacks native lambda functions - transformation logic mu
 
 Need a service orchestration mechanism that:
 
-* Renders Helm charts based on plan selection
+* Renders Helm charts based on service configuration
 * Manages service lifecycle (create, update, delete)
 * Handles connection secrets and billing integration
 * Allows Framework Engineers to maintain core logic in Go
@@ -256,7 +256,7 @@ Reconcile loop triggered
         ↓
 Operator loads service config
         ↓
-Operator evaluates plan selection
+Operator evaluates service configuration
         ↓
 Operator renders Helm chart (using helm-sdk)
         ↓
@@ -287,7 +287,7 @@ Operator updates status
 
 The following orchestration approaches were considered but did not meet the threshold for detailed investigation:
 
-* *Helm Operator (Flux)*: Flux's Helm controller reconciles HelmRelease resources but requires custom controllers for plan selection logic, connection secret generation, etc - essentially rebuilding Crossplane capabilities.
+* *Helm Operator (Flux)*: Flux's Helm controller reconciles HelmRelease resources but requires custom controllers for service configuration logic, connection secret generation, etc - essentially rebuilding Crossplane capabilities.
 
 * *Terraform Operator*: Terraform excels at infrastructure provisioning but adds unnecessary complexity for Kubernetes-native workloads.
 Requires maintaining Terraform modules alongside Helm charts, mixing declarative models.
@@ -1455,11 +1455,13 @@ The SLI Exporter continues monitoring throughout the process, triggering alerts 
 ----
 1. Scheduled job runs during maintenance window
    → Detects new composition revisions available in cluster
+   → Executes optional service-specific pre-hooks for safety checks or custom jobs
 
 2. Updates instances to latest revision
    → Modifies composition revision selector
    → Crossplane reconciles with new configuration
    → Helm Provider applies updates
+   → Executes optional service-specific post-hooks for validation or cleanup
 
 3. Monitors upgrade completion
    → SLI Exporter tracks health metrics
