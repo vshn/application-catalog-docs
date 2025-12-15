@@ -20,7 +20,7 @@ The architecture establishes clear separation between Framework Engineers (Go + 
 * *Secret Management:* Continue with Crossplane connection secrets
 * *Cost Tracking:* Keep existing BillingService CRD → Odoo integration
 * *Maintenance:* Composition revisions with CronJobs (MVP), investigate Argo Workflows and Crossplane Operations (Phase 2)
-* *Testing:* Chainsaw integration tests + Go unit tests + optional golden tests
+* *Testing:* Chainsaw end-to-end tests + Go unit tests + optional golden tests
 
 ====
 
@@ -78,8 +78,8 @@ This section provides a quick overview of all major architectural decisions. See
 |Argo Workflows, Crossplane WatchOperation/CronOperation Functions
 
 |*Testing Strategy*
-|Three-layer testing: Go unit tests + Chainsaw integration tests + Golden tests
-|KUTTL (rejected in favor of Chainsaw), Golden tests only, No integration tests
+|Three-layer testing: Go unit tests + Chainsaw end-to-end tests + Golden tests
+|Go unit tests, KUTTL end-to-end tests, Golden tests
 
 |===
 
@@ -687,9 +687,9 @@ Need comprehensive testing strategy covering:
 * *Easy to Debug*: Direct Go debugging with breakpoints
 * *CI-Friendly*: Quick feedback in pull requests
 
-====== Layer 2: Integration Tests (Full Lifecycle)
+====== Layer 2: End-to-End Tests (Full Lifecycle)
 
-**Tool:** Chainsaw (KUTTL successor)
+**Tool:** Chainsaw
 
 **Why Chainsaw over KUTTL:**
 
@@ -783,7 +783,7 @@ spec:
 *Use three-layer testing:*
 
 1. *Go Unit Tests* (primary) - Test composition function logic
-2. *Chainsaw Integration Tests* (critical paths) - Test full service lifecycle
+2. *Chainsaw End-to-End Tests* (critical paths) - Test full service lifecycle
 3. *Golden Tests* (specific cases) - Validate KCL compilation
 
 ==== Rationale
@@ -1250,7 +1250,7 @@ appcat-service-redis/
 │   ├── observability.k     # Metrics, dashboards, alerts
 │   └── main.k              # Bundle entry point
 ├── tests/
-│   ├── chainsaw/           # Integration tests
+│   ├── chainsaw/           # End-to-end tests
 │   └── golden/             # Golden test references
 ├── kcl.mod                 # KCL dependencies (platform base schemas)
 └── .gitlab-ci.yml          # Service pipeline definition
@@ -1301,14 +1301,14 @@ This keeps the service repository free of Go code while enabling type-safe acces
 2. Tests locally
    → Runs kcl run to compile and validate
    → Reviews generated XRD and ConfigMap manifests
-   → Writes Chainsaw integration tests
+   → Writes Chainsaw end-to-end tests
 
 3. Commits and tags release
 
 4. Service pipeline runs automatically
    → Validates KCL syntax and schema compliance
    → Generates manifests (XRD, ConfigMap, JSON schemas)
-   → Runs tests (golden tests, Chainsaw integration tests)
+   → Runs tests (golden tests, Chainsaw end-to-end tests)
    → Packages service bundle (tarball with all manifests)
    → Publishes to OCI registry: registry.servala.io/appcat/nextcloud:v1.0.0
 
@@ -1628,7 +1628,7 @@ They reference shared type schemas from a common definitions package but never a
 2. **Generate**: Compile KCL to CRD/XRD manifests and ConfigMaps. Fail if generated output differs from committed files (drift detection).
 3. **Golden Tests**: Compare generated manifests against golden reference files to catch unintended changes
 4. **Unit Tests**: Validate KCL logic, constraint checking, and compilation correctness
-5. **E2E Tests**: Execute Chainsaw integration tests in ephemeral Kind cluster
+5. **E2E Tests**: Execute Chainsaw end-to-end tests in ephemeral Kind cluster
    - Required on tags/releases
    - Optional on merge requests (triggered via label)
 6. **Package**: Create service bundle artifact containing CRDs, XRDs, ConfigMaps, generated Go type schemas, and manifest metadata
@@ -1745,6 +1745,6 @@ Framework Engineers maintain testing infrastructure across all three repositorie
 **Responsibilities:**
 
 * **Unit Tests**: Maintain Go unit tests for composition function logic in the runtime repository
-* **Integration Test Framework**: Provide Chainsaw test templates and patterns that Service Maintainers instantiate for their services
+* **End-to-End Test Framework**: Provide Chainsaw test templates and patterns that Service Maintainers instantiate for their services
 * **Golden Test Infrastructure**: Maintain tooling for KCL compilation validation across distributions and profiles
 * **Test Fixtures**: Provide reusable test data templates for common scenarios and edge cases
