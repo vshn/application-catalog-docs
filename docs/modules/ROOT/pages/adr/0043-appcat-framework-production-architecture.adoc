@@ -177,7 +177,9 @@ Excels at validation but lacks native lambda functions - transformation logic mu
 
 4. *Simpler Mental Model*: For Service Maintainers and Framework Engineers, KCL's imperative style is closer to traditional programming, reducing learning curve.
 
-5. *Desired Pattern*: The composition function can load KCL-compiled ConfigMaps at runtime, providing clear separation between Framework (Go) and Service Maintainer (KCL).
+5. *Desired Pattern*: The composition function loads a custom resource (any Kubernetes object is supported by composition functions) at runtime, providing clear separation between Framework (Go) and Service Maintainer (KCL).
+
+6. *Own Data Structure*: We define a dedicated `AppCatServiceConfig` CRD that matches the framework's needs; KCL emits this object and the Go function consumes.
 
 **Trade-off Accepted:** Smaller ecosystem and tooling compared to CUE, but better fit for our use case.
 
@@ -210,7 +212,7 @@ User creates Composite
         ↓
 Crossplane executes Composition Function
         ↓
-Function loads service config from ConfigMap (KCL-compiled)
+Function loads service config from the `AppCatServiceConfig` custom resource (KCL-compiled, Kubernetes-native)
         ↓
 Function merges: base configuration values + runtime parameter values
         ↓
@@ -222,7 +224,7 @@ Helm Provider renders and deploys chart
 **Advantages:**
 
 * *Generic Function*: One composition function can handle either one service or all services at once (Framework Engineer writes once)
-* *Declarative Configuration*: Service Maintainers only write KCL, compiled to ConfigMaps
+* *Declarative Configuration*: Service Maintainers only write KCL, compiled to an `AppCatServiceConfig` object
 * *Clear Separation*: Framework (Go function) vs Service Config (KCL) cleanly separated
 * *Native K8s Resource Model*: Uses XRDs, Compositions (standard Crossplane patterns)
 * *Composition Revisions*: Built-in support for versioning and gradual rollouts
@@ -252,7 +254,7 @@ Operator watches CRD
         ↓
 Reconcile loop triggered
         ↓
-Operator loads service config (ConfigMap)
+Operator loads service config
         ↓
 Operator evaluates plan selection
         ↓
@@ -273,7 +275,7 @@ Operator updates status
 
 **Disadvantages:**
 
-* *Framework Coupling*: Service configs still in ConfigMaps, but operator code might grow per-service logic
+* *Framework Coupling*: Service configs live in the `AppCatServiceConfig` object, but operator code might grow per-service logic
 * *No Composition Revisions*: Would need to build version management ourselves (complex)
 * *Reinventing Wheels*: Provider ecosystem (Helm, Kubernetes resources) already exists in Crossplane
 * *Status Aggregation*: Need to manually implement status propagation from child resources
@@ -307,7 +309,7 @@ These options were excluded early because they either lack critical features (re
 Building this ourselves in an operator is complex.
 
 3. *Generic Function Pattern*: One composition function handles *all* services or *single* services.
-Service Maintainers add new services by creating KCL configs and ConfigMaps - no Go changes needed.
+Service Maintainers add new services by creating KCL configs that compile into the `AppCatServiceConfig` object - no Go changes needed.
 This scales better than an operator with service-specific logic.
 
 4. *Provider Ecosystem*: Leverage Crossplane Helm provider instead of implementing Helm SDK ourselves.
@@ -610,7 +612,7 @@ spec:
     functionRef:
       name: function-appcat
     input:
-      kind: ConfigMap
+      kind: AppCatServiceConfig  # typed configuration CR (any Kubernetes object works for composition input)
       name: appcat-redis-func-config
 
   # Maintenance operation (runs periodically)
@@ -681,7 +683,7 @@ Need comprehensive testing strategy covering:
 
 * Composition function logic
 * Helm value rendering
-* ConfigMap loading and parsing
+* Custom resource input object loading and parsing
 * Connection detail handling
 * All other managed resources during composition function life-cycle
 
@@ -834,7 +836,7 @@ The architecture distributes responsibilities across three repositories:
 ==== Separation of Concerns
 
 Configuration and runtime are decoupled through well-defined contracts.
-Service configurations declare their requirements (required function version, Helm chart references) while runtime components gets configurations through input ConfigMap of Compositions.
+Service configurations declare their requirements (required function version, Helm chart references) while runtime components get configurations through the `AppCatServiceConfig` object passed as `inputRef` in the Composition.
 This separation enables independent versioning and deployment of services without requiring runtime code changes.
 
 ==== Security Boundaries
@@ -857,7 +859,7 @@ Each bundle represents a specific service version and contains declarative manif
 ==== Bundle Composition
 
 A service bundle packages multiple artifact types into a single distributable unit.
-The bundle includes Custom Resource Definitions that establish the service API surface, ConfigMaps containing JSON configuration data generated by compiling KCL source files at build time, and metadata manifests describing dependencies and compatibility requirements.
+The bundle includes Custom Resource Definitions that establish the service API surface, `AppCatServiceConfig` objects containing JSON/YAML configuration data generated by compiling KCL source files at build time, and metadata manifests describing dependencies and compatibility requirements.
 JSON schemas derived from the service API enable type generation for runtime components.
 
 ==== Distribution Mechanism
@@ -971,9 +973,9 @@ The composition function operates as a generic rendering engine that transforms 
 ==== Configuration Discovery
 
 When an instance creation request arrives, the composition function receives a reference to the service configuration through the Composition pipeline input.
-Each service bundle deploys configuration data as ConfigMap in an AppCat system namespace.
-The Composition manifest references the appropriate ConfigMap via `inputRef`, and Crossplane passes this reference to the function during pipeline execution.
-The function loads the referenced ConfigMap to retrieve service-specific configuration data that defines how to render instances of that service.
+Each service bundle deploys configuration data as an `AppCatServiceConfig` object in an AppCat system namespace.
+The Composition manifest references the appropriate object via `inputRef`, and Crossplane passes this reference to the function during pipeline execution.
+The function loads the referenced object to retrieve service-specific configuration data that defines how to render instances of that service.
 This reference-based approach allows the function to support multiple services without requiring service-specific code or prior knowledge of service catalog contents.
 
 ==== Request Processing
@@ -1087,8 +1089,8 @@ They need visibility into their running instances without direct cluster access.
 
 1. **Framework Engineers** define reusable framework templates in KCL
 2. **Service Maintainer** writes dashboard definition in KCL (part of service bundle) using framework-provided templates for panels, queries, and layouts
-3. **Service bundle compilation** transforms KCL to Grafana JSON and packages it in a ConfigMap
-4. **Composition function** loads the pre-compiled JSON template from ConfigMap (deployed from service bundle) at instance creation
+3. **Service bundle compilation** transforms KCL to Grafana JSON and packages it in the `AppCatServiceConfig` object
+4. **Composition function** loads the pre-compiled JSON/YAML template from that object (deployed from service bundle) at instance creation
 5. **Function substitutes** instance-specific variables (namespace, instance name) into the template
 6. **Function creates** instance-specific dashboard resource with Grafana discovery label
 7. **Grafana operator** automatically discovers and imports the dashboard via GrafanaDashboard custom resource
@@ -1144,7 +1146,7 @@ status:
 ----
 
 This provides no visibility into:
-- Which managed resource failed (HelmRelease, ServiceMonitor, ConfigMap)
+- Which managed resource failed (HelmRelease, ServiceMonitor, configuration object)
 - Why it failed (image pull error, validation error, resource quota exceeded)
 - How to fix it (actionable guidance)
 
@@ -1153,7 +1155,7 @@ This provides no visibility into:
 The composition function aggregates status data from all managed resources and provides detailed error information in composite status fields.
 
 This enables Service Users to see:
-* Which specific resource failed (HelmRelease, ServiceMonitor, ConfigMap)
+* Which specific resource failed (HelmRelease, ServiceMonitor, configuration object)
 * Why it failed (image pull error, validation error, resource quota exceeded)
 * How to fix it (actionable guidance based on error patterns)
 
@@ -1234,7 +1236,7 @@ status:
 5. *Provide Observability*: Use framework-provided definitions for metrics, dashboards, and alerts
 6. *Test Service*: Validate service configuration and lifecycle before deployment
 7. *Expose Typed API to Go*: Generate Go structs from the KCL API schema so composition functions stay type-safe without manual Go edits (codegen)
-8. *Single Source of Truth*: KCL schema drives CRD/XRD, ConfigMaps, and generated Go types to avoid drift
+8. *Single Source of Truth*: KCL schema drives CRD/XRD, the `AppCatServiceConfig` object, and generated Go types to avoid drift
 
 ==== Solution
 
@@ -1267,7 +1269,7 @@ appcat-service-redis/
 * **Public Access:** Service repositories are open for community contributions
 * **No Secrets:** Service repositories contain no secrets, environment-specific configs, or platform infrastructure
 * **Platform Dependencies:** Services import platform base schemas via `kcl.mod`
-* **Single Source of Truth:** KCL service schema produces all bundle artifacts (XRD, ConfigMaps, JSON schemas)
+* **Single Source of Truth:** KCL service schema produces all bundle artifacts (XRD, `AppCatServiceConfig` objects, JSON schemas)
 
 ===== Service Bundle Outputs
 
@@ -1278,7 +1280,7 @@ The service repository pipeline compiles KCL configurations into a service bundl
 The service bundle packages multiple artifacts:
 
 * **XRD Manifests:** Custom Resource Definition establishing the service API surface, generated from KCL service schema
-* **ConfigMaps:** Pre-compiled service configuration containing plan definitions, Helm value mappings, and observability specifications
+* **`AppCatServiceConfig` objects:** Pre-compiled service configuration containing plan definitions, Helm value mappings, and observability specifications
 * **JSON Schemas:** Type definitions exported from KCL schema as an intermediate format for Go type generation
 * **Bundle Metadata:** Manifest declaring Helm chart dependencies, required function versions, and compatibility constraints
 
@@ -1305,14 +1307,14 @@ This keeps the service repository free of Go code while enabling type-safe acces
 
 2. Tests locally
    → Runs kcl run to compile and validate
-   → Reviews generated XRD and ConfigMap manifests
+   → Reviews generated XRD and configuration object manifests
    → Writes Chainsaw end-to-end tests
 
 3. Commits and tags release
 
 4. Service pipeline runs automatically
    → Validates KCL syntax and schema compliance
-   → Generates manifests (XRD, ConfigMap, JSON schemas)
+   → Generates manifests (XRD, configuration object, JSON schemas)
    → Runs tests (golden tests, Chainsaw end-to-end tests)
    → Packages service bundle (tarball with all manifests)
    → Publishes to OCI registry: registry.servala.io/appcat/nextcloud:v1.0.0
@@ -1520,7 +1522,7 @@ For complex recovery scenarios requiring direct intervention, Service Operators 
 
 Framework Engineer maintains the generic composition function that:
 
-1. Receives ConfigMap reference from Composition `inputRef` and loads service configuration
+1. Receives `AppCatServiceConfig` reference from Composition `inputRef` and loads service configuration
 2. Extracts composite parameters from Crossplane request and binds to generated Go types
 3. **Loads static configuration** containing pre-compiled Helm values
 4. **Applies dynamic overrides** by mapping composite parameters to Helm value paths
@@ -1530,11 +1532,11 @@ Framework Engineer maintains the generic composition function that:
 8. Updates claim status with observability URLs
 9. Returns desired state to Crossplane
 
-The function is generic - it handles all services by loading service-specific configuration from ConfigMaps deployed by the platform pipeline.
+The function is generic - it handles all services by loading service-specific configuration from `AppCatServiceConfig` objects deployed by the platform pipeline.
 
 **Configuration Structure:**
 
-Service configurations are pre-compiled during bundle build and stored as JSON in ConfigMaps.
+Service configurations are pre-compiled during bundle build and stored as JSON in `AppCatServiceConfig` objects.
 The function reads static plan-based defaults and dynamic parameter mappings, merging them at runtime based on user selections.
 
 **Desired/Observed State Management (`ApplyState`):**
@@ -1546,11 +1548,11 @@ The function reads static plan-based defaults and dynamic parameter mappings, me
 
 ====== Framework Engineer Responsibilities
 
-* **Configuration Merge Logic**: Load pre-compiled JSON from ConfigMaps, apply dynamic parameter mappings, and merge with runtime overrides
+* **Configuration Merge Logic**: Load pre-compiled JSON from the `AppCatServiceConfig`, apply dynamic parameter mappings, and merge with runtime overrides
 * **State Management**: Maintain `ApplyState`/`ObserveState` helpers for type-safe resource registration and observation across services
-* **ConfigMap Schema Definition**: Define JSON structure that Service Maintainers' KCL compiles to (static values, dynamic mappings, observability config)
-* **Validation and Error Handling**: Ensure ConfigMap structure is valid and provide clear error messages for configuration failures
-* **Backwards Compatibility**: Support services with varying ConfigMap schemas as the framework evolves
+* **Configuration Object Schema Definition**: Define JSON structure that Service Maintainers' KCL compiles to (static values, dynamic mappings, observability config)
+* **Validation and Error Handling**: Ensure the `AppCatServiceConfig` structure is valid and provide clear error messages for configuration failures
+* **Backwards Compatibility**: Support services with varying `AppCatServiceConfig` schemas as the framework evolves
 
 ===== 2. KCL Framework Maintenance
 
@@ -1630,13 +1632,13 @@ They reference shared type schemas from a common definitions package but never a
 **Pipeline Stages:**
 
 1. **Lint**: KCL syntax validation and formatting checks
-2. **Generate**: Compile KCL to CRD/XRD manifests and ConfigMaps. Fail if generated output differs from committed files (drift detection).
+2. **Generate**: Compile KCL to CRD/XRD manifests and `AppCatServiceConfig` objects. Fail if generated output differs from committed files (drift detection).
 3. **Golden Tests**: Compare generated manifests against golden reference files to catch unintended changes
 4. **Unit Tests**: Validate KCL logic, constraint checking, and compilation correctness
 5. **E2E Tests**: Execute Chainsaw end-to-end tests in ephemeral Kind cluster
    - Required on tags/releases
    - Optional on merge requests (triggered via label)
-6. **Package**: Create service bundle artifact containing CRDs, XRDs, ConfigMaps, generated Go type schemas, and manifest metadata
+6. **Package**: Create service bundle artifact containing CRDs, XRDs, `AppCatServiceConfig` objects, generated Go type schemas, and manifest metadata
 7. **Publish**: Push service bundle to registry with semantic version tag and git SHA tag
 
 **Versioning Strategy:** Each service is independently versioned using semantic versioning. A new service release does not require changes to other services or the platform repository.
@@ -1644,7 +1646,7 @@ They reference shared type schemas from a common definitions package but never a
 **Bundle Format:** Service bundle is a self-contained OCI artifact or tarball containing:
 
 * CRD/XRD manifests
-* ConfigMaps with compiled service configuration
+* `AppCatServiceConfig` objects with compiled service configuration
 * Generated Go type schemas (JSON Schema intermediate format)
 * Manifest file declaring Helm chart versions, dependencies, and resource definitions
 
@@ -1667,7 +1669,7 @@ Secrets themselves are NEVER committed to git - they are injected at pipeline ru
 2. **Apply Profiles**: Merge service configurations with environment-specific profiles (staging vs production)
 3. **Inject Secrets**: Retrieve secrets from GitLab CI variables or Vault and inject into rendered manifests at runtime
 4. **Render Platform**: Generate Crossplane, provider, and ArgoCD manifests with profile overrides
-5. **Render Services**: Generate service-specific compositions, XRDs, and ConfigMaps with environment context
+5. **Render Services**: Generate service-specific compositions, XRDs, and `AppCatServiceConfig` objects with environment context
 6. **Mint Revision Labels**: Create composition revision labels derived from service version and function image version
 7. **Deploy Staging**: Automatically deploy rendered manifests to staging environment via ArgoCD
 8. **Deploy Production**: Manually approved deployment to production environment via ArgoCD (protected job)
@@ -1720,7 +1722,7 @@ The codegen pipeline pulls bundles based on the platform lockfile or latest vers
 Drift detection ensures the committed types match the generated output.
 
 **Generic Function Pattern:** The composition function is generic - a single Go binary handles all services.
-It loads service-specific configuration from ConfigMaps at runtime, reads pre-compiled JSON containing static plan values and dynamic parameter mappings, and merges them based on user selections.
+It loads service-specific configuration from the `AppCatServiceConfig` objects at runtime, reads pre-compiled JSON containing static plan values and dynamic parameter mappings, and merges them based on user selections.
 The function never contains service-specific logic.
 
 **Versioning Independence:** Runtime components are versioned independently from services.
