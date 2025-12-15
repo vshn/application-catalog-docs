@@ -488,6 +488,8 @@ status:
     odooInvoiceID: INV-2024-001234
 ----
 
+**Operator Option:** BillingOperator can react to service updates that change cost; Odoo could expose an endpoint to pre-calculate or return prices directly to the operator, enabling automatic status updates when plans or resources change.
+
 === 1.5: Service Maintenance and Upgrades
 
 ==== Problem
