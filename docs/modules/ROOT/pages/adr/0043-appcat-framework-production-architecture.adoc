@@ -696,6 +696,10 @@ Need comprehensive testing strategy covering:
 * *Easy to Debug*: Direct Go debugging with breakpoints
 * *CI-Friendly*: Quick feedback in pull requests
 
+**Disadvantages:**
+
+* Need cumbersome testing fixtures to emulate Crossplane grpc requests
+
 ====== Layer 2: End-to-End Tests (Full Lifecycle)
 
 **Tool:** Chainsaw
