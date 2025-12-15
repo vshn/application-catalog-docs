@@ -105,7 +105,12 @@ This section provides a quick overview of all major architectural decisions. See
 ==== Problem
 
 Need a type-safe, constraint-based configuration language for defining service plans, Helm value mappings, and cluster configurations.
-Must support validation, composition, and reusability while being maintainable by Service Maintainers.
+Must support validation, composition, and reusability while being maintainable by Service Maintainers, and align with how each persona works:
+
+* *Service Maintainer*: author services and define parameter-to-Helm mappings without Go, with clear validation errors and minimal boilerplate.
+* *Framework Engineer*: enforce platform base schemas, generate managed resources service bundles, and keep overrides (defaults → service → distribution → profile) composable.
+* *Service Operator*: rely on consistent API surfaces for troubleshooting and upgrades; need deterministic mappings and readable errors when validation fails.
+* *Service User*: see only safe, validated parameters in the portal; prevent invalid combinations from ever reaching the runtime.
 
 ==== Solutions
 
