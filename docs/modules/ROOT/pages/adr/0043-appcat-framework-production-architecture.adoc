@@ -720,7 +720,10 @@ Need comprehensive testing strategy covering:
 * Billing Service management
 * Service upgrade (chart version change)
 * Service deletion (cleanup)
-* Day 2 operations tests
+* Upgrade tests
+* Regression tests
+* Connection tests (already exist)
+* Other Day 2 operations tests
 
 **Example:**
 
