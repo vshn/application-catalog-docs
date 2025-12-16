@@ -268,7 +268,17 @@ guaranteed::
 - Resource guarantees with pod anti-affinity
 - Higher availability SLA
 
-TODO: Work on plan specifications
+**Plans:**
+
+By default, the following plans are available on every cluster:
+
+[cols="25a,15,15,15", options="header"]
+|===
+| Plan | CPU | Memory | Disk
+| standard-2 | 500m | 2Gi | 16Gi
+| standard-4 | 1 | 4Gi | 16Gi
+| standard-8 | 2 | 8Gi | 16Gi
+|===
 
 Key Components::
 
