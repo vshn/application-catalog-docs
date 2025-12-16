@@ -221,9 +221,13 @@ data:
   ROOT_TOKEN: <base64-encoded-root-token>
 ```
 
-**Auto unseal**
+**Auto-unseal**
 
 Auto unseal allows OpenBao to unseal automatically without manual intervention using an external key management system. This is crucial for automated recovery and reduces operational burden.
+
+By default OpenBao instances will be configured to use a central, internal VSHN managed Vault or OpenBao to auto-unseal.
+
+WARNING: If a customer configures an auto-unseal provider, only the service level "besteffort" can be guaranteed.
 
 Supported auto-unseal providers:
 
