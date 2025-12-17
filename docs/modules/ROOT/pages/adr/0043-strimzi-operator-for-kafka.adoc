@@ -1,0 +1,446 @@
+= ADR 0043 - Strimzi Operator for Apache Kafka
+:adr_author:    Simon Hofer
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2025-12-05
+:adr_upd_date:  2025-12-05
+:adr_status:    draft
+:adr_tags:      kafka,service
+:page-aliases:  explanations/decisions/kafka.adoc
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+We use the Strimzi Kafka Operator to provide Apache Kafka as a managed service on Kubernetes, complemented by Apicurio Registry for schema management and AKHQ for operational visibility.
+====
+
+== Problem
+
+We need to provide Apache Kafka on Kubernetes as a managed service with the following features:
+
+* Production-ready Kafka cluster management with KRaft mode
+* High availability across multiple availability zones
+* Schema registry for managing Avro/Protobuf/JSON schemas
+* Operational visibility and monitoring tooling
+* TLS-encrypted connections and authentication
+* Automated backup and disaster recovery
+* Topic and user self-service management
+* Comprehensive metrics and monitoring with Grafana dashboards
+* Regular maintenance and version upgrades
+* Support for various sizing options (1 or 3 replicas)
+
+The solution must align with VSHN's "more buy than make" approach, leveraging existing open-source operators rather than building custom solutions.
+
+== Evaluated Solutions
+
+For Apache Kafka on Kubernetes, the following production-ready solutions were evaluated:
+
+[cols="1,1,1"]
+|===
+|Requirements |https://strimzi.io/[Strimzi] |https://github.com/confluentinc/confluent-kubernetes-examples[Confluent Operator]
+
+|KRaft Mode Support |✅ |✅
+
+|Schema Registry Integration |❌ (Apicurio) |✅ (Confluent)
+
+|Topic and User Management |✅ (Native CRDs) |✅
+
+|Metrics Export |✅  |✅
+
+|Multi-AZ Support |✅ (Rack awareness) |✅ (Rack awareness)
+
+|2-AZ Support |❌ (reconfiguration needed) |✅ (automatic observer promotion)
+
+|Automated Rebalancing |✅ (Cruise Control) |✅ (Self-balancing clusters)
+
+|TLS/mTLS Support |✅ |✅
+
+|Open Source |✅ (Apache 2.0) |❌ (Proprietary)
+
+|Active Development |✅ |✅
+
+|Grafana Dashboards |✅ (Community maintained) |✅ (Community maintained)
+
+|Commercial Support Available |✅ (Red Hat, SPOUD) |✅ (Confluent)
+
+|Maturity |✅ CNCF Sandbox, Production-ready since 2018 |✅ Widely used in enterprise
+
+|===
+
+Additional Notes:
+
+* **Strimzi** is a CNCF sandbox project with strong community backing and Red Hat support. It has been production-ready since 2018 and is used by numerous enterprises worldwide. It provides the most comprehensive mature Kubernetes-native approach with extensive CRDs for all Kafka resources available as open-source.
+* **Confluent Operator** requires a license for production use and ties users to Confluent's ecosystem, which conflicts with our preference for open-source flexibility. If customers specifically require Confluent features, we can consider it as a separate offering.
+
+**Not Considered:**
+
+* **https://github.com/adobe/koperator[Koperator]** (Banzai Cloud): Limited recent development activity and lacks some operational features like Cruise Control integration. Not actively maintained.
+* **https://github.com/bitnami/charts/tree/main/bitnami/kafka[Bitnami Helm Chart]**: Lacks advanced operational features like topic/user management CRDs and automated rebalancing. More suitable for development environments than production.
+
+
+== Decision
+
+We will use https://strimzi.io/[Strimzi Kafka Operator] to provide Apache Kafka as a managed service.
+
+The platform will consist of the following components:
+
+=== Core Components
+
+**Kafka Cluster (Strimzi Operator)**::
+
+* Manages Kafka brokers and KRaft controllers
+* Provides Kubernetes-native resources (CRDs) for Kafka, KafkaTopic, KafkaUser
+* Integrates Cruise Control for automated cluster rebalancing
+* Supports rolling updates with zero downtime
+* Version support follows https://github.com/strimzi/strimzi-kafka-operator/blob/main/KAFKA_VERSION_SUPPORT.md[Strimzi's version support policy]
+
+**Schema Registry (Apicurio Registry)**::
+
+* Manages Avro, Protobuf, and JSON schemas
+* Compatible with Confluent Schema Registry API
+* Integrated with Kafka for schema storage backend
+
+**Web UI (AKHQ)**::
+
+* Provides operational visibility into Kafka clusters
+* Allows browsing topics, consumer groups, and messages
+* Facilitates debugging and troubleshooting
+* Read-only mode for production environments
+
+=== Supporting Components
+
+**Monitoring and Observability**::
+
+* Prometheus for metrics collection
+* JMX Exporter for Kafka broker metrics
+* Grafana dashboards based on Strimzi community templates
+* AppCat SLI Exporter for basic availability checks (broker/controller health)
+* https://github.com/spoud/kafka-synth-client[Kafka Synth Client] for continuous end-to-end latency monitoring
+* AlertManager for capacity and availability alerts
+
+**Operational Tools**::
+* Strimzi Drain Cleaner for safe node maintenance
+* Cruise Control for partition rebalancing
+* Entity Operators for Topic and User management
+
+=== Deployment Architecture
+
+**Node Pools**::
+
+* Operations Node Pool: Strimzi Operators, Drain Cleaner
+* Kafka Broker Node Pool: Kafka broker pods with high-throughput storage
+* KRaft Controller Node Pool: KRaft controllers with low-latency storage
+
+**Storage**::
+
+* Premium SSDs with zone-pinned volumes
+* High throughput for broker data
+* Low latency NVMe for KRaft metadata
+* Expandable disks with `volumeBindingMode: WaitForFirstConsumer`
+
+**High Availability**::
+
+Ideally deployed across 3 availability zones with the following configuration:
+
+* Minimum 3 availability zones for fault tolerance
+* 2 brokers per availability zone (6 total for production)
+* 3 KRaft controllers (1 per AZ)
+* 3 Schema Registry instances (1 per AZ)
+* Replication factor: 5, min.insync.replicas: 3
+
+If not 3 AZs are available we need to choose the best possible alternative 2 / 2.5 DC setup / 3 different racks or at least 3 different nodes to ensure some level of fault tolerance.
+
+The possibilities heavily depend on the underlying infrastructure capabilities found at customer sites.
+
+The solution must allow a parameter to specify the rack/zone topology for pod distribution and for Kafkas internal rack awareness configuration.
+
+
+**Authentication and Authorization**::
+
+* mTLS for inter-broker communication
+* mTLS for internal clients via Strimzi KafkaUser resources
+* ACL-based authorization managed through KafkaUser CRDs
+* Optional OAuth integration via https://github.com/strimzi/strimzi-kafka-oauth[strimzi-kafka-oauth] for external clients
+
+**Apicurio Registry Auth**::
+
+* Authentication requires Keycloak integration using OpenID Connect
+* Authorization managed via Keycloak roles and groups
+
+As the requirements to have Keycloak as identity provider are already in place for other services, this fits well into the existing architecture.
+On the other hand not all users have Keycloak so we can also consider alternatives.
+
+**Alternative Authentication Options**::
+
+* Disable schema registration for clients by default
+* Allow all reads on schemas (no authentication on apicurio registry)
+* Prohibit writes on an Ingress level for public read-only access
+* Having an extra Ingress for internal access with a static authentication for e.g. CI/CD systems that need to register schemas automatically.
+
+=== Rationale
+
+**Why Strimzi?**
+
+1. **Kubernetes-Native Design**: Strimzi is designed from the ground up for Kubernetes, using operators and CRDs extensively. This aligns with our infrastructure-as-code approach and enables declarative management.
+
+2. **Open Source and Flexibility**: Apache License 2.0 ensures no vendor lock-in. We can use any Kafka distribution and aren't tied to proprietary licensing models based on node count or throughput.
+
+3. **Operational Maturity**: Strimzi provides battle-tested operational features:
+   * Zero-downtime rolling upgrades
+   * Integrated Cruise Control for rebalancing
+   * Drain Cleaner for safe node maintenance
+   * Comprehensive monitoring integration
+
+4. **Community and Support**: Strong CNCF community backing, Red Hat support, and SPOUD partnership for third-level Kafka expertise.
+
+5. **Feature Completeness**: Native support for all requirements including KRaft mode, schema registry integration (Apicurio), metrics export, and multi-AZ deployments.
+
+6. **Proven Track Record**: Strimzi is used in production by numerous organizations and has a proven track record of stability and reliability.
+
+**Why Apicurio Registry?**
+
+* Open-source and vendor-neutral
+* API-compatible with Confluent Schema Registry
+* Managed via Kubernetes operator
+* Multiple storage backend options (Kafka, PostgreSQL)
+* Active development and Red Hat support
+
+**Why AKHQ?**
+
+* Provides essential operational visibility without vendor lock-in
+* Lightweight and easy to deploy
+* Read-only mode prevents accidental changes in production
+* Complements command-line tools with visual interface
+
+== Advantages
+
+* **Kubernetes-Native Operations**: Declarative management through CRDs enables GitOps workflows and automation
+* **Zero-Downtime Maintenance**: Rolling updates for brokers and configuration changes
+* **Automated Rebalancing**: Cruise Control integration enables intelligent partition distribution
+* **Comprehensive Monitoring**: Pre-built Prometheus exporters and Grafana dashboards
+* **High Availability**: Multi-AZ support with rack awareness ensures resilience
+* **Schema Management**: Integrated schema registry prevents breaking changes
+* **Security**: Built-in mTLS support and ACL management
+* **Cost Efficiency**: No licensing fees based on cluster size or throughput
+* **Expert Support**: Partnership with SPOUD provides third-level Kafka expertise
+* **Community Backing**: CNCF project with active development and contributions
+
+== Disadvantages
+
+* **Kafka Version Dependency**: Limited to Kafka versions supported by Strimzi operator
+* **Operator Complexity**: Additional layer that requires understanding of operator patterns
+* **Potential Breaking Changes**: Operator upgrades could introduce breaking changes requiring manual intervention
+* **Learning Curve**: Teams need to learn Strimzi-specific CRDs and operational patterns
+* **Opinionated Decisions**: Some configurations are opinionated by the operator design
+
+== Risks and Mitigation
+
+=== Operator Becomes Unmaintained
+
+Risk:: Strimzi development stagnates or the project is abandoned
+
+Mitigation::
+* **Option 1**: Fork and maintain internally or through SPOUD partnership
+* **Option 2**: Migrate to alternative solution (e.g., Confluent Operator with licensing)
+* **Likelihood**: Low - Strong CNCF backing and Red Hat support reduce this risk
+
+=== Breaking Changes in CRDs
+
+Risk:: Strimzi upgrades introduce breaking changes in CRDs requiring manual migration
+
+Mitigation::
+* **Option 1**: Handle migrations transparently in Crossplane compositions where possible
+* **Option 2**: Develop automated migration tooling for customer instances
+* **Process**: Thoroughly test operator upgrades in staging environments before production rollout
+
+=== Performance Issues
+
+Risk:: Default configurations don't meet performance requirements for high-throughput use cases
+
+Mitigation::
+* Leverage Cruise Control for continuous optimization
+* Implement synthetic monitoring for continuous latency tracking
+* Regular performance testing in pre-production environments
+
+=== Capacity Management
+
+Risk:: Insufficient planning leads to storage or throughput limitations
+
+Mitigation::
+* Implement capacity alerting with 80% thresholds for disk and network
+* Use Cruise Control for proactive rebalancing when scaling
+* Regular capacity review process with stakeholders
+* Optimize applications for efficient Kafka usage
+* Fine-tune Kafka producer/consumer configurations
+
+== Consequences
+
+=== Positive
+
+* Customers get a production-ready, highly available Kafka service
+* Operations team has comprehensive monitoring and operational tooling
+* Automated maintenance reduces operational burden
+* Schema registry prevents data quality issues
+* Self-service topic and user provisioning empowers development teams
+
+=== Negative
+
+* Initial setup complexity higher than simple Helm chart deployment
+* Requires training for operations team on Strimzi-specific concepts
+* Dependency on Strimzi release cycle for Kafka version updates
+* Additional components (Apicurio, AKHQ) increase the overall system complexity
+
+== Monitoring and SLA
+
+Following xref:adr/0015-metrics-and-monitoring-of-services.adoc[ADR 0015], we will implement a two-tier monitoring approach:
+
+=== Basic Availability Monitoring
+
+* Use the https://github.com/vshn/appcat/tree/master/pkg/sliexporter[AppCat SLI Exporter] to perform basic health checks:
+** Verify KRaft controller pods are healthy and reachable
+** Verify Kafka broker pods are healthy and reachable
+** Verify Schema Registry pods are healthy and reachable
+** This provides the foundational "service is running" metrics
+
+=== End-to-End Latency Monitoring
+
+* Deploy https://github.com/spoud/kafka-synth-client[Kafka Synth Client] for continuous synthetic monitoring:
+** Produces canary messages to a dedicated heartbeat topic at regular intervals
+** Consumes the same messages and measures end-to-end latency (time from produce to consume)
+** Exports latency metrics (p50, p95, p99) to Prometheus
+** Detects silent degradation that basic health checks might miss
+** Validates the entire data path: producer → broker → consumer
+** Low-volume traffic that doesn't impact production workloads
+
+=== Additional Monitoring
+
+* Export JMX metrics from Kafka brokers using Prometheus JMX Exporter
+* Deploy pre-configured Grafana dashboards from Strimzi community
+* Configure capacity alerts for disk usage, network throughput, and consumer lag
+* Route SLO alerts to VSHN operations team
+* Route capacity alerts to customer's chosen alerting channels
+
+=== Service Level Indicator (SLI)
+
+The service is considered "Up" when:
+
+* KRaft controller nodes are reachable and healthy in Kubernetes (AppCat SLI Exporter)
+* Kafka brokers are reachable and healthy in Kubernetes (AppCat SLI Exporter)
+* End-to-end latency p95 is below 5 seconds (Kafka Synth Client)
+* Schema registry cluster is reachable and healthy in Kubernetes (AppCat SLI Exporter)
+
+=== Key Metrics
+
+* Broker availability and health
+* Under-replicated partitions
+* Offline partitions
+* End-to-end message latency (producer → consumer)
+* Consumer lag per consumer group
+* Disk usage per broker
+* Network throughput
+* JVM heap usage
+* KRaft controller active status
+
+== Implementation Notes
+
+=== Operator and CRD Installation
+
+Following xref:adr/0014-commodore-component-to-deploy-compositions-and-xrds.adoc[ADR 0014], operators and their CRDs are deployed via Project Syn Commodore Components:
+
+**Strimzi Operator**::
+* Deployed via Commodore component (to be created: `component-strimzi-kafka-operator`)
+* Alternatively, use the https://strimzi.io/docs/operators/latest/deploying.html#deploying-cluster-operator-helm-chart-str[Strimzi Helm Chart] directly in Commodore component
+* Installs the Strimzi Cluster Operator and all required CRDs (`Kafka`, `KafkaTopic`, `KafkaUser`, `KafkaConnect`, etc.)
+* Operator runs in dedicated namespace (e.g., `syn-strimzi-kafka-operator`)
+* Manages Kafka clusters across all namespaces (cluster-scoped deployment)
+* Configure with appropriate resource limits and RBAC permissions
+
+**Supporting Components**::
+* Strimzi Drain Cleaner: Deployed via `component-strimzi-kafka-operator` or separate component
+* Cruise Control: Integrated into Kafka cluster via Strimzi `Kafka` CR (not a separate operator)
+* Kafka Synth Client: Deployed per instance in the instance namespace (not an operator)
+* Apicurio Registry: Deployed per instance in the instance namespace (not with an operator)
+
+The Commodore components handle:
+
+* Operator deployment and lifecycle management
+* CRD installation and version management
+* Namespace creation and RBAC setup
+* Configuration of operator-wide settings
+* Integration with Project Syn configuration management
+
+=== Initial Instance Deployment
+
+* Use Crossplane Provider Kubernetes to create Strimzi `Kafka` CRs
+* Use Crossplane compositions to abstract Kafka cluster configuration
+* Configure proper resource requests and limits based on expected load
+* Implement topologySpreadConstraints and Kafka Rack awareness for multi-AZ distribution
+* Enable Prometheus ServiceMonitors / PodMonitors for all components
+* Deploy with KRaft mode (ZooKeeper-less)
+
+=== Client Configuration
+
+* Provide starter templates for Java applications (Quarkus, Spring Boot)
+* Include sample KafkaUser and KafkaTopic resources that can be used with the cluster
+* Document best practices for consumer lag monitoring
+* Provide guidance on replication factor and min.insync.replicas configuration
+
+
+=== Backup and Recovery
+
+Backup and recovery of Kafka require careful consideration because Kafka is a distributed system where durability is primarily provided by replication. The platform objective is to provide a reliable emergency restore capability while encouraging application teams to adopt patterns that reduce reliance on point-in-time restores (idempotent processing, event sourcing, tiered retention, compacted topics, etc.).
+
+Scope and Responsibility::
+*Platform*: provide PV snapshot capability for Kafka PVCs, configuration for snapshot retention/rotation, a documented emergency restore playbook, and tools for cluster-level restores. The platform will also snapshot Schema Registry storage and configuration where possible.
+*Application Teams*: own application-level recovery requirements (single-topic or message-level restores), define RPO/RTO needs, and adopt application patterns that avoid the need for frequent restores.
+
+Snapshot Frequency & RPO Options::
+* **Daily snapshots (default)** — RPO ≈ 24 hours. Reasonable for most use cases; minimal storage cost.
+* **Hourly snapshots (optional)** — RPO ≈ 1 hour. Enable for mission-critical clusters where acceptable.
+
+
+RTO Expectations (high level)::
+* **Full cluster restore**: dependent on cluster size and I/O performance — expect several hours for small clusters, longer for larger clusters. Restoration includes PV restore time, broker startup, partition leader elections and potential rebalancing.
+* **Single-topic / message restores**: may require custom tooling or manual processes; expect non-trivial effort and longer RTOs.
+
+
+Notes on Single-Topic / Message-Level Recovery::
+* This is not natively supported by PV snapshots. Typical approaches include:
+   - Restoring an entire broker state and extracting topic data via consumer tooling (time-consuming).
+   - Using MirrorMaker/replication clusters to copy topic data before destructive maintenance (proactive strategy).
+   - Exporting topic data into an external store for ad-hoc restore (requires per-application design).
+* These approaches have trade-offs in cost, complexity and RTO; platform-level support is limited to emergency workflows and guidance.
+
+
+Limitations and Caveats::
+* PV snapshots are **platform-level emergency** tools — they are suitable for full-cluster rollback but are poor at single-message or point-in-time restores for specific topics.
+* Snapshot consistency across multiple broker PVs depends on snapshot provider capabilities (some providers offer volume group snapshots; others do not). Document the guarantees for each CSP.
+* Restores may cause data loss up to the snapshot age (RPO) and require manual reconciliation in applications.
+
+Operational Recommendations::
+* **Enable PV snapshots** (with sensible retention) for Kafka PVCs by default and document the provider-specific semantics.
+* **Test restores regularly** (quarterly) and maintain a runbook with exact steps and expected timings.
+* **Expose schema registry backup** — ensure Apicurio/Schema Registry storage is included in snapshots or export schema artifacts periodically.
+* **Encourage application patterns** that minimise platform restore needs (idempotent consumers, compacted topics for critical keys, event sourcing patterns, consumer-side checkpoints).
+
+
+
+NOTE: If higher frequency or point-in-time recovery is required, an additional application-level solution can be implemented (e.g., MirrorMaker replication, topic export tools, Kafka Connect sink to S3 etc.). Such solutions are outside the platform scope.
+
+
+=== Operator Read-Only / UI Safeguards
+
+* Deploy AKHQ (or any Kafka UI) in **read-only** mode for production clusters to prevent accidental destructive operations (topic deletion, ACL changes) from the UI.
+* Restrict UI access with authentication, network policies and/or ingress restrictions; grant UI access only to troubleshooting groups.
+
+
+== Further Reading
+
+* https://strimzi.io/docs/operators/latest/overview.html[Strimzi Documentation]
+* https://www.apicur.io/registry/docs/[Apicurio Registry Documentation]
+* https://akhq.io/[AKHQ Documentation]
+* https://products.vshn.ch/appcat/kafka.html[VSHN Kafka Service Description]
+* xref:adr/0015-metrics-and-monitoring-of-services.adoc[ADR 0015: Metrics and Monitoring]
+* xref:adr/0014-commodore-component-to-deploy-compositions-and-xrds.adoc[ADR 0014: Commodore Component]
