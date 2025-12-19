@@ -1,11 +1,11 @@
-= ADR 0048 - Service Maintenance and Upgrades (Framework 2.0)
+= ADR 0047 - Service Maintenance and Upgrades (Framework 2.0)
 :adr_author: Gabriel Saratura
 :adr_owner: Schedar
 :adr_reviewers: Schedar
 :adr_date:
 :adr_upd_date:
 :adr_status: draft
-:adr_tags: framework,framework2,maintenance,upgrades,crossplane
+:adr_tags: framework,framework2,maintenance,upgrades,crossplane,workflows,cronoperations
 
 include::partial$adr-meta.adoc[]
 
