@@ -1,4 +1,4 @@
-= ADR 0050 - Testing Strategy (Framework 2.0)
+= ADR 0048 - Testing Strategy (Framework 2.0)
 :adr_author: Gabriel Saratura
 :adr_owner: Schedar
 :adr_reviewers: Schedar
