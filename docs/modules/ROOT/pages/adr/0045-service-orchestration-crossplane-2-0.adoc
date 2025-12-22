@@ -14,7 +14,7 @@ include::partial$adr-meta.adoc[]
 ====
 This ADR defines the service orchestration mechanism for AppCat Framework 2.0, evaluating Crossplane 2.0 composition functions against a custom Kubernetes operator.
 
-The decision selects Crossplane 2.0 with composition functions as the orchestration layer, providing generic service management with built-in revision control and clear separation between framework code (Go) and service configuration (KCL).
+The decision selects https://www.crossplane.io/[Crossplane] 2.0 with composition functions as the orchestration layer, providing generic service management with built-in revision control and clear separation between framework code (https://go.dev/[Go]) and service configuration (https://www.kcl-lang.io/[KCL]).
 ====
 
 == Context
@@ -52,7 +52,7 @@ The orchestration layer sits at the boundary between framework runtime and servi
 
 ==== Description
 
-Crossplane 2.0 composition functions execute in pipeline mode during reconciliation, receiving composite state and returning desired resources.
+https://www.crossplane.io/[Crossplane] 2.0 composition functions execute in pipeline mode during reconciliation, receiving composite state and returning desired resources.
 A single generic function handles all services by loading service-specific configuration Kubernetes like object (ex:, `RedisServiceConfig`) at runtime, merging user parameters, and generating resources.
 Other functions can be added to increase framework quality such as increased service resilience and error handling.
 
@@ -77,7 +77,7 @@ Other functions can be added to increase framework quality such as increased ser
 
 ==== Description
 
-Build a custom Kubernetes operator using operator-sdk that directly reconciles service CRDs and renders Helm charts.
+Build a custom Kubernetes operator using https://github.com/operator-framework/operator-sdk[operator-sdk] that directly reconciles service CRDs and renders Helm charts.
 The operator would either use per-service controllers or a generic controller loading service configuration at runtime, with custom implementations for revision management and upgrade workflows.
 
 ==== Advantages
@@ -103,12 +103,12 @@ The operator would either use per-service controllers or a generic controller lo
 
 The following orchestration approaches were considered but excluded early as they do not meet core requirements:
 
-* **Helm Operator (Flux)**: Flux's Helm controller reconciles HelmRelease resources but lacks service configuration logic, connection secret generation, billing integration - essentially requires rebuilding Crossplane capabilities.
+* **https://fluxcd.io/[Helm Operator (Flux)]**: Flux's Helm controller reconciles HelmRelease resources but lacks service configuration logic, connection secret generation, billing integration - essentially requires rebuilding Crossplane capabilities.
 
-* **Terraform Operator**: Terraform excels at cloud infrastructure provisioning but adds unnecessary complexity for Kubernetes-native workloads.
+* **https://developer.hashicorp.com/terraform[Terraform Operator]**: Terraform excels at cloud infrastructure provisioning but adds unnecessary complexity for Kubernetes-native workloads.
 Requires maintaining Terraform modules alongside Helm charts, mixing declarative models, and does not provide native Kubernetes resource management.
 
-* **KubeVela**: Application-centric platform with promising capabilities but immature ecosystem compared to Crossplane.
+* **https://kubevela.io/[KubeVela]**: Application-centric platform with promising capabilities but immature ecosystem compared to Crossplane.
 Application model doesn't align with "Helm Chart in" vision, and has less adoption in managed service space.
 Provides similar capabilities to Crossplane but with smaller community and fewer production deployments.
 

@@ -12,7 +12,7 @@ include::partial$adr-meta.adoc[]
 [NOTE]
 .Summary
 ====
-We choose KCL over CUE for type-safe, constraint-based configuration tool.
+We choose https://www.kcl-lang.io/[KCL] over https://cuelang.org/[CUE] for type-safe, constraint-based configuration tool.
 KCL satisfies our needs for service definitions, helm release mapping, and platform schemas in Framework 2.0.
 ====
 
@@ -32,7 +32,7 @@ Must support validation, composition, and reusability while being maintainable b
 
 **Description:**
 
-KCL is a constraint-based configuration language designed for Kubernetes.
+https://www.kcl-lang.io/[KCL] is a constraint-based configuration language designed for Kubernetes.
 Features include strong typing with compile-time validation, lambda functions for transformations, and native Kubernetes resource understanding.
 
 **Advantages:**
@@ -57,7 +57,7 @@ Features include strong typing with compile-time validation, lambda functions fo
 
 **Description:**
 
-CUE is a data constraint language where types and values are unified.
+https://cuelang.org/[CUE] is a data constraint language where types and values are unified.
 Configurations compose through constraint unification.
 Excels at validation but lacks native lambda functions - transformation logic must be expressed through constraint systems, making some operations such as Helm value mappings verbose.
 

@@ -12,7 +12,7 @@ include::partial$adr-meta.adoc[]
 [NOTE]
 .Summary
 ====
-The decision selects Kubernetes native CronJobs to orchestrate maintenance and upgrades with possible use of ArgoCD Workflows or Crossplane CronOperations in the future in case of growing complexity.
+The decision selects Kubernetes native https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/[CronJobs] to orchestrate maintenance and upgrades with possible use of https://argoproj.github.io/workflows/[ArgoCD Workflows] or https://docs.crossplane.io/latest/operations/operation/[Crossplane Operations] in the future in case of growing complexity.
 ====
 
 == Problem
@@ -42,7 +42,7 @@ Need automated maintenance workflows for:
 
 **Description:**
 
-Kubernetes CronJobs execute scheduled maintenance tasks at specified intervals.
+https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/[Kubernetes CronJobs] execute scheduled maintenance tasks at specified intervals.
 Jobs run containers that perform version checks, apply composition revision updates, and trigger service upgrades during maintenance windows.
 
 **Advantages:**

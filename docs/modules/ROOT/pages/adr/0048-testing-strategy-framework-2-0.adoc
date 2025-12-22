@@ -12,7 +12,7 @@ include::partial$adr-meta.adoc[]
 [NOTE]
 .Summary
 ====
-Use a four-layer testing strategy: Go unit tests, Crossplane beta renderer diffs, Chainsaw end-to-end tests on ephemeral clusters before release/tag, and targeted golden tests for critical paths.
+Use a four-layer testing strategy: Go unit tests, https://docs.crossplane.io/latest/cli/command-reference/#render[Crossplane beta renderer] diffs, https://kyverno.github.io/chainsaw/latest/[Chainsaw] end-to-end tests on ephemeral clusters before release/tag, and targeted golden tests for critical paths.
 ====
 
 == Problem
@@ -53,7 +53,7 @@ Need comprehensive testing strategy covering:
 
 ====== Layer 2: Crossplane Beta Renderer Diffs (Composition Output)
 
-**Tool:** Crossplane beta renderer (pipeline mode) with diffing
+**Tool:** https://docs.crossplane.io/latest/cli/command-reference/#render[Crossplane beta renderer] (pipeline mode) with diffing
 
 **Purpose:** Render composition function output without a live cluster and produce diffs against expected resources, catching rendering regressions early.
 
@@ -72,7 +72,7 @@ Need comprehensive testing strategy covering:
 
 ====== Layer 3: End-to-End Tests (Full Lifecycle)
 
-**Tool:** Chainsaw
+**Tool:** https://kyverno.github.io/chainsaw/latest/[Chainsaw]
 
 **Why Chainsaw over KUTTL:**
 
@@ -135,7 +135,7 @@ spec:
 
 ====== Layer 4: Golden Tests (Configuration Validation)
 
-**Tool:** KCL + Make targets + diff
+**Tool:** https://www.kcl-lang.io/[KCL] + Make targets + diff
 
 **Purpose:** Detect unintended manifest changes when KCL configuration changes.
 
@@ -157,7 +157,7 @@ spec:
 
 ====== Decision on Golden Tests
 
-*Use golden tests on specific cases* - for validating KCL compilation only.
+*Use golden tests on specific cases* - for validating https://www.kcl-lang.io/[KCL] compilation only.
 
 **Recommendation:**
 
