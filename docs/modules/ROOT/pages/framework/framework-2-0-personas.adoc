@@ -1,0 +1,701 @@
+= Framework 2.0 Persona Solutions
+:navtitle: Framework 2.0 Personas
+
+[NOTE]
+.Summary
+====
+Proposed solutions for relevant personas described in xref:adr/0039-servala-framework-requirements.adoc[ADR 0039 - Servala Framework Requirements]
+====
+
+== Service User
+
+=== Persona Description
+
+*Service User* is an end customer who provisions and uses services via the Servala portal.
+They need visibility into their running instances without direct cluster access.
+
+=== Requirements
+
+1. *Metrics Access*: View service-specific metrics (CPU, memory, connections, throughput)
+2. *Log Access*: View application logs for troubleshooting
+3. *Cost Visibility*: Understand current and projected costs
+4. *Connection Details*: Easily retrieve credentials and endpoints
+5. *Service Health*: Real-time status and SLI indicators
+
+=== Solution
+
+==== 1. Metrics Access via Grafana Dashboard
+
+**Problem:** Service Users need namespace-scoped access to metrics without full cluster visibility.
+
+**Solution:** KCL Dashboard Templates with Compile-Time Generation
+
+**How it Works:**
+
+1. **Framework Engineers** define reusable framework templates in KCL
+2. **Service Maintainer** writes dashboard definition in KCL (part of service bundle) using framework-provided templates for panels, queries, and layouts
+3. **Service bundle compilation** transforms KCL to Grafana JSON and packages it in the `AppCatServiceConfig` object
+4. **Composition function** loads the pre-compiled JSON/YAML template from that object (deployed from service bundle) at instance creation
+5. **Function substitutes** instance-specific variables (namespace, instance name) into the template
+6. **Function creates** instance-specific dashboard resource with Grafana discovery label
+7. **Grafana operator** automatically discovers and imports the dashboard via GrafanaDashboard custom resource
+
+**Benefits:**
+
+* *Type-Safe*: KCL validates dashboard structure at build time
+* *Concise*: Framework templates abstract Grafana JSON boilerplate
+* *Consistent*: All dashboards follow the same patterns
+* *Maintainable*: Update all dashboards by modifying KCL templates and rebuilding
+
+===== 2. Log Access
+
+**Problem:** Service Users need filtered logs without access to other tenants' logs.
+
+**Solution:** Loki with Namespace Labels + Grafana Explore Links
+
+**How it Works:**
+
+1. **Service pods** emit logs to stdout/stderr with standard Kubernetes log metadata (namespace, pod name, labels)
+2. **Promtail** (or equivalent log collector) scrapes logs from all pods and adds labels (namespace, app, service)
+3. **Loki** stores logs with namespace-based label filtering ensuring tenant isolation
+4. **Composition function** generates Loki query URLs with namespace filter at instance creation
+5. **Function adds** log query URLs to composite status (lokiQuery, grafanaExploreURL)
+6. **Servala portal** displays logs by embedding Grafana Explore iframe or querying Loki API directly
+7. **RBAC enforcement** ensures Service Users can only query logs from their namespace
+
+**Benefits:**
+
+* *Namespace Isolation*: Automatic tenant separation through Kubernetes namespace boundaries
+* *No Additional Configuration*: Standard log collection, no per-service setup required
+* *Grafana Integration*: Seamless log viewing in Grafana Explore alongside metrics
+* *Query Flexibility*: Service Users can filter by time range, pod, severity level
+* *Cost Efficient*: Loki's label-based indexing keeps storage costs low
+
+===== 3. Comprehensive Service Status and Error Propagation
+
+**Problem:** Service Users need clear, actionable error messages when service provisioning fails, but Crossplane's default status propagation is limited and doesn't surface detailed errors from managed resources to composites.
+
+**Crossplane Default Behavior:**
+
+By default, Crossplane only propagates basic Ready/Synced conditions from managed resources to composites.
+When a HelmRelease fails, Service Users see:
+
+[source,yaml]
+----
+status:
+  conditions:
+  - type: Ready
+    status: "False"
+    reason: "ReconcileError"
+    message: "cannot compose resources"  # Not helpful!
+----
+
+This provides no visibility into:
+- Which managed resource failed (HelmRelease, ServiceMonitor, configuration object)
+- Why it failed (image pull error, validation error, resource quota exceeded)
+- How to fix it (actionable guidance)
+
+**How it Works:**
+
+The composition function aggregates status data from all managed resources and provides detailed error information in composite status fields.
+Framework Engineers can further push rich status to the composite by using Crossplane https://github.com/crossplane-contrib/function-extra-resources[function extra resources] (e.g., injecting pods/sidecars for observation) combined with the composition function to update composite status directly.
+
+This enables Service Users to see:
+* Which specific resource failed (HelmRelease, ServiceMonitor, configuration object)
+* Why it failed (image pull error, validation error, resource quota exceeded)
+* How to fix it (actionable guidance based on error patterns)
+
+**Benefits:**
+
+* *Actionable Errors*: Service Users see exactly what failed and why
+* *Resource-Level Detail*: Visibility into which managed resource caused the failure
+* *Troubleshooting Guidance*: Composition function provides resolution steps for common errors
+* *Servala Portal Integration*: Portal can display errors with visual indicators and help documentation
+* *Faster Resolution*: Service Users and operators can quickly identify and fix issues
+
+===== Service User Workflow
+
+[source]
+----
+1. User Provisions Service (Servala Portal)
+   → Creates VSHNRedis composite
+   → Waits for Ready condition
+   → Displays connection details from status
+
+2. User Views Metrics (Servala Portal)
+   → Fetches status.metrics.dashboardURL
+   → Embeds Grafana dashboard
+
+3. User Views Logs (Servala Portal)
+   → Queries Loki with status.logs.lokiQuery
+   → Displays logs in portal UI
+
+4. User Views Cost (Servala Portal)
+   → Displays status.cost.monthlyCost
+   → Fetches detailed breakdown from Odoo
+
+5. User Troubleshoots Issue
+   → View metrics → identify high memory usage
+   → View logs → find error messages
+   → Adjust plan if needed (upgrade to larger plan)
+----
+
+**Example of Service Status Field:**
+
+[source,yaml]
+----
+status:
+  conditions: {}
+
+  # Metrics & Observability
+  metrics:
+    dashboardURL: "https://dashboards.cluster.servala.io/"
+    prometheusQuery: '{instance_namespace="namespace", app="redis-prod-1"}'
+
+  # Logs
+  logs:
+    lokiQuery: '{instance_namespace="namespace", app="redis-prod-1"}'
+    lokiURL: "https://logs.cluster.servala.io/"
+
+  # Billing & Cost
+  billing:
+    plan: "standard-2"
+    monthlyCost: 25.00
+    currency: "CHF"
+    billingPeriod: "2024-12"
+    odooInvoiceID: "INV-2024-001234"
+    sla: "guaranteed"
+----
+
+=== Service Maintainer
+
+==== Persona Description
+
+*Service Maintainer* adds new services, defines plans and Helm mappings. They work exclusively in KCL - no Go code changes needed.
+
+==== Requirements
+
+1. *Add New Service*: Add Helm-based service without touching Go code
+2. *Define Static Configuration*: Plans, SLA, chart versions, images, scheduling, backup policies - compiled at build time
+3. *Define Dynamic Configuration*: API parameters (XRD spec) for runtime customization - version selection, custom settings, backup schedules
+4. *Map Configuration to Helm Values*: Both static and dynamic configuration must map to Helm chart values
+5. *Provide Observability*: Use framework-provided definitions for metrics, dashboards, and alerts
+6. *Test Service*: Validate service configuration and lifecycle before deployment
+7. *Expose Schema to Tooling*: Publish machine-readable schema (JSON Schema) for validation and portal consumption without touching Go code
+8. *Single Source of Truth*: KCL schema drives CRD/XRD and the `AppCatServiceConfig` object to avoid drift
+
+==== Solution
+
+===== Service Repository Structure
+
+Service Maintainers work in dedicated service repositories, one per service, that are publicly accessible for community contributions.
+
+**Example Repository:** `appcat-service-redis/` (public)
+
+[source]
+----
+appcat-service-redis/
+├── kcl/
+│   ├── service.k           # Service metadata, XRD definition
+│   ├── plans.k             # Service-specific plans (standard-1, standard-2, etc.)
+│   ├── helm-values.k       # Compile-time: Plan → Helm mapping
+│   ├── parameters.k        # Runtime: XRD parameters → Helm mapping
+│   ├── observability.k     # Metrics, dashboards, alerts
+│   └── main.k              # Bundle entry point
+├── tests/
+│   ├── chainsaw/           # End-to-end tests
+│   └── golden/             # Golden test references
+├── kcl.mod                 # KCL dependencies (platform base schemas)
+└── .gitlab-ci.yml          # Service pipeline definition
+----
+
+**Key Points:**
+
+* **Separate Repository:** Each service has its own repository
+* **Public Access:** Service repositories are open for community contributions
+* **No Secrets:** Service repositories contain no secrets, environment-specific configs, or platform infrastructure
+* **Platform Dependencies:** Services import platform base schemas via `kcl.mod`
+* **Single Source of Truth:** KCL service schema produces all bundle artifacts (XRD, `AppCatServiceConfig` objects, JSON schemas)
+
+===== Service Bundle Outputs
+
+The service repository pipeline compiles KCL configurations into a service bundle published to the OCI registry.
+
+**What the Service Pipeline Generates:**
+
+The service bundle packages multiple artifacts:
+
+* **XRD Manifests:** Custom Resource Definition establishing the service API surface, generated from KCL service schema
+* **Configuration objects:** Pre-compiled service configuration containing plan definitions, Helm value mappings, and observability specifications
+* **JSON Schemas:** Type definitions exported from KCL schema for validation, documentation, and portal tooling
+* **Bundle Metadata:** Manifest declaring Helm chart dependencies, required function versions, and compatibility constraints
+* **Third-Party Dependencies:** Services can declare external dependencies (e.g., other service bundles they consume); the platform pipeline resolves these via bundle metadata and lockfile pins.
+
+**Publication Flow:**
+
+The service pipeline publishes bundles to the OCI registry with semantic version tags (e.g., `registry.servala.io/appcat/redis:v1.2.3`).
+The platform repository references these bundles through lockfile entries to control deployment to staging and production environments (Section 2.4: Pipeline Architecture).
+
+**Cross-Repository Integration:**
+
+After a service bundle is published, the platform/runtime pipelines pull the bundle and pass the `AppCatServiceConfig` to the generic composition function via `inputRef`.
+Schemas remain available for validation and portal tooling, but the runtime does not generate per-service Go types.
+
+===== Workflow: Service Maintainer
+
+**Example - Adding or updating a service:**
+
+[source]
+----
+1. Service Maintainer creates/updates service repository
+   → Repository: appcat-service-nextcloud (public)
+   → Defines service in KCL such as service.k, plans.k, helm-values.k, parameters.k, observability.k, etc
+   → Imports platform base schemas
+
+2. Tests locally
+   → Runs kcl run to compile and validate
+   → Reviews generated XRD and configuration object manifests
+   → Writes Chainsaw end-to-end tests
+
+3. Commits and tags release
+
+4. Service pipeline runs automatically
+   → Validates KCL syntax and schema compliance
+   → Generates manifests (XRD, configuration object, JSON schemas)
+   → Runs tests (golden tests, Chainsaw end-to-end tests)
+   → Packages service bundle (tarball with all manifests)
+   → Publishes to OCI registry: registry.servala.io/appcat/nextcloud:v1.0.0
+
+5. Notifies Framework Engineer
+   → Service bundle ready for deployment
+----
+
+=== Service Operator
+
+==== Persona Description
+
+*Service Operator* manages service instances, troubleshoots issues, performs maintenance, and responds to incidents.
+
+==== Requirements
+
+1. *Monitor Service Health*: View real-time status, SLI metrics, alerts
+2. *Troubleshoot Issues*: Access logs, metrics, events for debugging
+3. *Perform Maintenance*: Upgrade instances, apply patches during maintenance windows
+4. *Handle Incidents*: Respond to alerts, restore from backups
+5. *Manage Costs*: Review billing, optimize resource usage
+
+==== Solution
+
+===== 1. Monitor Service Health
+
+Service Operators monitor instance health through dashboards and alerts deployed automatically by the composition function.
+
+**Monitoring Approach:**
+
+The composition function generates ServiceMonitor resources during instance creation, integrating with cluster-wide Prometheus installations.
+Service-level indicators from the SLI Exporter provide availability, latency, and throughput metrics.
+AlertManager routes alerts to incident management platforms with on-call scheduling and mobile notifications.
+
+**Workflow:**
+
+[source]
+----
+1. Service Operator opens Grafana
+   → Selects "All Services" dashboard
+   → Views aggregated SLI metrics per service type
+
+2. Filters by cluster, namespace, service
+   → Sees instance-level metrics (CPU, memory, connections)
+   → Checks SLI: availability, latency, throughput
+
+3. Alert triggered
+   → "RedisHighMemoryUsage" for redis-instance-3
+   → Incident management platform notifies on-call operator
+   → Operator acknowledges and begins investigation
+----
+
+===== 2. Troubleshoot Issues
+
+Service Operators investigate and resolve issues using composite status fields, instance dashboards, logs, and direct cluster access.
+
+**Troubleshooting Approach:**
+
+Alerts from the incident management platform include links to runbooks with service-specific troubleshooting procedures.
+Service Operators begin by checking the composite status field which aggregates health indicators, error conditions, and operational metadata from all managed resources.
+This provides immediate diagnostic context before deeper investigation through Grafana dashboards and Loki log exploration.
+Direct cluster access via kubectl enables investigation and remediation when dashboard data indicates issues requiring intervention.
+
+**Workflow:**
+
+[source]
+----
+1. Alert received via incident management platform
+   → Alert includes instance details and runbook link
+   → Operator opens runbook for troubleshooting guidance
+
+2. Service Operator checks composite status field
+   → Retrieves composite resource via kubectl or cluster API
+   → Reviews status conditions, error messages, and resource states
+   → Identifies affected components (HelmRelease, ServiceMonitor, etc.)
+
+3. Service Operator investigates via Grafana
+   → Opens dashboard URL from status field
+   → Views instance metrics to confirm issue
+   → Explores logs via Loki query link from status field
+
+4. Service Operator resolves issue
+   → Applies fix based on runbook procedures
+   → Verifies metrics return to normal ranges
+   → Confirms composite status shows Ready condition
+
+5. Documents incident
+   → Updates runbook with resolution details
+   → Closes alert in incident platform
+----
+
+===== 3. Perform Maintenance
+
+Service Operators manage service updates through automated maintenance windows and manual intervention procedures.
+
+**Maintenance Approach:**
+
+Service instances define maintenance windows in their specifications.
+Automated maintenance processes monitor for new composition revisions deployed to the cluster via the platform pipeline.
+Scheduled jobs execute during maintenance windows, updating revision selectors to trigger controlled reconciliation that applies configuration changes or version upgrades.
+The SLI Exporter continues monitoring throughout the process, triggering alerts if upgrades fail.
+
+**Automated Maintenance:**
+
+[source]
+----
+1. Scheduled job runs during maintenance window
+   → Detects new composition revisions available in cluster
+   → Executes optional service-specific pre-hooks for safety checks or custom jobs
+
+2. Updates instances to latest revision
+   → Modifies composition revision selector
+   → Crossplane reconciles with new configuration
+   → Helm Provider applies updates
+   → Executes optional service-specific post-hooks for validation or cleanup
+
+3. Monitors upgrade completion
+   → SLI Exporter tracks health metrics
+   → Alerts on failures
+----
+
+**Manual Maintenance:**
+
+Service Operators manually trigger maintenance operations by patching composite resources to reference specific composition revisions.
+Runbooks document pre-checks, patch procedures, and verification steps for common maintenance scenarios including upgrades, configuration changes, and rollback operations.
+
+**Future Enhancements:**
+
+For complex multi-step maintenance workflows requiring coordinated upgrades with pre-checks and rollback capabilities, the framework will evaluate orchestration solutions such as Argo Workflows or Crossplane Operations when they reach production maturity.
+
+===== 4. Handle Incidents
+
+Service Operators respond to incidents using backup and restore capabilities integrated with instance lifecycle management.
+
+**Incident Response Approach:**
+
+The composition function generates backup schedule resources during instance provisioning, deploying them alongside workload resources to ensure data protection.
+Backup executions integrate with object storage services for artifact persistence.
+Service restoration supports both automatic restore (user-initiated via XRD) and manual restore (operator-triggered for complex recovery scenarios).
+
+**Automatic Restore (User-Initiated):**
+
+Some services support automatic restoration through the XRD specification, allowing Service Users to create a new instance that automatically restores from a broken instance's backup.
+The user specifies the source instance and backup snapshot in the restore parameters, and the composition function orchestrates the restoration during instance creation.
+
+[source]
+----
+1. Service User creates new instance with restore specification
+   → Specifies source instance name in restore parameters
+   → Optionally selects specific backup snapshot
+   → Composition function detects restore request
+
+2. Composition function orchestrates restoration
+   → Locates backup artifacts from source instance
+   → Provisions new instance infrastructure
+   → Restores data from backup during initialization
+
+3. Instance becomes ready
+   → Service User accesses restored instance
+   → Original broken instance remains for investigation
+----
+
+**Manual Restore (Operator-Triggered):**
+
+For complex recovery scenarios requiring direct intervention, Service Operators manually trigger restoration by creating restore resources that target specific backup snapshots and restoration methods.
+
+[source]
+----
+1. Incident detected
+   → Service Operator verifies issue through metrics and logs
+   → Confirms data corruption or loss requiring restoration
+
+2. Identifies recovery point
+   → Lists available backup snapshots
+   → Selects snapshot from before incident
+
+3. Initiates restoration
+   → Scales down workload to prevent writes
+   → Creates restore resource targeting selected snapshot
+   → Backup system restores data from object storage
+
+4. Validates restoration
+   → Scales up workload
+   → Verifies data integrity through metrics and smoke tests
+   → Notifies Service User of resolution
+----
+
+=== Framework Engineer
+
+==== Persona Description
+
+*Framework Engineer* maintains platform infrastructure, composition functions, KCL framework, CI/CD, and testing infrastructure.
+
+==== Requirements
+
+1. *Maintain Composition Function*: Generic Go function handling all services
+2. *Maintain KCL Framework*: Type schemas, distributions, profiles
+3. *Manage Platform*: Crossplane, providers, ArgoCD, AppCat components and other 3rd Operators such as CNPG
+4. *CI/CD Pipeline*: Automated testing, building, deployment
+5. *Documentation*: ADRs, runbooks, architecture diagrams
+
+==== Solution
+
+===== 1. Composition Function Architecture
+
+**Core Logic Flow:**
+
+Framework Engineer maintains the generic composition function that:
+
+1. Receives `AppCatServiceConfig` reference from Composition `inputRef` and loads service configuration
+2. Extracts composite parameters from the Crossplane request (unstructured)
+3. **Loads static configuration** containing pre-compiled Helm values
+4. **Applies dynamic overrides** by mapping composite parameters to Helm value paths
+5. **Merges values** with runtime parameters overriding default values
+6. Uses `ApplyState()` (Crossplane helper) to register all desired composed resources with consistent naming/ownership
+7. Populates connection details and kube options, then `ObserveState()` to bind observed objects back into the unstructured state view
+8. Updates claim status with observability URLs
+9. Returns desired state to Crossplane
+
+The function is generic - it handles all services by loading service-specific configuration from `AppCatServiceConfig` objects deployed by the platform pipeline.
+
+**Configuration Structure:**
+
+Service configurations are pre-compiled during bundle build and stored as JSON in `AppCatServiceConfig` objects.
+The function reads static plan-based defaults and dynamic parameter mappings, merging them at runtime based on user selections.
+
+**Desired/Observed State Management (`ApplyState`):**
+
+* KCL manifests define the desired resources and naming scheme; the function turns them into unstructured objects at runtime
+* The composition function uses Crossplane helpers (`ApplyState`, `ObserveState`) to register resources with consistent naming/ownership and kube options
+* `ObserveState(state)` hydrates the observed portion from the Crossplane request back into an unstructured state map for status updates and decisions
+* This pattern centralizes naming, ownership annotations, kube options, readiness handling, and connection detail propagation without per-service boilerplate, even when resources are conditional (driven by the manifest)
+
+====== Framework Engineer Responsibilities
+
+* **Configuration Merge Logic**: Load pre-compiled JSON from the `AppCatServiceConfig`, apply dynamic parameter mappings, and merge with runtime overrides
+* **State Management**: Maintain `ApplyState`/`ObserveState` helper usage for consistent resource registration and observation across services
+* **Configuration Object Schema Definition**: Define JSON structure that Service Maintainers' KCL compiles to (static values, dynamic mappings, observability config)
+* **Validation and Error Handling**: Ensure the `AppCatServiceConfig` structure is valid and provide clear error messages for configuration failures
+* **Backwards Compatibility**: Support services with varying `AppCatServiceConfig` schemas as the framework evolves
+
+===== 2. KCL Framework Maintenance
+
+Framework Engineers maintain the platform repository containing base schemas, distributions, profiles, and platform infrastructure definitions.
+
+**Example - Platform Repository Structure:**
+
+[source]
+----
+appcat-platform/
+├── kcl/
+│   ├── defs/                # Framework Engineer maintains
+│   │   ├── base.k           # PlanSpec, ServiceSpec schemas
+│   │   └── helm.k           # HelmSpec, HelmValueMapping schemas
+│   ├── distributions/       # Framework Engineer maintains
+│   │   ├── kubernetes.k     # Vanilla Kubernetes
+│   │   └── openshift.k      # + SCC, Routes, OLM
+│   ├── platform/            # Framework Engineer maintains
+│   │   ├── crossplane.k     # Crossplane installation
+│   │   ├── providers.k      # Providers (Kubernetes, Helm)
+│   │   └── appcat.k         # AppCat controller, SLI exporter, API Server
+│   ├── profiles/            # Framework Engineer maintains
+│   │   ├── servala-prod.k   # Production cluster config
+│   │   └── servala-staging.k # Staging cluster config
+│   └── argocd/              # Framework Engineer maintains
+│       └── main.k           # Root app, ApplicationSet
+├── lockfile.yaml            # Service version pins
+└── .gitlab-ci.yml           # Platform pipeline
+----
+
+**Type Schemas:**
+
+Framework Engineer defines KCL type schemas in `defs/base.k` that provide structure and validation for service configurations:
+
+* *PlanSpec*: Defines service plan structure (name, CPU, memory, storage, replicas, description)
+* *ObservabilitySpec*: Defines metrics configuration, dashboard templates, and alert rules
+* *OtherServiceSpec*: Defines other service definition such as metadata, Helm chart info, connection secrets, SLA, etc
+
+These schemas ensure Service Maintainers create valid, type-safe configurations that the composition function can consume.
+
+===== 3. Platform Component Management
+
+**Platform Components:**
+
+The platform section generates the following manifests:
+
+1. Crossplane 2.0
+- Configuration: function-enabled, composition pipelines
+
+2. Crossplane Providers
+- provider-kubernetes (for K8s resources)
+- provider-helm (for Helm releases)
+
+3. AppCat Components
+- AppCat Controller (webhooks, event forwarding, Odoo integration)
+- SLI Exporter (probes, Prometheus metrics)
+- Composition Functions (function-appcat OCI image)
+
+4. ArgoCD
+- Root app (bootstrap)
+- Platform app (Crossplane, providers)
+- Services ApplicationSet (service apps)
+
+===== 4. CI/CD and Repository Architecture
+
+The CI/CD architecture is built on three separate repositories with distinct access controls, responsibilities, and security boundaries.
+
+====== Repository 1: Service Repositories (n repositories - PUBLIC/OPEN)
+
+**Purpose:** Service-specific KCL configuration, tests, and lifecycle management.
+
+**Access Control:** Public (GitHub) or open GitLab repositories. Service Maintainers and community contributors have write access.
+
+**Security Boundary:** Service repositories contain NO secrets, NO environment-specific profiles, NO production configurations.
+They reference shared type schemas from a common definitions package but never access restricted platform configurations.
+
+**Pipeline Stages:**
+
+1. **Lint**: KCL syntax validation and formatting checks
+2. **Generate**: Compile KCL to CRD/XRD manifests and `AppCatServiceConfig` objects. Fail if generated output differs from committed files (drift detection).
+3. **Golden Tests**: Compare generated manifests against golden reference files to catch unintended changes
+4. **Unit Tests**: Validate KCL logic, constraint checking, and compilation correctness
+5. **E2E Tests**: Execute Chainsaw end-to-end tests in ephemeral Kind cluster
+- Required on tags/releases
+- Optional on merge requests (triggered via label)
+6. **Package**: Create service bundle artifact containing CRDs, XRDs, `AppCatServiceConfig` objects, JSON Schemas, and manifest metadata
+7. **Publish**: Push service bundle to registry with semantic version tag and git SHA tag
+
+**Versioning Strategy:** Each service is independently versioned using semantic versioning. A new service release does not require changes to other services or the platform repository.
+
+**Bundle Format:** Service bundle is a self-contained OCI artifact or tarball containing:
+
+* CRD/XRD manifests
+* `AppCatServiceConfig` objects with compiled service configuration
+* JSON Schemas for validation and portal tooling
+* Manifest file declaring Helm chart versions, dependencies, and resource definitions
+
+**Registry Publishing:** Bundles are published to a public or shared registry accessible to both Service Maintainers and the platform pipeline. Example: `registry.servala.io/appcat/redis:v1.2.3` and `registry.servala.io/appcat/redis:v1.2.3-abc123`.
+
+====== Repository 2: Platform KCL Repository (1 repository - RESTRICTED)
+
+**Purpose:** Platform infrastructure, profiles, orchestration, and secret management.
+
+**Access Control:** Restricted GitLab repository with protected branches.
+Only Framework Engineers have write access.
+Protected jobs require manual approval for production deployments.
+
+**Security Boundary:** This repository contains environment-specific configurations and references to secrets.
+Secrets themselves are NEVER committed to git - they are injected at pipeline runtime from GitLab CI variables or Vault.
+
+**Example Pipeline Stages:**
+
+1. **Pull Bundles**: Fetch service bundles from registry based on lockfile version pins
+2. **Apply Profiles**: Merge service configurations with environment-specific profiles (staging vs production)
+3. **Inject Secrets**: Retrieve secrets from GitLab CI variables or Vault and inject into rendered manifests at runtime
+4. **Render Platform**: Generate Crossplane, provider, and ArgoCD manifests with profile overrides
+5. **Render Services**: Generate service-specific compositions, XRDs, and `AppCatServiceConfig` objects with environment context
+6. **Mint Revision Labels**: Create composition revision labels derived from service version and function image version
+7. **Deploy Staging**: Automatically deploy rendered manifests to staging environment via ArgoCD
+8. **Deploy Production**: Manually approved deployment to production environment via ArgoCD (protected job)
+
+**Lockfile Management:** The lockfile is the authoritative record of which service bundle versions are deployed to which environments.
+Framework Engineers update the lockfile when promoting a service from staging to production.
+
+**Example - Lockfile Structure:**
+
+[source]
+----
+services:
+  redis:
+    staging:
+      bundle: registry.servala.io/appcat/redis:v1.2.3
+    production:
+      bundle: registry.servala.io/appcat/redis:v1.2.2
+  postgres:
+    staging:
+      bundle: registry.servala.io/appcat/postgres:v2.0.1
+    production:
+      bundle: registry.servala.io/appcat/postgres:v2.0.1
+platform:
+  function-appcat:
+    staging: registry.servala.io/appcat/function:v0.5.0
+    production: registry.servala.io/appcat/function:v0.4.0
+----
+
+**Profile Application:** Profiles contain cluster-specific overrides such as resource quotas, storage classes, ingress configurations, backup schedules, and maintenance windows. Profiles are applied as overlays on top of service bundle defaults.
+
+====== Repository 3: AppCat Go Runtime Repository
+
+**Purpose:** Generic composition function, controllers, and runtime components written in Go.
+
+**Access Control:** Internal GitLab repository accessible to Framework Engineers and approved contributors.
+Less restrictive than platform repository since it contains no secrets or configurations.
+
+**Example Pipeline Stages:**
+
+1. **Lint**: Go code linting and formatting
+2. **Unit Tests**: Go unit tests for composition logic, state management, and Helm rendering
+3. **Build Images**: Build OCI images for function-appcat, appcat-controller, and sli-exporter
+4. **Publish Images**: Push images to registry with version tags
+
+**Runtime Strategy:** The composition function remains generic and uses Crossplane helper libraries to work with unstructured objects.
+
+**Generic Function Pattern:** The composition function is generic - a single Go binary handles all services.
+It loads service-specific configuration from the `AppCatServiceConfig` objects at runtime, reads pre-compiled JSON containing static plan values and dynamic parameter mappings, and merges them based on user selections.
+The function never contains service-specific logic.
+
+**Versioning Independence:** Runtime components are versioned independently from services.
+A single function version (e.g., `v0.5.0`) can handle multiple service versions (e.g., `redis:v1.2.3` and `postgres:v2.0.1`).
+Runtime images are rebuilt only when Go code changes, not on every service release.
+
+===== 5. Documentation Maintenance
+
+Framework Engineers maintain comprehensive documentation covering architecture decisions, operational procedures, and system design.
+
+**Operational Runbooks:**
+
+Provide step-by-step procedures for common operational tasks and incident response scenarios.
+Runbooks cover composition function troubleshooting, platform component upgrades, distribution configuration, backup and restore procedures, and incident response workflows.
+Each runbook includes prerequisites, detailed steps, verification procedures, and rollback instructions.
+
+**Architecture Diagrams:**
+
+Maintain visual representations of system architecture, data flows, and component interactions.
+Diagrams illustrate overall architecture, service provisioning flows, upgrade workflows, and persona interactions with the system.
+Diagrams use standardized notation and are kept synchronized with architectural changes.
+
+===== 6. Testing Infrastructure
+
+Framework Engineers maintain testing infrastructure across all three repositories as defined in the testing strategy.
+
+**Responsibilities:**
+
+* **Unit Tests**: Maintain Go unit tests for composition function logic in the runtime repository
+* **End-to-End Test Framework**: Provide Chainsaw test templates and patterns that Service Maintainers instantiate for their services
+* **Golden Test Infrastructure**: Maintain tooling for KCL compilation validation across distributions and profiles
+* **Test Fixtures**: Provide reusable test data templates for common scenarios and edge cases
