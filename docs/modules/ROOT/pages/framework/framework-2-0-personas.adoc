@@ -52,7 +52,7 @@ Evaluate alternatives: Perses (dashboards as CRDs), VictoriaMetrics vmui (lightw
 * *Benefits*: Purpose-built for cloud-native multi-tenancy
 * *Drawbacks*: Less mature ecosystems, smaller communities, feature gaps
 
-**https://miro.com/app/board/uXjVJiczJH0=/?moveToWidget=3458764653377393401&cot=10[Decision Deferred]:**
+**https://miro.com/app/board/uXjVJiczJH0=/?moveToWidget=3458764653377393401&cot=10[Further Investigation Necessary]**
 
 Solution requires further investigation to evaluate implementation effort, UX requirements, and operational complexity.
 Requirements: OSS/free solution, strict tenant isolation guarantees, integrated portal experience.
