@@ -38,12 +38,30 @@ Portal backend enforces tenancy by injecting namespace filters into queries base
 * *Benefits*: Full tenancy control at application layer, open-source solution, integrated UX
 * *Drawbacks*: Must implement dashboard rendering and query builder
 
-**Option B: Grafana OSS with Namespace-Scoped Dashboards**
+**Option B: Grafana OSS (Namespace-Scoped Dashboards or Organizations)**
 
-Generate per-instance Grafana dashboards with hardcoded namespace filters, restrict Service Users to viewer role.
+Two potential approaches using Grafana OSS for tenant isolation:
 
-* *Benefits*: Rich visualization ecosystem, familiar tooling, extensive plugin support
-* *Drawbacks*: Data source permissions require Enterprise license, users can't customize views (viewer-only), account management overhead, SSO integration needed
+**B.1: Namespace-Scoped Dashboards (Single Organization)**
+
+Generate per-instance Grafana dashboards with hardcoded namespace filters in queries, restrict Service Users to viewer role.
+All tenants share the same Grafana organization with a shared Prometheus data source.
+
+* *Benefits*: Rich visualization ecosystem, familiar tooling, simple setup, single Grafana organization
+* *Drawbacks*: **Users can bypass namespace filters** - Viewer role can craft arbitrary Prometheus queries via API, no query-level enforcement in OSS, users can't customize views (viewer-only), account management overhead
+
+**B.2: Grafana Organizations (Separate Organizations per Tenant)**
+
+Create separate https://grafana.com/docs/grafana/latest/administration/organization-management/[Grafana organization] per tenant, each with their own Prometheus data source.
+Organizations provide complete resource isolation (dashboards, data sources, teams).
+
+* *Benefits*: Resource-level isolation, separate data sources per tenant, clean separation between tenants, rich ecosystem
+* *Drawbacks*: **Users can still bypass query restrictions** - https://grafana.com/blog/2024/05/06/data-source-security-in-grafana-best-practices-and-what-to-avoid/[OSS viewers can query beyond dashboards] via API calls, requires Enterprise https://docs.aws.amazon.com/grafana/latest/userguide/data-source-permissions.html[Data Source Permissions] for query enforcement, complex organization management at scale (N organizations for N tenants), SSO integration challenges, separate Prometheus instances needed for true isolation
+
+**Common Limitation:**
+
+Both approaches lack query-level enforcement in Grafana OSS - authenticated users can bypass dashboard filters and send arbitrary queries to accessible data sources.
+True tenant isolation at query level requires Grafana Enterprise Data Source Permissions (paid feature).
 
 **Option C: Cloud-Native Dashboard Alternatives**
 
