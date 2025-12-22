@@ -24,30 +24,41 @@ They need visibility into their running instances without direct cluster access.
 
 === Solution
 
-==== 1. Metrics Access via Grafana Dashboard
+==== 1. Metrics Access
 
-**Problem:** Service Users need namespace-scoped access to metrics without full cluster visibility.
+**Problem:** Service Users need namespace-scoped metrics access without ability to query other tenants' data.
 
-**Solution:** KCL Dashboard Templates with Compile-Time Generation
+**Options Under Consideration:**
 
-**How it Works:**
+**Option A: Servala Portal with Direct Prometheus Queries**
 
-1. **Framework Engineers** define reusable framework templates in KCL
-2. **Service Maintainer** writes dashboard definition in KCL (part of service bundle) using framework-provided templates for panels, queries, and layouts
-3. **Service bundle compilation** transforms KCL to Grafana JSON and packages it in the `AppCatServiceConfig` object
-4. **Composition function** loads the pre-compiled JSON/YAML template from that object (deployed from service bundle) at instance creation
-5. **Function substitutes** instance-specific variables (namespace, instance name) into the template
-6. **Function creates** instance-specific dashboard resource with Grafana discovery label
-7. **Grafana operator** automatically discovers and imports the dashboard via GrafanaDashboard custom resource
+Servala Portal queries Prometheus API directly and renders charts using frontend library.
+Portal backend enforces tenancy by injecting namespace filters into queries based on authenticated user context.
 
-**Benefits:**
+* *Benefits*: Full tenancy control at application layer, open-source solution, integrated UX
+* *Drawbacks*: Must implement dashboard rendering and query builder
 
-* *Type-Safe*: KCL validates dashboard structure at build time
-* *Concise*: Framework templates abstract Grafana JSON boilerplate
-* *Consistent*: All dashboards follow the same patterns
-* *Maintainable*: Update all dashboards by modifying KCL templates and rebuilding
+**Option B: Grafana OSS with Namespace-Scoped Dashboards**
 
-===== 2. Log Access
+Generate per-instance Grafana dashboards with hardcoded namespace filters, restrict Service Users to viewer role.
+
+* *Benefits*: Rich visualization ecosystem, familiar tooling, extensive plugin support
+* *Drawbacks*: Data source permissions require Enterprise license, users can't customize views (viewer-only), account management overhead, SSO integration needed
+
+**Option C: Cloud-Native Dashboard Alternatives**
+
+Evaluate alternatives: Perses (dashboards as CRDs), VictoriaMetrics vmui (lightweight UI), or other open-source solutions with built-in multi-tenancy.
+
+* *Benefits*: Purpose-built for cloud-native multi-tenancy
+* *Drawbacks*: Less mature ecosystems, smaller communities, feature gaps
+
+**https://miro.com/app/board/uXjVJiczJH0=/?moveToWidget=3458764653377393401&cot=10[Decision Deferred]:**
+
+Solution requires further investigation to evaluate implementation effort, UX requirements, and operational complexity.
+Requirements: OSS/free solution, strict tenant isolation guarantees, integrated portal experience.
+Decision applies to both Service User and Service Operator metrics access patterns.
+
+==== 2. Log Access
 
 **Problem:** Service Users need filtered logs without access to other tenants' logs.
 
