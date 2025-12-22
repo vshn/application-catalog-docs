@@ -56,31 +56,49 @@ Evaluate alternatives: Perses (dashboards as CRDs), VictoriaMetrics vmui (lightw
 
 Solution requires further investigation to evaluate implementation effort, UX requirements, and operational complexity.
 Requirements: OSS/free solution, strict tenant isolation guarantees, integrated portal experience.
-Decision applies to both Service User and Service Operator metrics access patterns.
+Decision applies to both Service User and Service Operator metrics access patterns and should align with log access solution for consistent observability UX across the platform.
 
 ==== 2. Log Access
 
-**Problem:** Service Users need filtered logs without access to other tenants' logs.
+**Problem:** Service Users need namespace-scoped log access without viewing other tenants' logs.
 
-**Solution:** Loki with Namespace Labels + Grafana Explore Links
+**Options Under Consideration:**
 
-**How it Works:**
+**Option A: Servala Portal with Direct Log Backend API Queries**
 
-1. **Service pods** emit logs to stdout/stderr with standard Kubernetes log metadata (namespace, pod name, labels)
-2. **Promtail** (or equivalent log collector) scrapes logs from all pods and adds labels (namespace, app, service)
-3. **Loki** stores logs with namespace-based label filtering ensuring tenant isolation
-4. **Composition function** generates Loki query URLs with namespace filter at instance creation
-5. **Function adds** log query URLs to composite status (lokiQuery, grafanaExploreURL)
-6. **Servala portal** displays logs by embedding Grafana Explore iframe or querying Loki API directly
-7. **RBAC enforcement** ensures Service Users can only query logs from their namespace
+Servala Portal queries log backend API (https://grafana.com/oss/loki/[Loki], https://opensearch.org/[OpenSearch], etc.) directly and renders logs in custom log viewer component.
+Portal backend enforces tenancy by injecting namespace filters into queries based on authenticated user context.
 
-**Benefits:**
+* *Benefits*: Full tenancy control at application layer, integrated portal UX, no separate log platform accounts, consistent with metrics approach in case of same solution
+* *Drawbacks*: Must implement log viewer UI with search/filtering capabilities, query builder for different backends
 
-* *Namespace Isolation*: Automatic tenant separation through Kubernetes namespace boundaries
-* *No Additional Configuration*: Standard log collection, no per-service setup required
-* *Grafana Integration*: Seamless log viewing in Grafana Explore alongside metrics
-* *Query Flexibility*: Service Users can filter by time range, pod, severity level
-* *Cost Efficient*: Loki's label-based indexing keeps storage costs low
+**Option B: link:++https://grafana.com/oss/loki/[Loki]++[Loki] + https://grafana.com/docs/grafana/latest/visualizations/explore/logs-integration/[Grafana Explore]**
+
+Loki for log storage which already has multi-tenancy built-in, Grafana Explore for log viewing alongside metrics.
+
+* *Benefits*: Integrated with metrics workflow, powerful query language (LogQL), mature ecosystem, multi-tenancy availability in Loki
+* *Drawbacks*: Account management overhead, viewer-only access limitations
+
+**Option C: https://www.elastic.co/elasticsearch[Elasticsearch]/https://opensearch.org/[https://xxx][OpenSearch] Stack**
+
+Elasticsearch or OpenSearch for log storage, Kibana or OpenSearch Dashboards for viewing.
+Namespace-based index patterns or document-level security for tenant isolation.
+
+* *Benefits*: Rich search and analytics capabilities, mature ecosystem, full-text search performance, advanced filtering
+* *Drawbacks*: Higher resource requirements, document-level security requires paid features (Elasticsearch) or configuration complexity (OpenSearch), separate platform authentication
+
+**Option D: Cloud-Native Alternatives**
+
+Evaluate emerging OSS solutions: https://quickwit.io/[Quickwit] (fast search on object storage), https://vector.dev/[Vector] (flexible log pipeline with multiple backend support).
+
+* *Benefits*: Purpose-built for cloud-native environments, cost-efficient object storage backends
+* *Drawbacks*: Less mature ecosystems, limited query capabilities, smaller communities
+
+**https://miro.com/app/board/uXjVJiczJH0=/?moveToWidget=3458764653380775994&cot=10[Further Investigation Necessary]:**
+
+Solution requires investigation to evaluate log viewer UX requirements, query capabilities, backend performance characteristics, and operational complexity.
+Requirements: open-source solution, strict tenant isolation, log search/filtering/aggregation capabilities, integrated portal experience.
+Decision applies to both Service User and Service Operator metrics access patterns and should align with metrics access solution for consistent observability UX across the platform.
 
 ===== 3. Comprehensive Service Status and Error Propagation
 
