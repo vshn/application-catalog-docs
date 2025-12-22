@@ -100,93 +100,95 @@ Solution requires investigation to evaluate log viewer UX requirements, query ca
 Requirements: open-source solution, strict tenant isolation, log search/filtering/aggregation capabilities, integrated portal experience.
 Decision applies to both Service User and Service Operator metrics access patterns and should align with metrics access solution for consistent observability UX across the platform.
 
-===== 3. Comprehensive Service Status and Error Propagation
+==== 3. Comprehensive Service Status
 
-**Problem:** Service Users need clear, actionable error messages when service provisioning fails, but Crossplane's default status propagation is limited and doesn't surface detailed errors from managed resources to composites.
-
-**Crossplane Default Behavior:**
-
-By default, Crossplane only propagates basic Ready/Synced conditions from managed resources to composites.
-When a HelmRelease fails, Service Users see:
-
-[source,yaml]
-----
-status:
-  conditions:
-  - type: Ready
-    status: "False"
-    reason: "ReconcileError"
-    message: "cannot compose resources"  # Not helpful!
-----
-
-This provides no visibility into:
-- Which managed resource failed (HelmRelease, ServiceMonitor, configuration object)
-- Why it failed (image pull error, validation error, resource quota exceeded)
-- How to fix it (actionable guidance)
+**Problem:** Service Users need complete visibility into service health, errors, observability access, billing through a single status field.
 
 **How it Works:**
 
-The composition function aggregates status data from all managed resources and provides detailed error information in composite status fields.
-Framework Engineers can further push rich status to the composite by using Crossplane https://github.com/crossplane-contrib/function-extra-resources[function extra resources] (e.g., injecting pods/sidecars for observation) combined with the composition function to update composite status directly.
+The composition function aggregates comprehensive status information from multiple sources:
 
-This enables Service Users to see:
-* Which specific resource failed (HelmRelease, ServiceMonitor, configuration object)
-* Why it failed (image pull error, validation error, resource quota exceeded)
-* How to fix it (actionable guidance based on error patterns)
+* **Managed Resources**: HelmRelease, ServiceMonitor, BackupSchedule status and readiness conditions
+* **Extra Resources Pattern**: Uses Crossplane https://github.com/crossplane-contrib/function-extra-resources[function-extra-resources] to observe pods/sidecars for runtime health (replicas, pod status, restart counts, uptime)
+* **AppCat Controller**: Watches BillingService CRD, syncs lifecycle events with Odoo, updates billing status
+* **Observability Integration**: Provides metrics/logs access points (implementation determined by observability solution decision)
 
-**Benefits:**
-
-* *Actionable Errors*: Service Users see exactly what failed and why
-* *Resource-Level Detail*: Visibility into which managed resource caused the failure
-* *Troubleshooting Guidance*: Composition function provides resolution steps for common errors
-* *Servala Portal Integration*: Portal can display errors with visual indicators and help documentation
-* *Faster Resolution*: Service Users and operators can quickly identify and fix issues
-
-===== Service User Workflow
-
-[source]
-----
-1. User Provisions Service (Servala Portal)
-   → Creates VSHNRedis composite
-   → Waits for Ready condition
-   → Displays connection details from status
-
-2. User Views Metrics (Servala Portal)
-   → Fetches status.metrics.dashboardURL
-   → Embeds Grafana dashboard
-
-3. User Views Logs (Servala Portal)
-   → Queries Loki with status.logs.lokiQuery
-   → Displays logs in portal UI
-
-4. User Views Cost (Servala Portal)
-   → Displays status.cost.monthlyCost
-   → Fetches detailed breakdown from Odoo
-
-5. User Troubleshoots Issue
-   → View metrics → identify high memory usage
-   → View logs → find error messages
-   → Adjust plan if needed (upgrade to larger plan)
-----
+This provides Service Users with:
+* **Health Status**: Pod readiness, replica counts, uptime, restart counts
+* **Resource Status**: Which resources are healthy or failed (HelmRelease, ServiceMonitor, backups)
+* **Error Details**: Actionable error messages when provisioning fails (image pull errors, validation failures, quota issues)
+* **Observability Access**: Metrics and logs query endpoints (solution-agnostic placeholders)
+* **Billing Information**: Current plan, costs, billing periods, invoice references
+* **Connection Details**: Service endpoints, ports, credentials references
+* **Backup Status**: Information regarding Backups
+* **Service Plugins**: Extra sub-service status such as https://www.collaboraonline.com/partners/nextcloud/[Collabora]
 
 **Example of Service Status Field:**
+
+The composition function aggregates status from multiple sources and populates comprehensive status information:
 
 [source,yaml]
 ----
 status:
-  conditions: {}
+  # Standard Crossplane conditions
+  conditions:
+  - type: Ready
+    status: "True"
+    reason: "Available"
+    message: "Service is ready and healthy"
+    lastTransitionTime: "2024-12-15T10:30:00Z"
+  - type: Synced
+    status: "True"
+    reason: "ReconcileSuccess"
+    lastTransitionTime: "2024-12-15T10:30:00Z"
+
+  # Detailed resource status (aggregated from important managed resources)
+  resources:
+    helmRelease:
+      ready: true
+      revision: "1.2.3"
+      lastApplied: "2024-12-15T10:29:45Z"
+    serviceMonitor:
+      ready: true
+      scrapeInterval: "30s"
+    backupSchedule:
+      ready: true
+      lastBackup: "2024-12-15T02:00:00Z"
+      nextBackup: "2024-12-16T02:00:00Z"
+
+  # Runtime health (from extra resources: pods/sidecars observation)
+  health:
+    status: "healthy"
+    replicas:
+      desired: 3
+      ready: 3
+      available: 3
+    pods:
+    - name: "redis-prod-1-0"
+      status: "Running"
+      restartCount: 0
+    - name: "redis-prod-1-1"
+      status: "Running"
+      restartCount: 0
+    - name: "redis-prod-1-2"
+      status: "Running"
+      restartCount: 1
+    uptime: "15d 6h 23m"
+
+  # Extra service deployments (Collabora with Nextcloud)
+  plugins: []
 
   # Metrics & Observability
-  metrics:
-    dashboardURL: "https://dashboards.cluster.servala.io/"
-    prometheusQuery: '{instance_namespace="namespace", app="redis-prod-1"}'
+  metrics: {}
 
   # Logs
-  logs:
-    lokiQuery: '{instance_namespace="namespace", app="redis-prod-1"}'
-    lokiURL: "https://logs.cluster.servala.io/"
+  logs: {}
 
-  # Billing & Cost
+  # Backups
+  backup: {}
+
+  # Billing & Cost (event-based tracking via BillingService CRD)
+  # Controller watches BillingService and syncs with Odoo, then updates status
   billing:
     plan: "standard-2"
     monthlyCost: 25.00
@@ -194,6 +196,8 @@ status:
     billingPeriod: "2024-12"
     odooInvoiceID: "INV-2024-001234"
     sla: "guaranteed"
+    lastBillingEvent: "2024-12-01T00:00:00Z"
+    nextBillingEvent: "2025-01-01T00:00:00Z"
 ----
 
 === Service Maintainer
