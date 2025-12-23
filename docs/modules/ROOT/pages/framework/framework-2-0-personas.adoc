@@ -523,22 +523,18 @@ appcat-platform/
 **Access Control:** Internal GitLab repository accessible to Framework Engineers and approved contributors.
 Less restrictive than platform repository since it contains no secrets or configurations.
 
-**Example Pipeline Stages:**
+**Pipeline Stages:**
 
 1. **Lint**: Go code linting and formatting
-2. **Unit Tests**: Go unit tests for composition logic, state management, and Helm rendering
-3. **Build Images**: Build OCI images for function-appcat, appcat-controller, and sli-exporter
+2. **Unit Tests**: Go unit tests for composition logic, state management
+3. **Build Images**: Build OCI images for function-appcat, appcat-controller, sli-exporter
 4. **Publish Images**: Push images to registry with version tags
 
-**Runtime Strategy:** The composition function remains generic and uses Crossplane helper libraries to work with unstructured objects.
+**Key Points:**
 
-**Generic Function Pattern:** The composition function is generic - a single Go binary handles all services.
-It loads service-specific configuration from the `AppCatServiceConfig` objects at runtime, reads pre-compiled JSON containing static plan values and dynamic parameter mappings, and merges them based on user selections.
-The function never contains service-specific logic.
-
-**Versioning Independence:** Runtime components are versioned independently from services.
-A single function version (e.g., `v0.5.0`) can handle multiple service versions (e.g., `redis:v1.2.3` and `postgres:v2.0.1`).
-Runtime images are rebuilt only when Go code changes, not on every service release.
+* Runtime components versioned independently from services (e.g., function `v0.5.0` handles multiple service versions)
+* Images rebuilt only when Go code changes, not on every service release
+* Single generic function binary handles all services via runtime configuration loading
 
 ===== 5. Documentation and Testing
 
