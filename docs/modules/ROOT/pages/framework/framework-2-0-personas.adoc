@@ -76,6 +76,9 @@ Solution requires further investigation to evaluate implementation effort, UX re
 Requirements: OSS/free solution, strict tenant isolation guarantees, integrated portal experience.
 Decision applies to both Service User and Service Operator metrics access patterns and should align with log access solution for consistent observability UX across the platform.
 
+**Composition Function Integration:** Whichever metrics solution is chosen, the composition function will integrate with it to populate the composite status field with dashboard URLs and Prometheus queries.
+Platform configuration (e.g., Grafana endpoint) is provided via https://docs.crossplane.io/latest/composition/environment-configs/[Crossplane EnvironmentConfigs], while dynamic provisioning may leverage https://github.com/grafana/crossplane-provider-grafana[provider-grafana] or other Crossplane providers.
+
 ==== 2. Log Access
 
 **Problem:** Service Users need namespace-scoped log access without viewing other tenants' logs.
@@ -117,6 +120,9 @@ Evaluate emerging OSS solutions: https://quickwit.io/[Quickwit] (fast search on 
 Solution requires investigation to evaluate log viewer UX requirements, query capabilities, backend performance characteristics, and operational complexity.
 Requirements: open-source solution, strict tenant isolation, log search/filtering/aggregation capabilities, integrated portal experience.
 Decision applies to both Service User and Service Operator metrics access patterns and should align with metrics access solution for consistent observability UX across the platform.
+
+**Composition Function Integration:** The selected log solution will integrate with the composition function to populate the composite status field with log query URLs.
+Platform endpoints are configured via https://docs.crossplane.io/latest/composition/environment-configs/[Crossplane EnvironmentConfigs], enabling the function to construct tenant-scoped log access URLs based on namespace and instance details.
 
 ==== 3. Comprehensive Service Status
 
