@@ -326,179 +326,109 @@ The platform repository references these bundles through lockfile entries to con
 
 ==== Persona Description
 
-*Service Operator* manages service instances, troubleshoots issues, performs maintenance, and responds to incidents.
+*Service Operator* manages service instances across all tenants, troubleshoots issues, performs maintenance, and responds to incidents with cluster-wide visibility and control.
 
 ==== Requirements
 
-1. *Monitor Service Health*: View real-time status, SLI metrics, alerts
-2. *Troubleshoot Issues*: Access logs, metrics, events for debugging
-3. *Perform Maintenance*: Upgrade instances, apply patches during maintenance windows
-4. *Handle Incidents*: Respond to alerts, restore from backups
-5. *Manage Costs*: Review billing, optimize resource usage
+1. *Monitor All Instances*: Cluster-wide visibility of health, SLI metrics, and alerts
+2. *Troubleshoot and Resolve*: Direct cluster access for investigation and remediation
+3. *Perform Maintenance*: Coordinate upgrades during maintenance windows
+4. *Handle Incidents*: Respond to alerts, restore from backups, execute runbooks
 
 ==== Solution
 
-===== 1. Monitor Service Health
+===== 1. Monitor and Troubleshoot
 
-Service Operators monitor instance health through dashboards and alerts deployed automatically by the composition function.
+**Access and Tools:**
 
-**Monitoring Approach:**
-
-The composition function generates ServiceMonitor resources during instance creation, integrating with cluster-wide Prometheus installations.
-Service-level indicators from the SLI Exporter provide availability, latency, and throughput metrics.
-AlertManager routes alerts to incident management platforms with on-call scheduling and mobile notifications.
-
-**Workflow:**
-
-[source]
-----
-1. Service Operator opens metrics visualisation tool such as Grafana
-   → Selects "All Services" dashboard
-   → Views aggregated SLI metrics per service type
-
-2. Filters by cluster, namespace, service
-   → Sees instance-level metrics (CPU, memory, connections)
-   → Checks SLI: availability, latency, throughput
-
-3. Alert triggered
-   → "RedisHighMemoryUsage" for redis-instance-3
-   → Incident management platform notifies on-call operator
-   → Operator acknowledges and begins investigation
-----
-
-===== 2. Troubleshoot Issues
-
-Service Operators investigate and resolve issues using composite status fields, instance dashboards, logs, and direct cluster access.
-
-**Troubleshooting Approach:**
-
-Alerts from the incident management platform include links to runbooks with service-specific troubleshooting procedures.
-Service Operators begin by checking the composite status field which aggregates health indicators, error conditions, and operational metadata from all managed resources.
-This provides immediate diagnostic context before deeper investigation through Grafana dashboards and Loki log exploration.
-Direct cluster access via kubectl enables investigation and remediation when dashboard data indicates issues requiring intervention.
+* **Observability Platform**: Direct access to metrics and logs for all instances across tenants
+* **Cluster Access**: kubectl to inspect composites, managed resources, pods, events
+* **Composite Status Field**: Aggregated health, errors, and resource states
+* **Incident Management**: Alert routing with runbook links for standardized response
+* **Runbooks**: Service-specific troubleshooting procedures
 
 **Workflow:**
 
 [source]
 ----
-1. Alert received via incident management platform
-   → Alert includes instance details and runbook link
-   → Operator opens runbook for troubleshooting guidance
+1. Alert received: "RedisHighMemoryUsage" for customer-prod/redis-instance-3
+   → Incident platform notifies on-call operator with runbook link
 
-2. Service Operator checks composite status field
-   → Retrieves composite resource via kubectl or cluster API
-   → Reviews status conditions, error messages, and resource states
-   → Identifies affected components (HelmRelease, ServiceMonitor, etc.)
+2. Check composite status
+   → kubectl get vshnredis redis-instance-3 -n customer-prod -o yaml
+   → Review status.conditions, status.health, status.resources
+   → Identify affected components (pods, resources)
 
-3. Service Operator investigates via Grafana
-   → Opens dashboard URL from status field
-   → Views instance metrics to confirm issue
-   → Explores logs via Loki query link from status field
+3. Investigate via observability platform such as Grafana
+   → Filter metrics by namespace and instance
+   → Query logs for error patterns
+   → Identify root cause
 
-4. Service Operator resolves issue
-   → Applies fix based on runbook procedures
-   → Verifies metrics return to normal ranges
-   → Confirms composite status shows Ready condition
+4. Resolve following runbook
+   → Apply fix (scaling, configuration change, restart)
+   → Monitor metrics returning to normal
+   → Verify composite status shows Ready
 
-5. Documents incident
-   → Updates runbook with resolution details
-   → Closes alert in incident platform
+5. Document and close
+   → Update runbook with findings
+   → Close alert in incident platform
 ----
 
-===== 3. Perform Maintenance
+===== 2. Perform Maintenance
 
-Service Operators manage service updates through automated maintenance windows and manual intervention procedures.
+Service Operators coordinate upgrades and configuration changes during maintenance windows using composition revisions.
 
-**Maintenance Approach:**
+**Approach:**
 
-Service instances define maintenance windows in their specifications.
-Automated maintenance processes monitor for new composition revisions deployed to the cluster via the platform pipeline.
-Scheduled jobs execute during maintenance windows, updating revision selectors to trigger controlled reconciliation that applies configuration changes or version upgrades.
-The SLI Exporter continues monitoring throughout the process, triggering alerts if upgrades fail.
+Instances define maintenance windows in their specifications.
+Automated jobs or manual patching update composition revision selectors, triggering Crossplane reconciliation with new configurations.
+Service-specific pre/post-hooks enable custom workflows such as validation and safety checks.
 
-**Automated Maintenance:**
+**Workflow:**
 
 [source]
 ----
-1. Scheduled job runs during maintenance window
-   → Detects new composition revisions available in cluster
-   → Executes optional service-specific pre-hooks for safety checks or custom jobs
+Automated (Scheduled Job):
+1. Job runs during maintenance window
+   → Detects new composition revisions
+   → Executes optional pre-hooks
+   → Updates revision selector on instances
+   → Monitors via SLI Exporter, alerts on failure
 
-2. Updates instances to latest revision
-   → Modifies composition revision selector
-   → Crossplane reconciles with new configuration
-   → Helm Provider applies updates
-   → Executes optional service-specific post-hooks for validation or cleanup
-
-3. Monitors upgrade completion
-   → SLI Exporter tracks health metrics
-   → Alerts on failures
+Manual (Operator-Triggered):
+1. Review runbook for maintenance procedure
+   → Verify prerequisites and revision compatibility
+   → Patch composite to reference target revision
+   → Monitor reconciliation and health metrics
+   → Execute rollback if needed (revert revision selector)
 ----
 
-**Manual Maintenance:**
+===== 3. Handle Incidents and Restore
 
-Service Operators manually trigger maintenance operations by patching composite resources to reference specific composition revisions.
-Runbooks document pre-checks, patch procedures, and verification steps for common maintenance scenarios including upgrades, configuration changes, and rollback operations.
+Service Operators respond to incidents requiring manual intervention or data recovery.
+Backup and restore mechanisms are service-specific, defined by Service Maintainers in service configurations (some use K8UP schedules, others use service-native backup solutions).
 
-**Future Enhancements:**
-
-For complex multi-step maintenance workflows requiring coordinated upgrades with pre-checks and rollback capabilities, the framework will evaluate orchestration solutions such as Argo Workflows or Crossplane Operations when they reach production maturity.
-
-===== 4. Handle Incidents
-
-Service Operators respond to incidents using backup and restore capabilities integrated with instance lifecycle management.
-
-**Incident Response Approach:**
-
-The composition function generates backup schedule resources during instance provisioning, deploying them alongside workload resources to ensure data protection.
-Backup executions integrate with object storage services for artifact persistence.
-Service restoration supports both automatic restore (user-initiated via XRD) and manual restore (operator-triggered for complex recovery scenarios).
-
-**Automatic Restore (User-Initiated):**
-
-Some services support automatic restoration through the XRD specification, allowing Service Users to create a new instance that automatically restores from a broken instance's backup.
-The user specifies the source instance and backup snapshot in the restore parameters, and the composition function orchestrates the restoration during instance creation.
-
-[source]
-----
-1. Service User creates new instance with restore specification
-   → Specifies source instance name in restore parameters
-   → Optionally selects specific backup snapshot
-   → Composition function detects restore request
-
-2. Composition function orchestrates restoration
-   → Locates backup artifacts from source instance
-   → Provisions new instance infrastructure
-   → Restores data from backup during initialization
-
-3. Instance becomes ready
-   → Service User accesses restored instance
-   → Original broken instance remains for investigation
-----
-
-**Manual Restore (Operator-Triggered):**
-
-For complex recovery scenarios requiring direct intervention, Service Operators manually trigger restoration by creating restore resources that target specific backup snapshots and restoration methods.
+**Operator Workflow:**
 
 [source]
 ----
 1. Incident detected
-   → Service Operator verifies issue through metrics and logs
-   → Confirms data corruption or loss requiring restoration
+   → Verify issue via metrics, logs, composite status
+   → Determine if data recovery required
 
-2. Identifies recovery point
-   → Lists available backup snapshots
-   → Selects snapshot from before incident
+2. Identify recovery approach
+   → Consult service-specific runbook defined by Service Maintainers
+   → Locate available backups (method varies by service)
+   → Select recovery point
 
-3. Initiates restoration
-   → Scales down workload to prevent writes
-   → Creates restore resource targeting selected snapshot
-   → Backup system restores data from object storage
+3. Execute restoration
+   → Follow service-specific restore procedure
+   → Monitor restoration progress via composite status
 
-4. Validates restoration
-   → Scales up workload
-   → Verifies data integrity through metrics and smoke tests
-   → Notifies Service User of resolution
+4. Validate and resume
+   → Verify data integrity
+   → Confirm service health via metrics
+   → Notify affected users
 ----
 
 === Framework Engineer
