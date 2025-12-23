@@ -100,7 +100,7 @@ Loki for log storage which already has multi-tenancy built-in, Grafana Explore f
 * *Benefits*: Integrated with metrics workflow, powerful query language (LogQL), mature ecosystem, multi-tenancy availability in Loki
 * *Drawbacks*: Account management overhead, viewer-only access limitations
 
-**Option C: https://www.elastic.co/elasticsearch[Elasticsearch]/https://opensearch.org/[https://xxx][OpenSearch] Stack**
+**Option C: https://www.elastic.co/elasticsearch[Elasticsearch]/https://opensearch.org/[OpenSearch] Stack**
 
 Elasticsearch or OpenSearch for log storage, Kibana or OpenSearch Dashboards for viewing.
 Namespace-based index patterns or document-level security for tenant isolation.
