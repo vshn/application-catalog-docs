@@ -96,6 +96,7 @@
 ** xref:framework/working_with_functions.adoc[]
 ** xref:framework/slareports.adoc[]
 ** xref:framework/framework-2-0.adoc[]
+*** xref:framework/framework-2-0-personas.adoc[]
 ** xref:framework/non-converged.adoc[]
 ** Billing
 *** xref:framework/cloud-usage-reporting.adoc[]
