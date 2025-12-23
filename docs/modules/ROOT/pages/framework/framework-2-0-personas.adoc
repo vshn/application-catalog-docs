@@ -228,18 +228,18 @@ status:
 
 ==== Persona Description
 
-*Service Maintainer* adds new services, defines plans and Helm mappings. They work exclusively in KCL - no Go code changes needed.
+*Service Maintainer* adds new services, defines managed resources and Helm mappings. They work exclusively in KCL - no Go code changes needed.
 
 ==== Requirements
 
 1. *Add New Service*: Add Helm-based service without touching Go code
-2. *Define Static Configuration*: Plans, SLA, chart versions, images, scheduling, backup policies - compiled at build time
+2. *Define Static Configuration*: SLA, chart versions, images, scheduling, backup policies and more - compiled at build time
 3. *Define Dynamic Configuration*: API parameters (XRD spec) for runtime customization - version selection, custom settings, backup schedules
 4. *Map Configuration to Helm Values*: Both static and dynamic configuration must map to Helm chart values
 5. *Provide Observability*: Use framework-provided definitions for metrics, dashboards, and alerts
 6. *Test Service*: Validate service configuration and lifecycle before deployment
 7. *Expose Schema to Tooling*: Publish machine-readable schema (JSON Schema) for validation and portal consumption without touching Go code
-8. *Single Source of Truth*: KCL schema drives CRD/XRD and the `AppCatServiceConfig` object to avoid drift
+8. *Single Source of Truth*: KCL schema drives CRD/XRD and the `AppCatServiceConfig` object which encapsulates managed resources to avoid drift
 
 ==== Solution
 
@@ -271,8 +271,8 @@ appcat-service-redis/
 * **Separate Repository:** Each service has its own repository
 * **Public Access:** Service repositories are open for community contributions
 * **No Secrets:** Service repositories contain no secrets, environment-specific configs, or platform infrastructure
-* **Platform Dependencies:** Services import platform base schemas via `kcl.mod`
-* **Single Source of Truth:** KCL service schema produces all bundle artifacts (XRD, `AppCatServiceConfig` objects, JSON schemas)
+* **Platform Dependencies:** Services import platform https://miro.com/app/board/uXjVJiczJH0=/?moveToWidget=3458764652885557650&cot=14[base schemas] via `kcl.mod`
+* **Single Source of Truth:** KCL service schema produces all https://miro.com/app/board/uXjVJiczJH0=/?moveToWidget=3458764652863663022&cot=14[bundle artifacts] (XRD, `AppCatServiceConfig` objects, JSON schemas)
 
 ===== Service Bundle Outputs
 
@@ -280,23 +280,18 @@ The service repository pipeline compiles KCL configurations into a service bundl
 
 **What the Service Pipeline Generates:**
 
-The service bundle packages multiple artifacts:
+The https://miro.com/app/board/uXjVJiczJH0=/?moveToWidget=3458764652863663022&cot=14[service bundle] packages multiple artifacts:
 
 * **XRD Manifests:** Custom Resource Definition establishing the service API surface, generated from KCL service schema
-* **Configuration objects:** Pre-compiled service configuration containing plan definitions, Helm value mappings, and observability specifications
+* **Configuration objects:** Pre-compiled service configuration containing service based managed resource, Helm value mappings, and observability specifications
 * **JSON Schemas:** Type definitions exported from KCL schema for validation, documentation, and portal tooling
 * **Bundle Metadata:** Manifest declaring Helm chart dependencies, required function versions, and compatibility constraints
 * **Third-Party Dependencies:** Services can declare external dependencies (e.g., other service bundles they consume); the platform pipeline resolves these via bundle metadata and lockfile pins.
 
 **Publication Flow:**
 
-The service pipeline publishes bundles to the OCI registry with semantic version tags (e.g., `registry.servala.io/appcat/redis:v1.2.3`).
-The platform repository references these bundles through lockfile entries to control deployment to staging and production environments (Section 2.4: Pipeline Architecture).
-
-**Cross-Repository Integration:**
-
-After a service bundle is published, the platform/runtime pipelines pull the bundle and pass the `AppCatServiceConfig` to the generic composition function via `inputRef`.
-Schemas remain available for validation and portal tooling, but the runtime does not generate per-service Go types.
+The service pipeline https://miro.com/app/board/uXjVJiczJH0=/?moveToWidget=3458764652855458489&cot=14[publishes] bundles to the OCI registry with semantic version tags (e.g., `registry.servala.io/appcat/redis:v1.2.3`).
+The platform repository references these bundles through lockfile entries to control deployment to staging and production environments.
 
 ===== Workflow: Service Maintainer
 
@@ -316,7 +311,7 @@ Schemas remain available for validation and portal tooling, but the runtime does
 
 3. Commits and tags release
 
-4. Service pipeline runs automatically
+4. https://miro.com/app/board/uXjVJiczJH0=/?moveToWidget=3458764652855458489&cot=14[https://xxx][Service pipeline] runs automatically
    → Validates KCL syntax and schema compliance
    → Generates manifests (XRD, configuration object, JSON schemas)
    → Runs tests (golden tests, Chainsaw end-to-end tests)
@@ -357,7 +352,7 @@ AlertManager routes alerts to incident management platforms with on-call schedul
 
 [source]
 ----
-1. Service Operator opens Grafana
+1. Service Operator opens metrics visualisation tool such as Grafana
    → Selects "All Services" dashboard
    → Views aggregated SLI metrics per service type
 
