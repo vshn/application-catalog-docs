@@ -42,7 +42,7 @@ The orchestration layer sits at the boundary between framework runtime and servi
 
 * Loading service configurations at runtime
 * Merging static defaults with dynamic user parameters
-* Generating Kubernetes resources (HelmRelease, Schedule, ServiceMonitor, secrets, etc.)
+* Generating Kubernetes resources (HelmRelease, K8up backup schedules, ServiceMonitor, secrets, etc.)
 * Tracking revisions for upgrade workflows
 * Propagating status and errors to users
 
@@ -61,7 +61,7 @@ Other functions can be added to increase framework quality such as increased ser
 * **Generic Function Pattern**: Single function handles all services without Go code changes
 * **Built-in Composition Revisions**: Native versioning and gradual rollout capabilities
 * **Clear Separation**: Framework code (Go) completely separated from service configuration (KCL)
-* **Provider Ecosystem**: Leverage existing Crossplane providers (Helm, Kubernetes) instead of custom implementations
+* **Provider Ecosystem**: Leverage existing Crossplane providers (Helm, SQL) instead of custom implementations
 * **Status Aggregation**: Automatic status propagation from managed resources
 * **Existing Team Knowledge**: Team already proficient with Crossplane patterns
 
@@ -94,8 +94,7 @@ The operator would either use per-service controllers or a generic controller lo
 * **Framework Coupling**: Risk of service-specific logic creeping into operator code over time
 * **No Built-in Revisions**: Must implement version management, gradual rollouts, and revision tracking ourselves (complex)
 * **Reinventing Wheels**: Helm integration, status aggregation, provider patterns already exist in Crossplane
-* **More Code to Maintain**: Operator lifecycle, CRD management, status propagation, connection secrets all custom implementations
-* **No Framework Reuse**: Each new service capability potentially requires operator code changes
+* **More Code to Maintain**: Custom implementations needed for operator, CRD management, status propagation, connection secrets all custom implementations
 * **Migration Cost**: Existing Crossplane investment (team knowledge, component-appcat patterns) cannot be leveraged
 * **Revision Management**: Composition revisions essential for maintenance workflows would require significant custom development
 
@@ -128,7 +127,7 @@ Building equivalent functionality in a custom operator would be complex and requ
 2. **Generic Function Pattern**: A single composition function handles all services by loading runtime configuration, eliminating the need for service-specific Go code.
 This enables Service Maintainers to add services independently while keeping the framework stable.
 
-3. **Leverage Existing Ecosystem**: Crossplane providers (Helm, Kubernetes) provide mature implementations for chart rendering, resource management, and status aggregation.
+3. **Leverage Existing Ecosystem**: Crossplane providers (Helm, SQL) provide mature implementations for chart rendering, resource management, and status aggregation.
 Reimplementing these capabilities in a custom operator offers no clear benefit.
 
 4. **Existing Team Knowledge**: The team is already proficient with Crossplane from component-appcat, reducing adoption risk and enabling faster implementation.
