@@ -1,0 +1,553 @@
+= Framework 2.0 Persona Solutions
+:navtitle: Framework 2.0 Personas
+
+[NOTE]
+.Summary
+====
+Proposed solutions for relevant personas described in xref:adr/0039-servala-framework-requirements.adoc[ADR 0039 - Servala Framework Requirements]
+====
+
+== Service User
+
+=== Persona Description
+
+*Service User* is an end customer who provisions and uses services via the Servala portal.
+They need visibility into their running instances without direct cluster access.
+
+=== Requirements
+
+1. *Metrics Access*: View service-specific metrics (CPU, memory, connections, throughput)
+2. *Log Access*: View application logs for troubleshooting
+3. *Cost Visibility*: Understand current and projected costs
+4. *Connection Details*: Easily retrieve credentials and endpoints
+5. *Service Health*: Real-time status and SLI indicators
+
+=== Solution
+
+==== 1. Metrics Access
+
+**Problem:** Service Users need namespace-scoped metrics access without ability to query other tenants' data.
+
+**Options Under Consideration:**
+
+**Option A: Servala Portal with Direct Prometheus Queries**
+
+Servala Portal queries Prometheus API directly and renders charts using frontend library.
+Portal backend enforces tenancy by injecting namespace filters into queries based on authenticated user context.
+
+* *Benefits*: Full tenancy control at application layer, open-source solution, integrated UX
+* *Drawbacks*: Must implement dashboard rendering and query builder
+
+**Option B: Grafana OSS (Namespace-Scoped Dashboards or Organizations)**
+
+Two potential approaches using Grafana OSS for tenant isolation:
+
+**B.1: Namespace-Scoped Dashboards (Single Organization)**
+
+Generate per-instance Grafana dashboards with hardcoded namespace filters in queries, restrict Service Users to viewer role.
+All tenants share the same Grafana organization with a shared Prometheus data source.
+
+* *Benefits*: Rich visualization ecosystem, familiar tooling, simple setup, single Grafana organization
+* *Drawbacks*: **Users can bypass namespace filters** - Viewer role can craft arbitrary Prometheus queries via API, no query-level enforcement in OSS, users can't customize views (viewer-only), account management overhead
+
+**B.2: Grafana Organizations (Separate Organizations per Tenant)**
+
+Create separate https://grafana.com/docs/grafana/latest/administration/organization-management/[Grafana organization] per tenant, each with their own Prometheus data source.
+Organizations provide complete resource isolation (dashboards, data sources, teams).
+
+* *Benefits*: Resource-level isolation, separate data sources per tenant, clean separation between tenants, rich ecosystem
+* *Drawbacks*: **Users can still bypass query restrictions** - https://grafana.com/blog/2024/05/06/data-source-security-in-grafana-best-practices-and-what-to-avoid/[OSS viewers can query beyond dashboards] via API calls, requires Enterprise https://docs.aws.amazon.com/grafana/latest/userguide/data-source-permissions.html[Data Source Permissions] for query enforcement, complex organization management at scale (N organizations for N tenants), SSO integration challenges, separate Prometheus instances needed for true isolation
+
+**Common Limitation:**
+
+Both approaches lack query-level enforcement in Grafana OSS - authenticated users can bypass dashboard filters and send arbitrary queries to accessible data sources.
+True tenant isolation at query level requires Grafana Enterprise Data Source Permissions (paid feature).
+
+**Option C: Cloud-Native Dashboard Alternatives**
+
+Evaluate alternatives: Perses (dashboards as CRDs), VictoriaMetrics vmui (lightweight UI), or other open-source solutions with built-in multi-tenancy.
+
+* *Benefits*: Purpose-built for cloud-native multi-tenancy
+* *Drawbacks*: Less mature ecosystems, smaller communities, feature gaps
+
+**https://miro.com/app/board/uXjVJiczJH0=/?moveToWidget=3458764653377393401&cot=10[Further Investigation Necessary]**
+
+Solution requires further investigation to evaluate implementation effort, UX requirements, and operational complexity.
+Requirements: OSS/free solution, strict tenant isolation guarantees, integrated portal experience.
+Decision applies to both Service User and Service Operator metrics access patterns and should align with log access solution for consistent observability UX across the platform.
+
+**Composition Function Integration:** Whichever metrics solution is chosen, the composition function will integrate with it to populate the composite status field with dashboard URLs and Prometheus queries.
+Platform configuration (for example, Grafana endpoint) is provided via https://docs.crossplane.io/latest/composition/environment-configs/[Crossplane EnvironmentConfigs], while dynamic provisioning may leverage https://github.com/grafana/crossplane-provider-grafana[provider-grafana] or other Crossplane providers.
+
+==== 2. Log Access
+
+**Problem:** Service Users need namespace-scoped log access without viewing other tenants' logs.
+
+**Options Under Consideration:**
+
+**Option A: Servala Portal with Direct Log Backend API Queries**
+
+Servala Portal queries log backend API (https://grafana.com/oss/loki/[Loki], https://opensearch.org/[OpenSearch], etc.) directly and renders logs in custom log viewer component.
+Portal backend enforces tenancy by injecting namespace filters into queries based on authenticated user context.
+
+* *Benefits*: Full tenancy control at application layer, integrated portal UX, no separate log platform accounts, consistent with metrics approach in case of same solution
+* *Drawbacks*: Must implement log viewer UI with search/filtering capabilities, query builder for different backends
+
+**Option B: link:++https://grafana.com/oss/loki/[Loki]++[Loki] + https://grafana.com/docs/grafana/latest/visualizations/explore/logs-integration/[Grafana Explore]**
+
+Loki for log storage which already has multi-tenancy built-in, Grafana Explore for log viewing alongside metrics.
+
+* *Benefits*: Integrated with metrics workflow, powerful query language (LogQL), mature ecosystem, multi-tenancy availability in Loki
+* *Drawbacks*: Account management overhead, viewer-only access limitations
+
+**Option C: https://www.elastic.co/elasticsearch[Elasticsearch] / https://opensearch.org/[OpenSearch] Stack**
+
+Elasticsearch or OpenSearch for log storage, Kibana or OpenSearch Dashboards for viewing.
+Namespace-based index patterns or document-level security for tenant isolation.
+
+* *Benefits*: Rich search and analytics capabilities, mature ecosystem, full-text search performance, advanced filtering
+* *Drawbacks*: Higher resource requirements, document-level security requires paid features (Elasticsearch) or configuration complexity (OpenSearch), separate platform authentication
+
+**Option D: Cloud-Native Alternatives**
+
+Evaluate emerging OSS solutions: https://quickwit.io/[Quickwit] (fast search on object storage), https://vector.dev/[Vector] (flexible log pipeline with multiple backend support).
+
+* *Benefits*: Purpose-built for cloud-native environments, cost-efficient object storage backends
+* *Drawbacks*: Less mature ecosystems, limited query capabilities, smaller communities
+
+**https://miro.com/app/board/uXjVJiczJH0=/?moveToWidget=3458764653380775994&cot=10[Further Investigation Necessary]:**
+
+Solution requires investigation to evaluate log viewer UX requirements, query capabilities, backend performance characteristics, and operational complexity.
+Requirements: open-source solution, strict tenant isolation, log search/filtering/aggregation capabilities, integrated portal experience.
+Decision applies to both Service User and Service Operator metrics access patterns and should align with metrics access solution for consistent observability UX across the platform.
+
+**Composition Function Integration:** The selected log solution will integrate with the composition function to populate the composite status field with log query URLs.
+Platform endpoints are configured via https://docs.crossplane.io/latest/composition/environment-configs/[Crossplane EnvironmentConfigs], enabling the function to construct tenant-scoped log access URLs based on namespace and instance details.
+
+==== 3. Comprehensive Service Status
+
+**Problem:** Service Users need complete visibility into service health, errors, observability access, billing through a single status field.
+
+**How it Works:**
+
+The composition function aggregates comprehensive status information from multiple sources:
+
+* **Managed Resources**: HelmRelease, ServiceMonitor, BackupSchedule status and readiness conditions
+* **Extra Resources Pattern**: Uses Crossplane https://github.com/crossplane-contrib/function-extra-resources[function-extra-resources] to observe pods/sidecars for runtime health (replicas, pod status, restart counts, uptime)
+* **AppCat Controller**: Watches BillingService CRD, syncs lifecycle events with Odoo, updates billing status
+* **Observability Integration**: Provides metrics/logs access points (implementation determined by observability solution decision)
+
+This provides Service Users with:
+
+* **Health Status**: Pod readiness, replica counts, uptime, restart counts
+* **Resource Status**: Which resources are healthy or failed (HelmRelease, ServiceMonitor, backups)
+* **Error Details**: Actionable error messages when provisioning fails (image pull errors, validation failures, quota issues)
+* **Observability Access**: Metrics and logs query endpoints (solution-agnostic placeholders)
+* **Billing Information**: Current plan, costs, billing periods, invoice references
+* **Connection Details**: Service endpoints, ports, credentials references
+* **Backup Status**: Information regarding Backups
+* **Service Plugins**: Extra sub-service status such as https://www.collaboraonline.com/partners/nextcloud/[Collabora]
+
+**Example of Service Status Field:**
+
+The composition function aggregates status from multiple sources and populates comprehensive status information:
+
+[source,yaml]
+----
+status:
+  # Standard Crossplane conditions
+  conditions:
+  - type: Ready
+    status: "True"
+    reason: "Available"
+    message: "Service is ready and healthy"
+    lastTransitionTime: "2024-12-15T10:30:00Z"
+  - type: Synced
+    status: "True"
+    reason: "ReconcileSuccess"
+    lastTransitionTime: "2024-12-15T10:30:00Z"
+
+  # Detailed resource status (aggregated from important managed resources)
+  resources:
+    helmRelease:
+      ready: true
+      revision: "1.2.3"
+      lastApplied: "2024-12-15T10:29:45Z"
+    serviceMonitor:
+      ready: true
+      scrapeInterval: "30s"
+    backupSchedule:
+      ready: true
+      lastBackup: "2024-12-15T02:00:00Z"
+      nextBackup: "2024-12-16T02:00:00Z"
+
+  # Runtime health (from extra resources: pods/sidecars observation)
+  health:
+    status: "healthy"
+    replicas:
+      desired: 3
+      ready: 3
+      available: 3
+    pods:
+    - name: "redis-prod-1-0"
+      status: "Running"
+      restartCount: 0
+    - name: "redis-prod-1-1"
+      status: "Running"
+      restartCount: 0
+    - name: "redis-prod-1-2"
+      status: "Running"
+      restartCount: 1
+    uptime: "15d 6h 23m"
+
+  # Extra service deployments (Collabora with Nextcloud)
+  plugins: []
+
+  # Metrics & Observability
+  metrics: {}
+
+  # Logs
+  logs: {}
+
+  # Backups
+  backup: {}
+
+  # Billing & Cost (event-based tracking via BillingService CRD)
+  # Controller watches BillingService and syncs with Odoo, then updates status
+  billing:
+    plan: "standard-2"
+    monthlyCost: 25.00
+    currency: "CHF"
+    billingPeriod: "2024-12"
+    odooInvoiceID: "INV-2024-001234"
+    sla: "guaranteed"
+    lastBillingEvent: "2024-12-01T00:00:00Z"
+    nextBillingEvent: "2025-01-01T00:00:00Z"
+----
+
+=== Service Maintainer
+
+==== Persona Description
+
+*Service Maintainer* adds new services, defines managed resources and Helm mappings. They work exclusively in KCL - no Go code changes needed.
+
+==== Requirements
+
+1. *Add New Service*: Add Helm-based service without touching Go code
+2. *Define Static Configuration*: SLA, chart versions, images, scheduling, backup policies and more - compiled at build time
+3. *Define Dynamic Configuration*: API parameters (XRD spec) for runtime customization - version selection, custom settings, backup schedules
+4. *Map Configuration to Helm Values*: Both static and dynamic configuration must map to Helm chart values
+5. *Provide Observability*: Use framework-provided definitions for metrics, dashboards, and alerts
+6. *Test Service*: Validate service configuration and lifecycle before deployment
+7. *Expose Schema to Tooling*: Publish machine-readable schema (JSON Schema) for validation and portal consumption without touching Go code
+8. *Single Source of Truth*: KCL schema drives CRD/XRD and the `AppCatServiceConfig` object which encapsulates managed resources to avoid drift
+
+==== Solution
+
+===== Service Repository Structure
+
+Service Maintainers work in dedicated service repositories, one per service, that are publicly accessible for community contributions.
+
+**Example Repository:** `appcat-service-redis/` (public)
+
+[source]
+----
+appcat-service-redis/
+├── kcl/
+│   ├── service.k           # Service metadata, XRD definition
+│   ├── plans.k             # Service-specific plans (standard-1, standard-2, etc.)
+│   ├── helm-values.k       # Compile-time: Plan → Helm mapping
+│   ├── parameters.k        # Runtime: XRD parameters → Helm mapping
+│   ├── observability.k     # Metrics, dashboards, alerts
+│   └── main.k              # Bundle entry point
+├── tests/
+│   ├── chainsaw/           # End-to-end tests
+│   └── golden/             # Golden test references
+├── kcl.mod                 # KCL dependencies (platform base schemas)
+└── .gitlab-ci.yml          # Service pipeline definition
+----
+
+**Key Points:**
+
+* **Separate Repository:** Each service has its own repository
+* **Public Access:** Service repositories are open for community contributions
+* **No Secrets:** Service repositories contain no secrets, environment-specific configs, or platform infrastructure
+* **Platform Dependencies:** Services import platform https://miro.com/app/board/uXjVJiczJH0=/?moveToWidget=3458764652885557650&cot=14[base schemas] via `kcl.mod`
+* **Single Source of Truth:** KCL service schema produces all https://miro.com/app/board/uXjVJiczJH0=/?moveToWidget=3458764652863663022&cot=14[bundle artifacts] (XRD, `AppCatServiceConfig` objects, JSON schemas)
+
+===== Service Bundle Outputs
+
+The service repository pipeline compiles KCL configurations into a service bundle published to the OCI registry.
+
+**What the Service Pipeline Generates:**
+
+The https://miro.com/app/board/uXjVJiczJH0=/?moveToWidget=3458764652863663022&cot=14[service bundle] packages multiple artifacts:
+
+* **XRD Manifests:** Custom Resource Definition establishing the service API surface, generated from KCL service schema
+* **Configuration objects:** Pre-compiled service configuration containing service based managed resource, Helm value mappings, and observability specifications
+* **JSON Schemas:** Type definitions exported from KCL schema for validation, documentation, and portal tooling
+* **Bundle Metadata:** Manifest declaring Helm chart dependencies, required function versions, and compatibility constraints
+* **Third-Party Dependencies:** Services can declare external dependencies (for example, other service bundles they consume); the platform pipeline resolves these via bundle metadata and lockfile pins.
+
+**Publication Flow:**
+
+The service pipeline https://miro.com/app/board/uXjVJiczJH0=/?moveToWidget=3458764652855458489&cot=14[publishes] bundles to the OCI registry with semantic version tags (for example, `registry.servala.io/appcat/redis:v1.2.3`).
+The platform repository references these bundles through lockfile entries to control deployment to staging and production environments.
+
+===== Workflow: Service Maintainer
+
+**Example - Adding or updating a service:**
+
+[source]
+----
+1. Service Maintainer creates/updates service repository
+   → Repository: appcat-service-nextcloud (public)
+   → Defines service in KCL such as service.k, plans.k, helm-values.k, parameters.k, observability.k, etc
+   → Imports platform base schemas
+
+2. Tests locally
+   → Runs kcl run to compile and validate
+   → Reviews generated XRD and configuration object manifests
+   → Writes Chainsaw end-to-end tests
+
+3. Commits and tags release
+
+4. https://miro.com/app/board/uXjVJiczJH0=/?moveToWidget=3458764652855458489&cot=14[https://xxx][Service pipeline] runs automatically
+   → Validates KCL syntax and schema compliance
+   → Generates manifests (XRD, configuration object, JSON schemas)
+   → Runs tests (golden tests, Chainsaw end-to-end tests)
+   → Packages service bundle (tarball with all manifests)
+   → Publishes to OCI registry: registry.servala.io/appcat/nextcloud:v1.0.0
+
+5. Notifies Framework Engineer
+   → Service bundle ready for deployment
+----
+
+=== Service Operator
+
+==== Persona Description
+
+*Service Operator* manages service instances across all tenants, troubleshoots issues, performs maintenance, and responds to incidents with cluster-wide visibility and control.
+
+==== Requirements
+
+1. *Monitor All Instances*: Cluster-wide visibility of health, SLI metrics, and alerts
+2. *Troubleshoot and Resolve*: Direct cluster access for investigation and remediation
+3. *Perform Maintenance*: Coordinate upgrades during maintenance windows
+4. *Handle Incidents*: Respond to alerts, restore from backups, execute runbooks
+
+==== Solution
+
+===== 1. Monitor and Troubleshoot
+
+**Access and Tools:**
+
+* **Observability Platform**: Direct access to metrics and logs for all instances across tenants
+* **Cluster Access**: kubectl to inspect composites, managed resources, pods, events
+* **Composite Status Field**: Aggregated health, errors, and resource states
+* **Incident Management**: Alert routing with runbook links for standardized response
+* **Runbooks**: Service-specific troubleshooting procedures
+
+**Workflow:**
+
+[source]
+----
+1. Alert received: "RedisHighMemoryUsage" for customer-prod/redis-instance-3
+   → Incident platform notifies on-call operator with runbook link
+
+2. Check composite status
+   → kubectl get vshnredis redis-instance-3 -n customer-prod -o yaml
+   → Review status.conditions, status.health, status.resources
+   → Identify affected components (pods, resources)
+
+3. Investigate via observability platform such as Grafana
+   → Filter metrics by namespace and instance
+   → Query logs for error patterns
+   → Identify root cause
+
+4. Resolve following runbook
+   → Apply fix (scaling, configuration change, restart)
+   → Monitor metrics returning to normal
+   → Verify composite status shows Ready
+
+5. Document and close
+   → Update runbook with findings
+   → Close alert in incident platform
+----
+
+===== 2. Perform Maintenance
+
+Service Operators coordinate upgrades and configuration changes during maintenance windows using composition revisions.
+
+**Approach:**
+
+Instances define maintenance windows in their specifications.
+Automated jobs or manual patching update composition revision selectors, triggering Crossplane reconciliation with new configurations.
+Service-specific pre/post-hooks enable custom workflows such as validation and safety checks.
+
+**Workflow:**
+
+[source]
+----
+Automated (Scheduled Job):
+1. Job runs during maintenance window
+   → Detects new composition revisions
+   → Executes optional pre-hooks
+   → Updates revision selector on instances
+   → Monitors via SLI Exporter, alerts on failure
+
+Manual (Operator-Triggered):
+1. Review runbook for maintenance procedure
+   → Verify prerequisites and revision compatibility
+   → Patch composite to reference target revision
+   → Monitor reconciliation and health metrics
+   → Execute rollback if needed (revert revision selector)
+----
+
+===== 3. Handle Incidents and Restore
+
+Service Operators respond to incidents requiring manual intervention or data recovery.
+Backup and restore mechanisms are service-specific, defined by Service Maintainers in service configurations (some use K8UP schedules, others use service-native backup solutions).
+
+**Operator Workflow:**
+
+[source]
+----
+1. Incident detected
+   → Verify issue via metrics, logs, composite status
+   → Determine if data recovery required
+
+2. Identify recovery approach
+   → Consult service-specific runbook defined by Service Maintainers
+   → Locate available backups (method varies by service)
+   → Select recovery point
+
+3. Execute restoration
+   → Follow service-specific restore procedure
+   → Monitor restoration progress via composite status
+
+4. Validate and resume
+   → Verify data integrity
+   → Confirm service health via metrics
+   → Notify affected users
+----
+
+=== Framework Engineer
+
+==== Persona Description
+
+*Framework Engineer* maintains platform infrastructure, composition functions, KCL framework, CI/CD, and testing infrastructure.
+
+==== Requirements
+
+1. *Maintain Composition Functions*: Generic Go function handling all services and any third party or custom functions for specific purposes.
+2. *Maintain KCL Framework*: Type schemas, profiles
+3. *Manage Platform*: Crossplane, providers, AppCat components and other 3rd Operators such as CNPG
+4. *CI/CD Pipeline*: Automated testing, building, deployment
+5. *Documentation*: ADRs, platform and generic runbooks, architecture diagrams
+
+==== Solution
+
+===== 1. Composition Function
+
+Framework Engineers maintain the generic composition function (Go) that handles all services by loading service-specific configurations from `AppCatServiceConfig` objects at runtime.
+
+**Function Logic:**
+
+1. Load `AppCatServiceConfig` from Composition `inputRef`
+2. Extract composite parameters and merge with static configuration
+3. Use Object-Oriented approach to manage desired/observed state
+4. Update composite status with observability URLs, connection details, health
+5. Return desired resources to Crossplane
+
+**Responsibilities:**
+
+* Define KCL libraries that Service Maintainers use
+* Implement configuration merge logic (static defaults + dynamic overrides)
+* Handle generic managed resources such as `BillingService` custom resource
+* Maintain state management patterns using Crossplane helper libraries and framework's own abstraction
+* Ensure backwards compatibility as schema evolves
+* Provide clear validation and error messages
+* Enrich composite status fields with relevant data
+
+===== 2. Service Configuration Schemas
+
+Framework Engineers maintain type schemas that Service Maintainers use to define services.
+
+**Type Schemas:** providing structure and validation for service configurations:
+
+* *PlanSpec*: Service plan structure (name, CPU, memory, storage, replicas, description)
+* *ObservabilitySpec*: Metrics configuration, dashboard templates, alert rules
+* *ServiceSpec*: Service metadata, Helm chart info, connection secrets, SLA
+* *HelmSpec*: Helm value mappings and parameter definitions
+
+These schemas ensure Service Maintainers create valid, type-safe configurations that the composition function can consume.
+
+===== 3. Platform Repository and Components
+
+Framework Engineers maintain the platform repository structure containing component definitions, profiles, and deployment configuration.
+
+**Example Repository Structure:**
+
+[source]
+----
+appcat-platform/
+├── kcl/
+│   ├── defs/                # Type schemas for Service Maintainers
+│   │   ├── base.k           # PlanSpec, ServiceSpec, ObservabilitySpec
+│   │   └── helm.k           # HelmSpec, HelmValueMapping
+│   ├── platform/            # Platform component definitions
+│   │   ├── crossplane.k     # Crossplane installation
+│   │   ├── providers.k      # Crossplane providers
+│   │   └── appcat.k         # AppCat components
+│   ├── profiles/            # Environment-specific configurations
+│   │   ├── servala-prod.k   # Servala production cluster
+│   │   ├── appuio-managed.k # APPUio managed cluster
+│   │   └── servala-staging.k # Servala staging cluster
+│   └── argocd/              # GitOps deployment
+│       └── main.k           # Root app, ApplicationSet
+├── lockfile.yaml            # Service version pins
+└── .gitlab-ci.yml           # Platform pipeline
+----
+
+**Components Generated:**
+
+1. **Crossplane 2.0**: Function-enabled configuration, composition pipelines
+2. **Crossplane Providers**: provider-kubernetes, provider-helm
+3. **AppCat Components**: AppCat Controller (webhooks, Odoo integration), SLI Exporter (metrics), Composition Functions (OCI image)
+4. **ArgoCD**: Root app (bootstrap), Platform app, Services ApplicationSet
+
+===== 4. AppCat Go Runtime Repository
+
+**Purpose:** Generic composition function, controllers, and runtime components written in Go.
+
+**Access Control:** Internal GitLab repository accessible to Framework Engineers and approved contributors.
+Less restrictive than platform repository since it contains no secrets or configurations.
+
+**Pipeline Stages:**
+
+1. **Lint**: Go code linting and formatting
+2. **Unit Tests**: Go unit tests for composition logic, state management
+3. **Build Images**: Build OCI images for function-appcat, appcat-controller, sli-exporter
+4. **Publish Images**: Push images to registry with version tags
+
+**Key Points:**
+
+* Runtime components versioned independently from services (for example, function `v0.5.0` handles multiple service versions)
+* Images rebuilt only when Go code changes, not on every service release
+* Single generic function binary handles all services via runtime configuration loading
+
+===== 5. Documentation and Testing
+
+**Documentation:**
+
+* ADRs documenting architecture decisions and rationale
+* Operational runbooks for troubleshooting, upgrades, and incident response
+* Architecture diagrams showing system flows and component interactions
+
+**Testing Infrastructure:**
+
+* Go unit tests for composition function logic
+* Chainsaw test templates for Service Maintainers
+* Golden test tooling for KCL compilation validation
+* Test fixtures for common scenarios
