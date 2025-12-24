@@ -23,6 +23,7 @@ Need automated maintenance workflows for:
 * Backup and restore orchestration
 * Version checks and notifications
 * Maintenance window enforcement
+* Maintenance suspension
 
 == Current State
 
