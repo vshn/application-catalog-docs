@@ -146,7 +146,7 @@ spec:
 * *CI-Friendly*: Quick validation in pull requests
 * *Hierarchy*: Testing multiple overrides, especially in cluster catalog generations (profiles)
 * Validate KCL compilation doesn't break
-* Catch unintended changes in generated manifests (e.g., namespace changed accidentally)
+* Catch unintended changes in generated manifests (for example, namespace changed accidentally)
 * Run in PR checks for fast feedback
 
 **Disadvantages:**

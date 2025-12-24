@@ -38,7 +38,7 @@ Features include strong typing with compile-time validation, lambda functions fo
 **Advantages:**
 
 * *Strong Typing*: Compile-time validation of schemas and data structures catches configuration errors before deployment
-* *Constraint-Based*: Define validation rules and constraints (e.g., CPU must match regex pattern, memory within allowed ranges)
+* *Constraint-Based*: Define validation rules and constraints (for example, CPU must match regex pattern, memory within allowed ranges)
 * *Built for Kubernetes*: Native understanding of Kubernetes resource structures reduces boilerplate
 * *Lambda Functions*: Natural expression of parameters/plan-to-Helm-value mapping functions, critical for service configuration
 * *Good Error Messages*: Clear validation errors with line numbers guide Service Maintainers to issues

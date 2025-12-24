@@ -102,7 +102,7 @@ spec:
 * *Complex Workflows*: Multi-step workflows with dependencies (backup before upgrade)
 * *Excellent Observability*: Workflow UI shows step progress, logs, errors
 * *Retry Logic*: Built-in retry with exponential backoff
-* *Conditional Steps*: Skip steps based on conditions (e.g., skip backup if recent backup exists)
+* *Conditional Steps*: Skip steps based on conditions (for example, skip backup if recent backup exists)
 * *DAG Support*: Parallel execution of independent tasks
 * *Audit Trail*: Workflow history persisted, easy to review what happened
 * *Comp Function Integration*: Workflows can be part of each instance

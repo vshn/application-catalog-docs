@@ -77,7 +77,7 @@ Requirements: OSS/free solution, strict tenant isolation guarantees, integrated 
 Decision applies to both Service User and Service Operator metrics access patterns and should align with log access solution for consistent observability UX across the platform.
 
 **Composition Function Integration:** Whichever metrics solution is chosen, the composition function will integrate with it to populate the composite status field with dashboard URLs and Prometheus queries.
-Platform configuration (e.g., Grafana endpoint) is provided via https://docs.crossplane.io/latest/composition/environment-configs/[Crossplane EnvironmentConfigs], while dynamic provisioning may leverage https://github.com/grafana/crossplane-provider-grafana[provider-grafana] or other Crossplane providers.
+Platform configuration (for example, Grafana endpoint) is provided via https://docs.crossplane.io/latest/composition/environment-configs/[Crossplane EnvironmentConfigs], while dynamic provisioning may leverage https://github.com/grafana/crossplane-provider-grafana[provider-grafana] or other Crossplane providers.
 
 ==== 2. Log Access
 
@@ -287,11 +287,11 @@ The https://miro.com/app/board/uXjVJiczJH0=/?moveToWidget=3458764652863663022&co
 * **Configuration objects:** Pre-compiled service configuration containing service based managed resource, Helm value mappings, and observability specifications
 * **JSON Schemas:** Type definitions exported from KCL schema for validation, documentation, and portal tooling
 * **Bundle Metadata:** Manifest declaring Helm chart dependencies, required function versions, and compatibility constraints
-* **Third-Party Dependencies:** Services can declare external dependencies (e.g., other service bundles they consume); the platform pipeline resolves these via bundle metadata and lockfile pins.
+* **Third-Party Dependencies:** Services can declare external dependencies (for example, other service bundles they consume); the platform pipeline resolves these via bundle metadata and lockfile pins.
 
 **Publication Flow:**
 
-The service pipeline https://miro.com/app/board/uXjVJiczJH0=/?moveToWidget=3458764652855458489&cot=14[publishes] bundles to the OCI registry with semantic version tags (e.g., `registry.servala.io/appcat/redis:v1.2.3`).
+The service pipeline https://miro.com/app/board/uXjVJiczJH0=/?moveToWidget=3458764652855458489&cot=14[publishes] bundles to the OCI registry with semantic version tags (for example, `registry.servala.io/appcat/redis:v1.2.3`).
 The platform repository references these bundles through lockfile entries to control deployment to staging and production environments.
 
 ===== Workflow: Service Maintainer
@@ -533,7 +533,7 @@ Less restrictive than platform repository since it contains no secrets or config
 
 **Key Points:**
 
-* Runtime components versioned independently from services (e.g., function `v0.5.0` handles multiple service versions)
+* Runtime components versioned independently from services (for example, function `v0.5.0` handles multiple service versions)
 * Images rebuilt only when Go code changes, not on every service release
 * Single generic function binary handles all services via runtime configuration loading
 
