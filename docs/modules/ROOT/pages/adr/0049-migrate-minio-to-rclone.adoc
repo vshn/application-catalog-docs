@@ -3,8 +3,8 @@
 :adr_owner:     Schedar
 :adr_reviewers: Schedar
 :adr_date:      2025-12-29
-:adr_upd_date:  2026-01-05
-:adr_status:    draft
+:adr_upd_date:  2026-01-06
+:adr_status:    rejected
 :adr_tags:      minio,rclone,objectstorage
 
 include::partial$adr-meta.adoc[]
@@ -181,18 +181,12 @@ For operators requiring pre-existing buckets (StackGres/WAL-G, Cloud Native Post
 
 == Decision
 
-We will migrate from MinIO to Rclone for backup storage, deploying a dedicated Rclone instance per AppCat instance.
+We will not migrate to Rclone for backup storage. While Rclone proved technically viable in the proof of concept, the solution is not production-ready, given its experimental S3 API status, memory limitations with multipart uploads, and VFS caching constraints.
 
-Each instance will have its own Rclone deployment serving an S3-compatible API backed by a PVC. This provides isolation between instances and eliminates single points of failure.
-
-The implementation will follow the existing bucket provisioning pattern via `XObjectBucket` composite resources, with a new `rclonebucket` function deploying resources through provider-helm.
+A follow-up ADR will be created to evaluate alternative solutions for replacing MinIO as our backup storage backend.
 
 == Consequences
 
-With the decision to migrate from MinIO to Rclone with per-instance deployments:
+With the decision to not proceed with the Rclone approach:
 
-* Implement `rclonebucket` composition function in `pkg/comp-functions/functions/buckets/rclonebucket/`
-* Create wrapper Helm chart for Rclone resource deployment
-* Add `objectbucket.rclone.appcat.vshn.io` Composition definition
-* Configure required Rclone flags for reliable backup operations
-* Plan migration path from existing MinIO deployments
+* A new ADR will evaluate alternative S3-compatible storage backends that are production-ready
