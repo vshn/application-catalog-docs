@@ -39,3 +39,5 @@
 ** xref:adr/0039-servala-framework-requirements.adoc[]
 ** xref:adr/0040-tcp-service-access.adoc[]
 ** xref:adr/0042-backup-encryption-for-mariadb-galera-and-postgresql.adoc[]
+
+** xref:adr/0049-migrate-minio-to-rclone.adoc[]
