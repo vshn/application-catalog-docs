@@ -1,0 +1,81 @@
+= ADR 0050 - Wazuh Agent for AppCat Services
+:adr_author:    Simon Beck
+:adr_owner:     Schedar
+:adr_reviewers:
+:adr_date:      2026-01-08
+:adr_upd_date:  2026-01-08
+:adr_status:    draft
+:adr_tags:      siem,xdr,security
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+Due to Wazuh's complexity and lack of maturity concerning agent deployment on Kubernetes, we reject the proposal to adopt Wazuh.
+====
+
+== Context
+https://wazuh.com/[Wazuh] is an open-source SIEM and XDR platform.
+It analyzes security data across endpoints, clouds, and networks to detect threats, respond to incidents, and ensure compliance, helping organizations strengthen their security posture through continuous monitoring and automation.
+
+Our customers are interested in the following features for Wazuh
+
+. Log analysis of running applications
+. In-depth information about the application via the Wazuh agent
+
+=== Log Analysis
+Wazuh indexers provides ElasticSearch compatible indexing endpoints.
+In fact it even uses filebeat to ship logs.!footnote:filebeat[https://documentation.wazuh.com/current/user-manual/manager/indexer-integration.html#filebeat]
+
+Additionally it also provides a syslog endpoint to ingest logs.!footnote:syslog[https://documentation.wazuh.com/current/user-manual/capabilities/log-data-collection/configuration.html#linux]
+
+However, the filebeat integration seems to be an internal component and doesn't seem to be the official way to feed logs into the system.
+The documented way is syslog.
+
+So most logshipping software will be compatible to ship the logs to Wazuh.
+
+=== Wazuh Agent
+
+There's documentation how to deploy the https://documentation.wazuh.com/current/deployment-options/deploying-with-kubernetes/index.html[Wazuh server] part for Kubernetes.
+
+Installation of the agent is only documented via a https://wazuh.com/blog/wazuh-agent-deployment-strategies-for-a-kubernetes-environment/[blog post].
+
+Ther article provides two methods of deployment:
+
+==== Sidecar
+
+The Wazuh agent can be run as a sidecar in the main application pod.
+Adding a sidecar is really dependent on how the service is deployed.
+While Helm charts might support injecting sidecars via their `values` it will be a lot harder for operator based services, like CNPG and MariaDB-Operator.
+
+To handle these cases an https://istio.io/latest/docs/setup/additional-setup/sidecar-injection/#automatic-sidecar-injection[Istio style sidecar injector] would have to be developed.
+
+==== Custom Image with Wazuh agent installed
+
+The second option outlined in the blog post is adding the agent directly in the application images.
+The documented approach to install it at runtime via an entrypoint script is questionable at best though, as it will require running the pods as root.
+
+== Decision
+Wazuh is a pretty complex system.
+We as Schedar would need the help of a partner who knows the application and can support us to provide it.
+
+Thus we reject the proposal.
+
+=== Log Analysis
+AppCat relies on the platform to ship logs.
+So this is a platform topic and is outside the scope of AppCat and ultimately not Schedar's decision.
+
+=== Wazuh Agent
+Injecting the Wazuh agent as a sidecar into the pods creates a very complex problem.
+Since not all our deployment methods support injecting sidecars and init containers, we'd have to implement a mutating webhook that injects the pods and configs into the pods.
+Adding it this way will decrease the stability of the services.
+
+Additionally, the only official documentation about using the agent to monitor an application on Kubernetes is in the form of a blog post.
+This does not inspire confidence about the maturity of the solution.
+
+If a service partner wants the agent in their service, then they can provide us with a specific image containing it.
+Building and maintaining a webhook handler that injects the necessary init and sidecar containers is a task for a third party who has more know-how with Wazuh.
+
+== Consequences
+Providing Wazuh agent integration will require a partner with know-how and the resources to maintain a proper solution and provide support.

@@ -169,4 +169,12 @@
 
 `backup,encryption,galera,postgresql`
 |draft |2025-10-06 |2025-10-06
+|xref:adr/0049-migrate-minio-to-rclone.adoc[]
+
+`minio,rclone,objectstorage`
+|rejected |2025-12-29 |2026-01-06
+|xref:adr/0050-wazuh-agent-for-appcat-services.adoc[]
+
+`siem,xdr,security`
+|draft | |2026-01-08
 |===
