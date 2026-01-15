@@ -1,0 +1,18 @@
+= Service Operator
+:navtitle: Service Operator
+
+Service Operators manage service instances across all tenants.
+They troubleshoot issues, perform maintenance, and respond to incidents with cluster-wide visibility and control.
+
+== Requirements
+
+As a Service Operator I can:
+
+* Monitor all instances with cluster-wide visibility of health, SLI metrics, and alerts
+* Access the cluster directly with kubectl for investigation and remediation
+* View comprehensive composite status showing health, errors, and resource states
+* Route alerts to incident management with runbook links for standardized response
+* Follow service-specific troubleshooting procedures documented in runbooks
+* Coordinate upgrades during maintenance windows
+* Restore service instances from backups when needed
+* Execute emergency procedures during incidents

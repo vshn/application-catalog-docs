@@ -1,0 +1,17 @@
+= Service Maintainer
+:navtitle: Service Maintainer
+
+Service Maintainers add new services and define their configuration.
+They work exclusively in KCL - no Go code changes needed.
+
+== Requirements
+
+As a Service Maintainer I can:
+
+* Add Helm-based services without touching Go code
+* Define static configuration (SLA, chart versions, images, scheduling, backup policies) compiled at build time
+* Define dynamic configuration (API parameters) for runtime customization - version selection, custom settings, backup schedules
+* Map both static and dynamic configuration to Helm chart values
+* Provide observability definitions using framework-provided templates for metrics, dashboards, and alerts
+* Test service configuration and lifecycle before deployment
+* Maintain a single source of truth in KCL that drives CRD/XRD and service configuration objects to avoid drift
