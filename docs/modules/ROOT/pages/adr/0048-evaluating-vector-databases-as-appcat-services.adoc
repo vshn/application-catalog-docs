@@ -1,0 +1,132 @@
+= ADR 0051 - Evaluating vector databases as AppCat services
+:adr_author:    Simon Beck
+:adr_owner:     Schedar
+:adr_reviewers:
+:adr_date:      2026-01-14
+:adr_upd_date:  2026-01-14
+:adr_status:    draft
+:adr_tags:      database,service
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+Exisitng AppCat services already provide some vector capabilities.
+For any other use-cases the required databases should be provided as solutions.
+====
+
+== Context
+
+More customers require vector databases for various AI related workloads.
+
+To provide the best services possible some of the most popular open source solutions are evaluated in this ADR.
+
+
+Solutions being evaluated:
+
+- OpenSearch/ElasticSearch
+- PostgreSQL with pgvector
+- Redis
+- Chroma
+- Qdrant
+- Milvus
+
+=== OpenSearch/ElasticSearch
+
+OpenSearch/ElasticSearch provides vector capabilities https://opensearch.org/platform/vector-search/[out of the box].
+Either one of these products are already on the roadmap for AppCat.
+
+=== PostgreSQL with pgvector
+
+StackGres and CNPG both already provide the pgvector extension.
+For StackGres it needs to be installed via the `extensions` stanza.
+CNPG pre-installs it in their default image.
+So the vector capabilities of our PostgreSQL offering is already there.
+Additional documentation to make users aware of this feature is recommended though.
+
+=== Redis
+
+Redis also provides vector capabilities out of the box.
+Redis provides documentation on how to use it: https://redis.io/docs/latest/develop/get-started/vector-database/#prepare-the-demo-dataset
+
+=== Dedicated Vector databases
+
+[cols=4]
+|===
+|Criteria
+|Chroma
+|Qdrant
+|Milvus
+
+|Installation
+|https://github.com/amikos-tech/chromadb-chart[community helm chart], but very limited functionality, missing HA
+|Official Helm chart available, enterprise operator
+|Official chart and operator available
+
+|Backup
+|https://cookbook.chromadb.dev/strategies/backup/[Export tool available, filesystem snapshots and filesystem snapshots]
+|https://qdrant.tech/documentation/database-tutorials/create-snapshot/[Pretty involved process for clusters]
+|https://milvus.io/docs/milvus_backup_cli.md[Backup tooling available]
+
+|Metrics
+|https://docs.trychroma.com/guides/deploy/observability[Opentelemetry traces]
+|https://qdrant.tech/documentation/guides/monitoring/[OpenMetrics/Prometheus]
+|https://milvus.io/docs/monitor.md[OpenMetrics/Prometheus]
+
+|Maintenance/2nd-day operations
+|https://cookbook.chromadb.dev/running/maintenance/[Chroma ops tool to do maintenance on the database]
+|https://qdrant.tech/documentation/guides/administration/[Administration guide]
+|Administration guides available that cover a lot of topics
+
+|Update/Upgrade
+|https://docs.trychroma.com/docs/overview/migration[Migration guide available], recent rewrite in rust, rewrite doesn't have authentication
+|https://qdrant.tech/documentation/faq/qdrant-fundamentals/?q=upgradeupgrade+guide#how-do-i-avoid-issues-when-updating-to-the-latest-version[Updates to the next consecutive version are supported]
+|Automated via their operator
+
+|License
+|Apache License 2.0
+|Apache License 2.0
+|Apache License 2.0
+
+|===
+
+=== Chroma
+Chroma's maturity doesn't seem to be there, many things are not documented on the official page but rather on a community driven page.
+Only a rudimentary helm chart is available.
+The recent rewrite in rust dropped features that were previously available.
+
+=== Qdrant
+Qdrant's documentation is excellent.
+However, there's a lot of "available on our cloud offering" there as well for features like cluster backups, which might be concerning for future anti-consumer decisions.
+The overall architecture and concepts are very inspired by ElasticSearch.
+
+=== Milvus
+
+Milvus is by far the most complex solution of the three.
+Although it provides an operator to handle the deployment, the amount of services it needs and deploys is extensive:
+
+- dedicated etcd
+- message queue
+- minio
+- zookeeper
+
+This rivals Kafka in complexity.
+
+== Decision
+
+The AppCat portofolio already contains two existing services that provide vector capabilities.
+OpenSearch/ElasticSearch is on the roadmap.
+These services and products are very well understood and widely used.
+AppCat should provide documentation to make users aware of the vector capabilities of these services.
+
+The dedicated vector databases might fit some use cases better, but of the three concrete requests we got, three different products were mentioned or requested.
+Given the initial effort to make a service AppCat managed, it's not feasible to add these services just for 1-2 instances.
+In these cases the databases should be handled as a solution.
+If at one point the adoption and demand for a specific product increases, the need to provide it as a self-service AppCat service can be re-evaluated.
+
+== Consequences
+We do not adopt any new vector database services into the AppCat service catalog.
+Instead we make users aware about the vector capabilities of the existing services.
+
+For any specific vector database deploying it as a solution should be considered.

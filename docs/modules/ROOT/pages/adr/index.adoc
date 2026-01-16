@@ -165,32 +165,36 @@
 
 `framework, networking, tcp`
 |accepted |2025-10-01 |2025-10-27
-|xref:adr/0042-backup-encryption-for-mariadb-galera-and-postgresql.adoc[]
-
-`backup,encryption,galera,postgresql`
-|draft |2025-10-06 |2025-10-06
-|xref:adr/0044-configuration-language-kcl-vs-cue.adoc[]
-
-`framework,framework2,kcl,cue`
-|draft | |
-|xref:adr/0045-service-orchestration-crossplane-2-0.adoc[]
-
-`framework,framework2,crossplane,composition`
-|draft | |
-|xref:adr/0046-secret-management-framework-2-0.adoc[]
-
-`framework,framework2,billing,odoo`
-|draft | |
-|xref:adr/0047-service-maintenance-and-upgrades-framework-2-0.adoc[]
-
-`framework,framework2,testing`
-|draft | |
 |xref:adr/0041-migrate-minio-to-rclone.adoc[]
 
 `minio,rclone,objectstorage`
 |rejected |2025-12-29 |2026-01-06
+|xref:adr/0042-backup-encryption-for-mariadb-galera-and-postgresql.adoc[]
+
+`backup,encryption,galera,postgresql`
+|draft |2025-10-06 |2025-10-06
 |xref:adr/0043-wazuh-agent-for-appcat-services.adoc[]
 
 `siem,xdr,security`
 |draft | |2026-01-08
+|xref:adr/0044-configuration-language-kcl-vs-cue.adoc[]
+
+`framework,framework2,kcl,cue,configuration`
+|draft |:adr_upd_date: |
+|xref:adr/0045-service-orchestration-crossplane-2-0.adoc[]
+
+`framework,framework2,crossplane,composition,orchestration`
+|draft |:adr_upd_date: |
+|xref:adr/0046-secret-management-framework-2-0.adoc[]
+
+`framework,framework2,secrets,crossplane,vault,openbao`
+|draft |:adr_upd_date: |
+|xref:adr/0047-service-maintenance-and-upgrades-framework-2-0.adoc[]
+
+`framework,framework2,maintenance,upgrades,crossplane,workflows,cronoperations`
+|draft |:adr_upd_date: |
+|xref:adr/0048-evaluating-vector-databases-as-appcat-services.adoc[]
+
+`database,service`
+|draft | |2026-01-14
 |===
