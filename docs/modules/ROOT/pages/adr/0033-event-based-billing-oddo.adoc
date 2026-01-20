@@ -201,21 +201,33 @@ status:
       value: "3"
       timestamp: "2025-06-20T13:00:00Z"
       state: "sent|pending|failed"
+      itemDescription: "Human readable description"
+      itemGroupDescription: "My Item Group"
+      unitID: "yunit"
     - type: "scaled"
       productId: "Y"
       value: "3"
       timestamp: "2025-05-20T13:00:00Z"
       state: "sent|pending|failed"
+      itemDescription: "Human readable description"
+      itemGroupDescription: "My Item Group"
+      unitID: "yunit"
     - type: "scaled"
       productId: "Y"
       value: "2"
       timestamp: "2025-04-20T13:00:00Z"
       state: "sent|pending|failed"
+      itemDescription: "Human readable description"
+      itemGroupDescription: "My Item Group"
+      unitID: "yunit"
     - type: "created"
       productId: "X"
       value: "1"
       timestamp: "2025-03-20T13:00:00Z"
       state: "sent|pending|failed"
+      itemDescription: "Human readable description"
+      itemGroupDescription: "My Item Group"
+      unitID: "xunit"
   conditions:
     - lastTransitionTime: "2024-05-25T15:35:02Z"
       reason: ReconcileSuccess
@@ -237,6 +249,11 @@ status:
 <8> List of products belonging to this instance.
 <9> `spec.value` for a generic naming, as not all product quantities can be described as a size.
 <10> Events track the state of each of the products associated.
+
+[NOTE]
+====
+Because product items in `spec` can be deleted, we store the full item details in `status.events` to retain history.
+====
 
 [NOTE]
 ====
