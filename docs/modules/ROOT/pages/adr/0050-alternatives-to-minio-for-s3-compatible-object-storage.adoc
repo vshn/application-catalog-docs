@@ -20,7 +20,7 @@ Thanks to the operator the bootstrapping and forming of the cluster can be fully
 
 https://github.com/minio/minio/issues/21714[Minio] as an open-source project is effectively unmaintained at this point.
 
-The main use-case for Minio are OpenShift clusters which reside on CSPs that don't provide their own S3 compatible ObjectStorage.
+The main use-case for Minio is OpenShift clusters which reside on CSPs that don't provide their own S3 compatible ObjectStorage.
 It's mostly used for backups and logs.
 
 Features we need from the new solution:
@@ -29,12 +29,12 @@ Features we need from the new solution:
 - Clustered/HA mode, optional with EC instead of replication
 - Storage on local block devices
 - Object LifeCycle to delete files older than x days, for log retention
-- Kubernetes readiness, are the charts and operators to simplify operations on K8s
+- Kubernetes readiness: are there charts and operators to simplify operations on K8s?
 
 Additionally to the mentioned points above we will also evaluate the complexity and ease of AppCat integration.
 
 Complexity is how many moving parts a solution has.
-To get an objective measure for this we check how many running pods are required for an HA cluster.
+To get an objective measure for this, we check how many running pods are required for an HA cluster.
 This includes any auxiliary operators or controllers.
 
 AppCat Integration is about how it could get integrated into AppCat.
@@ -214,7 +214,7 @@ The command used was: `warp list --obj.size="1Ki" --objects=1000000 --concurrent
 While for mixed operations Garage and Seaweedfs provide solid performance, Garage is a clear winner overtaking Seaweedfs.
 
 Seaweedfs really shines with a lot of small objects.
-There it takes the crown by passing Garage almost 2 times for put and 10 times for list.
+There it takes the crown by surpassing Garage almost 2 times for put and 10 times for list.
 
 ==== Resource Usage
 
@@ -222,7 +222,7 @@ While no in-depth analysis of the resource usage was made during the benchmarks,
 
 - Generally all solutions ate all the CPU they could get during the benchmark stress testing
 - Garage was by far the least memory hungry with less than 200Mb usage during the stress test, idling at less than 20Mb
-- SeaweedFS and Rook ceph where somewhat on par with around 500Mb memory usage. Although Rook was not deployed with an HA cluster config
+- SeaweedFS and Rook ceph were somewhat on par with around 500Mb memory usage. Although Rook was not deployed with an HA cluster config
 - Ozone takes the last place with over 2Gb memory usage before crashing footnote:[The crashes don't seem memory related, there were stacktraces about missing objects.]
 
 == Decision

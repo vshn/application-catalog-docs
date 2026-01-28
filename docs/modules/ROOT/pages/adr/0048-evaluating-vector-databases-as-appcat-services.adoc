@@ -1,4 +1,4 @@
-= ADR 0051 - Evaluating vector databases as AppCat services
+= ADR 0048 - Evaluating vector databases as AppCat services
 :adr_author:    Simon Beck
 :adr_owner:     Schedar
 :adr_reviewers:
