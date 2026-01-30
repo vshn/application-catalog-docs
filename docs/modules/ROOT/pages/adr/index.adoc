@@ -197,4 +197,12 @@
 
 `database,service`
 |draft | |2026-01-14
+|xref:adr/0049-managed-openbao.adoc[]
+
+`service,openbao,secret-management`
+|draft |2025-01-13 |2025-01-13
+|xref:adr/0050-alternatives-to-minio-for-s3-compatible-object-storage.adoc[]
+
+`s3,object-storage`
+|draft | |2026-01-26
 |===
