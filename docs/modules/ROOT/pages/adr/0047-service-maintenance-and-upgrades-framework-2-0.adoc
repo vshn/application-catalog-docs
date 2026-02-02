@@ -12,7 +12,7 @@ include::partial$adr-meta.adoc[]
 [NOTE]
 .Summary
 ====
-The decision selects Kubernetes native https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/[CronJobs] to orchestrate maintenance and upgrades with possible use of https://argoproj.github.io/workflows/[ArgoCD Workflows] or https://docs.crossplane.io/latest/operations/operation/[Crossplane Operations] in the future in case of growing complexity.
+The decision selects Kubernetes-native https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/[CronJobs] to orchestrate maintenance and upgrades, with the possibility of using https://argoproj.github.io/workflows/[ArgoCD Workflows] or https://docs.crossplane.io/latest/operations/operation/[Crossplane Operations] in the future as complexity grows.
 ====
 
 == Problem
@@ -102,18 +102,18 @@ spec:
 * *Complex Workflows*: Multi-step workflows with dependencies (backup before upgrade)
 * *Excellent Observability*: Workflow UI shows step progress, logs, errors
 * *Retry Logic*: Built-in retry with exponential backoff
-* *Conditional Steps*: Skip steps based on conditions (for example, skip backup if recent backup exists)
+* *Conditional Steps*: Skip steps based on conditions (for example, skip backup if a recent backup exists)
 * *DAG Support*: Parallel execution of independent tasks
 * *Audit Trail*: Workflow history persisted, easy to review what happened
 * *Comp Function Integration*: Workflows can be part of each instance
-* *Generic WorkflowTemplates*: WorkflowTemplates can defined cluster wide in KCL and easily referenced in Workflows
+* *Generic WorkflowTemplates*: WorkflowTemplates can be defined cluster-wide in KCL and easily referenced in Workflows
 * *Convenient UI*: ServiceOperators can handle maintenance directly in the ArgoCD UI
 
 **Disadvantages:**
 
 * *Additional Dependency*: Requires Argo Workflows installation and management
 * *Learning Curve*: Schedar team members need to learn workflow DSL (YAML-based)
-* *Operational Overhead*: Another operator to monitor, upgrade, secure
+* *Operational Overhead*: Another operator to monitor, upgrade, and secure
 * *Complexity*: Might be overkill for simple version checks
 
 === Option C: Crossplane WatchOperation / CronOperation Functions
@@ -155,14 +155,14 @@ spec:
 
 **Disadvantages:**
 
-* *Experimental*: CronOperation/WatchOperation still alpha in Crossplane
+* *Experimental*: CronOperation/WatchOperation is still alpha in Crossplane
 * *Complex Logic in Go*: Maintenance logic embedded in composition function code
 * *No Multi-Step Workflows*: Can't express backup -> upgrade -> verify easily
 
 == Decision
 
 Use CronJob pattern (Option A).
-Phase 2: Reevaluate Crossplane Operations (Option C) vs Argo Workflows (Option B) for complex orchestration such as release and rollback.
+Phase 2: Reevaluate Crossplane Operations (Option C) versus Argo Workflows (Option B) for complex orchestration tasks, such as releases and rollbacks.
 
 === Rationale
 
@@ -170,7 +170,7 @@ Phase 2: Reevaluate Crossplane Operations (Option C) vs Argo Workflows (Option B
 
 2. *Simplicity*: No additional dependencies, standard Kubernetes pattern.
 
-3. *Composition Revisions*: Leverage link:0030-function-revisions.adoc[ADR0030] pattern (revision selector + automatic policy) for upgrades during maintenance windows.
+3. *Composition Revisions*: Leverage xref:0030-function-revisions.adoc[ADR0030] pattern (revision selector + automatic policy) for upgrades during maintenance windows.
 
 4. *Good Enough*: Version checks and revision updates don't require complex multi-step workflows yet.
 
