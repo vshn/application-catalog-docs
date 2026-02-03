@@ -12,8 +12,8 @@ include::partial$adr-meta.adoc[]
 [NOTE]
 .Summary
 ====
-This ADR outlines the implementation of a managed OpenBao service on the AppCat platform to provide secret management capabilities to customers.
-This builds upon the suggestion of xref:adr/0024-product-choice-for-secret-management.adoc[] to use OpenBao as secret and PKI management solution.
+This ADR outlines the implementation of a managed OpenBao service on the AppCat platform to provide customers with secret management capabilities.
+This builds upon the suggestion of xref:adr/0024-product-choice-for-secret-management.adoc[] to use OpenBao as a secret and PKI management solution.
 ====
 
 == Context
@@ -25,7 +25,7 @@ Following the suggestion in xref:adr/0024-product-choice-for-secret-management.a
 - Open-source license with Linux Foundation backing
 - Self-hostable deployment model
 
-The service must integrate with the existing AppCat patterns including:
+The service must integrate with the existing AppCat patterns, including:
 
 - Crossplane-based provisioning
 - Managed namespace deployment model
@@ -58,7 +58,7 @@ Deploy OpenBao using the official Helm chart with external storage backends (Pos
 
 Implementation::
 
-- Use `provider-helm` to deploy OpenBao Helm chart
+- Use `provider-helm` to deploy the OpenBao Helm chart
 - PostgreSQL backend for secret storage (leveraging existing `VSHNPostgreSQL`)
 - Initialization through composition functions
 
@@ -80,7 +80,7 @@ Deploy OpenBao using the official Helm chart with integrated storage using Raft 
 
 Implementation::
 
-- Use `provider-helm` to deploy OpenBao Helm chart
+- Use `provider-helm` to deploy the OpenBao Helm chart
 - Raft storage backend for simplicity
 - Built-in clustering for high availability
 
@@ -114,7 +114,7 @@ Disadvantages::
 
 - High development effort
 - Additional operational complexity
-- Maintenance burden for custom operator
+- Maintenance burden for the custom operator
 
 == Decision
 
@@ -148,7 +148,7 @@ spec:
       fqdn: "openbao.example.com"  # Fully qualified domain name
       serviceLevel: guaranteed  # besteffort or guaranteed
       openBaoSettings:
-        # Auto-unseal configuration (optional)
+        # auto unseal configuration (optional)
         # Enables automatic unsealing using external key management systems
         # Only one provider should be configured at a time
         autoUnseal:
@@ -221,26 +221,26 @@ data:
   ROOT_TOKEN: <base64-encoded-root-token>
 ```
 
-**Auto-unseal**
+**Auto unseal**
 
 Auto unseal allows OpenBao to unseal automatically without manual intervention using an external key management system. This is crucial for automated recovery and reduces operational burden.
 
-By default OpenBao instances will be configured to use a central, internal VSHN managed Vault or OpenBao to auto-unseal.
+By default, OpenBao instances will be configured to use a central, internal VSHN-managed Vault or OpenBao to automatically unseal.
 
-WARNING: If a customer configures an auto-unseal provider, only the service level "besteffort" can be guaranteed.
+WARNING: If a customer configures no auto unseal provider, only the service level "besteffort" can be guaranteed.
 
-Supported auto-unseal providers:
+Supported auto unseal providers:
 
 AWS KMS::: Configure using `awsKmsSecretRef` pointing to a secret containing AWS credentials and KMS key configuration
 Azure Key Vault::: Configure using `azureKeyVaultSecretRef` pointing to a secret containing Azure credentials and Key Vault details
 GCP Cloud KMS::: Configure using `gcpKmsSecretRef` pointing to a secret containing GCP credentials and Cloud KMS configuration
 Transit (Vault/OpenBao)::: Configure using `transitSecretRef` pointing to a secret containing connection details to another Vault/OpenBao instance
 
-Each secret reference should contain the necessary credentials and configuration for the respective provider. When auto-unseal is configured, OpenBao will automatically unseal after restarts without requiring the unseal keys from `writeUnsealKeysSecretToRef`.
+Each secret reference should contain the necessary credentials and configuration for the respective provider. When auto unseal is configured, OpenBao will automatically unseal after restarts without requiring the unseal keys from `writeUnsealKeysSecretToRef`.
 
-If no auto-unseal provider is configured, manual unsealing using the unseal keys is required after each pod restart.
+If no automatic unsealing provider is configured, manual unsealing using the unseal keys is required after each pod restart.
 
-Example AWS KMS auto-unseal secret:
+Example AWS KMS automatic unseal secret:
 
 ```yaml
 apiVersion: v1
@@ -292,16 +292,16 @@ Security Model::
 - TLS encryption for all communications
 - RBAC policies managed through OpenBao
 - Audit logging to persistent storage
-- Auto-unseal configuration for OpenBao bootstrap
+- auto unseal configuration for OpenBao bootstrap
 
 == Consequences
 
 Positive::
 
 - Simplified deployment with fewer external dependencies
-- Built-in consensus and replication reduces operational complexity
+- Built-in consensus and replication reduce operational complexity
 - Self-contained backup mechanisms using Raft snapshots
-- Leverages official OpenBao Helm chart for production readiness
+- Leverages the official OpenBao Helm chart for production readiness
 - Eliminates external storage dependency management
 
 Negative::
@@ -315,10 +315,10 @@ Operational Impact::
 
 - Simplified service deployment with reduced external dependencies
 - Raft snapshot management and restoration procedures
-- Need for OpenBao and Raft consensus expertise in operations team
+- Need for OpenBao and Raft consensus expertise in the operations team
 - Integration testing with existing AppCat services
 - TLS certificate lifecycle management (renewal, rotation)
-- Auto-unseal configuration and cluster bootstrap management
+- auto unseal configuration and cluster bootstrap management
 - Raft cluster health monitoring and node management
 - Audit log management and compliance reporting
 - ServiceMonitor configuration for Prometheus integration
