@@ -7,13 +7,13 @@ To restore a VSHNMariaDB backup the following tools are needed:
 * https://github.com/mfuentesg/ksd[GitHub - mfuentesg/ksd: kubernetes secret decoder]
 * https://k8up.io/[K8up]
 * https://restic.net/[Restic]
-* `alias k=kubectl` && `alias ka='kubectl --as cluster-admin`
+* `alias k=kubectl` && `alias ka='kubectl --as=system:admin`
 
 == Acquiring VSHNMariaDB backup
 
 Locate instance namespace of VSHNMariaDB You want to backup:
 `k -n vshn-test get vshnmariadbs.vshn.appcat.vshn.io vshn-testing -o yaml | grep instanceNamespace` and for convinience use `kubens` using new namespace
-Depending on a cluster configuration it might be necessary for You to use all other commands using `kubectl --as cluster-admin` especially on Appuio Cloud
+Depending on a cluster configuration it might be necessary for You to use all other commands using `kubectl --as=system:admin` especially on Appuio Cloud
 There are two important secrets in instance namespace:
 * backup-bucket-credentials
 * k8up-repository-password

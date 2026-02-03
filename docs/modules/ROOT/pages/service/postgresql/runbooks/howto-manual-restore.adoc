@@ -15,7 +15,7 @@ From the said alert the customer namespace can be deducted together with the nam
 
 [source,bash]
 ----
-kubectl get XVSHNPostgreSQL <name-from-alert> --as cluster-admin
+kubectl get XVSHNPostgreSQL <name-from-alert> --as=system:admin
 ----
 
 NOTE: The XRD is protected in case the deletion protection is on.
@@ -28,7 +28,7 @@ The instance namespace is hidden from the customer.
 
 [source,bash]
 ----
-kubectl get XVSHNPostgreSQL <name-from-alert> -o=jsonpath='{.status.instanceNamespace}' --as cluster-admin
+kubectl get XVSHNPostgreSQL <name-from-alert> -o=jsonpath='{.status.instanceNamespace}' --as=system:admin
 ----
 
 [WARNING]
@@ -142,7 +142,7 @@ In case there is no secret it has to be recreated with the credentials from the 
 +
 [source,bash]
 ----
-kubectl get XObjectBucket --as cluster-admin <name>
+kubectl get XObjectBucket --as=system:admin <name>
 ----
 <7> THe bucket name
 <8> S3 Cloud provider endpoint

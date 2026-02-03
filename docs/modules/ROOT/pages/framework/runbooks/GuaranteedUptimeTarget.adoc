@@ -7,14 +7,14 @@ This alert is based on our SLI Exporter and how we in Appcat measure uptime of o
 
 == icon:bug[] Steps for Debugging
 
-There is no obvious reason why it happend, but we can easily check what happened. Evevry "guaranteed_availability" database has at least 2 replicas and PodDistruptionBudget set to 1. So, if one replica is down, the second one should be up and running. If that failed it means that there is some issue with the database or node itself. 
+There is no obvious reason why it happend, but we can easily check what happened. Evevry "guaranteed_availability" database has at least 2 replicas and PodDistruptionBudget set to 1. So, if one replica is down, the second one should be up and running. If that failed it means that there is some issue with the database or node itself.
 
 .Finding the failed database
 Check database name and namespace from alert. There are 2 relevant namespaces: claim namespace and instance namespace. Instance namespace is generated and always has format "vshn-<service_name(postgresql, redis, (...etc))>-<instance_name>".
 
 [source,bash]
 ----
-kubectl -n $instanceNamespace get pods 
+kubectl -n $instanceNamespace get pods
 kubectl -n $instanceNamespace describe $failing_pod
 kubectl -n $instanceNamespace logs pods/$failing_pod
 ----
@@ -23,9 +23,9 @@ It might be also worth checking for failing Kubernetes Objects and Composite:
 [source,bash]
 ----
 #$instanceNamespace_generated_chars can be obtained in a way: `echo vshn-postgresql-my-super-prod-5jfjn | rev | cut -d'-' -f1 | rev` ===> 5jfjn
-kubectl --as cluster-admin get objects | egrep $instanceNamespace_generated_chars
-kubectl --as cluster-admin describe objects $objectname
-kubectl --as cluster-admin describe xvshn[TAB here for specific service] | egrep $instanceNamespace_generated_chars
+kubectl --as=system:admin get objects | egrep $instanceNamespace_generated_chars
+kubectl --as=system:admin describe objects $objectname
+kubectl --as=system:admin describe xvshn[TAB here for specific service] | egrep $instanceNamespace_generated_chars
 ----
 
 .Check SLI Prober logs
@@ -65,7 +65,7 @@ Possible reasons for failing SLI Prober:
 
 [source,bash]
 -----
-Details: 	
+Details:
 OnCall 	                    : 	true
 alertname 	                : 	vshn-vshnpostgresql-GuaranteedUptimeTarget
 

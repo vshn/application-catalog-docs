@@ -13,8 +13,8 @@ In accordance to the https://git.vshn.net/aline.abler/scriptofdoom[scriptofdoom.
 while read -r cronjob rest
 do
   echo $cronjob
-  kubectl --as cluster-admin -n syn-appcat create job --from cronjob/$cronjob $cronjob --dry-run -oyaml | yq e '.spec.template.spec.containers[0].args[0] = "appuio-reporting report --timerange 1h --begin=$(date -d \"now -12 hours\" -u +\"%Y-%m-%dT%H:00:00Z\") --repeat-until=$(date -u +\"%Y-%m-%dT%H:00:00Z\")"' | kubectl --as cluster-admin apply -f -
-done <<< "$(kubectl --as cluster-admin -n syn-appcat get cronjobs.batch --no-headers)"
+  kubectl --as=system:admin -n syn-appcat create job --from cronjob/$cronjob $cronjob --dry-run -oyaml | yq e '.spec.template.spec.containers[0].args[0] = "appuio-reporting report --timerange 1h --begin=$(date -d \"now -12 hours\" -u +\"%Y-%m-%dT%H:00:00Z\") --repeat-until=$(date -u +\"%Y-%m-%dT%H:00:00Z\")"' | kubectl --as=system:admin apply -f -
+done <<< "$(kubectl --as=system:admin -n syn-appcat get cronjobs.batch --no-headers)"
 ----
 
 This will loop over all the billing cronjobs in the `syn-appcat`, create a new job from them and replace the args with whatever we want.
