@@ -1,4 +1,4 @@
-= ADR 0043 - Managed OpenBao Service Implementation
+= ADR 0049 - Managed OpenBao Service Implementation
 :adr_author:    Yannik Dällenbach
 :adr_owner:     Schedar/bespinian
 :adr_reviewers: Schedar
@@ -221,7 +221,9 @@ data:
   ROOT_TOKEN: <base64-encoded-root-token>
 ```
 
+pass:[<!-- vale off -->]
 **Auto-unseal**
+
 
 Auto unseal allows OpenBao to unseal automatically without manual intervention using an external key management system. This is crucial for automated recovery and reduces operational burden.
 
@@ -241,6 +243,8 @@ Each secret reference should contain the necessary credentials and configuration
 If no auto-unseal provider is configured, manual unsealing using the unseal keys is required after each pod restart.
 
 Example AWS KMS auto-unseal secret:
+
+pass:[<!-- vale on -->]
 
 ```yaml
 apiVersion: v1
@@ -288,12 +292,13 @@ Key Components::
 4. **Monitoring**: Custom SLI exporter and Prometheus integration
 
 Security Model::
-
+pass:[<!-- vale off -->]
 - TLS encryption for all communications
 - RBAC policies managed through OpenBao
 - Audit logging to persistent storage
 - Auto-unseal configuration for OpenBao bootstrap
 
+pass:[<!-- vale on -->]
 == Consequences
 
 Positive::
@@ -318,7 +323,10 @@ Operational Impact::
 - Need for OpenBao and Raft consensus expertise in operations team
 - Integration testing with existing AppCat services
 - TLS certificate lifecycle management (renewal, rotation)
+pass:[<!-- vale off -->]
 - Auto-unseal configuration and cluster bootstrap management
+
+pass:[<!-- vale on -->]
 - Raft cluster health monitoring and node management
 - Audit log management and compliance reporting
 - ServiceMonitor configuration for Prometheus integration

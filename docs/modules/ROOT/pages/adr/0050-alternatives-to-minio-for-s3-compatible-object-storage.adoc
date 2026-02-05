@@ -1,0 +1,238 @@
+= ADR 0050 - Alternatives to Minio for S3 compatible Object Storage
+:adr_author:    Simon Beck
+:adr_owner:     Schedar
+:adr_reviewers:
+:adr_date:      2026-01-26
+:adr_upd_date:  2026-01-26
+:adr_status:    draft
+:adr_tags:      s3,object-storage
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+Garage provides good performance and simplicity.
+Thanks to the operator the bootstrapping and forming of the cluster can be fully managed by K8s CRs and no additional provider is necessary.
+====
+
+== Context
+
+https://github.com/minio/minio/issues/21714[Minio] as an open-source project is effectively unmaintained at this point.
+
+The main use-case for Minio is OpenShift clusters which reside on CSPs that don't provide their own S3 compatible ObjectStorage.
+It's mostly used for backups and logs.
+
+Features we need from the new solution:
+- IAM with ACLs
+- Basic S3 compatibility (compatible with Restic)
+- Clustered/HA mode, optional with EC instead of replication
+- Storage on local block devices
+- Object LifeCycle to delete files older than x days, for log retention
+- Kubernetes readiness: are there charts and operators to simplify operations on K8s?
+
+Additionally to the mentioned points above we will also evaluate the complexity and ease of AppCat integration.
+
+Complexity is how many moving parts a solution has.
+To get an objective measure for this, we check how many running pods are required for an HA cluster.
+This includes any auxiliary operators or controllers.
+
+AppCat Integration is about how it could get integrated into AppCat.
+It will be checked if a full fledged provider is necessary or if a composition would suffice.
+If the solution can be configured via K8s objects, then usually a provider would not be necessary.
+However, if API access is needed then a provider is required.
+
+Every solution will also undergo two different benchmarks done with `minio-warp`:
+
+- The default mixed benchmark, which will stress test the clusters with a mixed selection of operations for 5 minutes
+- An extreme list test with 1 million objects, this test checks how good the solution can handle a large amount of objects
+
+=== Solutions
+
+These solutions will be looked at:
+
+- https://github.com/seaweedfs/seaweedfs[SeaweedFS]
+- https://git.deuxfleurs.fr/Deuxfleurs/garage[Garage]
+- https://github.com/rook/rook[Rook-Ceph]
+- https://github.com/apache/ozone[Apache Ozone]
+
+Honorable mentions that don't meet the clustered/HA requirement:
+
+- RustFS, still a very alpha solution
+- VersityGW, could only do HA via RWX
+
+[cols=5]
+|===
+|Criteria
+|SeaweedFS
+|Garage
+|Rook-Ceph
+|Apache Ozone
+
+|IAM
+|✅
+|✅ footnote:[It's not standard S3 IAM, they have their own simplified system, but sufficient for our use-cases]
+|✅
+|⚠️ (beta state)
+
+|S3 comp
+|✅
+|✅
+|✅
+|✅
+
+|HA
+|✅ (10+4 EC)
+|✅ (no EC)
+|✅
+|✅
+
+|Storage
+|✅
+|✅
+|✅
+|✅
+
+|LifeCycle
+|✅
+|✅
+|✅
+|⚠️ (on the road map)
+
+|K8s readiness
+|✅ Charts
+|✅ https://github.com/rajsinghtech/garage-operator[Community Operator]/Helm Chart footnote:[The helm chart does not fully provision a working instance. Manual steps are required https://garagehq.deuxfleurs.fr/documentation/quick-start/#creating-a-cluster-layout[after applying the chart.]]
+|✅ Rook is an Operator
+|✅ Chart, but rudimentary
+
+|Complexity
+|13 pods
+|4 pods
+|12 pods (no HA)
+|12 pods
+
+|AppCat integration
+|Provider
+|Composition thanks to operator
+|Composition thanks to operator
+|Provider
+
+|===
+
+=== Performance Benchmarks
+
+For completeness sake the benchmarks were also done with a Minio 4 node cluster.
+
+All these benchmarks were done on an M2 Macbook Pro with kind.
+Except for Rook Ceph, as it needs dedicated block storage, so minikube was used.
+
+==== Mixed
+Ran default `minio-warp mixed` against each cluster.
+The table contains the averages of each individual test.
+
+[cols=6]
+|===
+|Solution
+|Delete
+|Get
+|Put
+|Stat
+|Total
+
+|Seaweedfs
+|6.70 obj/s
+|301.72 MiB/s
+|100.88 MiB/s
+|20.12 obj/s
+|402.60 MiB/s, 67.08 obj/s
+
+|Garage
+|11.95 obj/s
+|538.23 MiB/s
+|179.31 MiB/s
+|35.89 obj/s
+|717.55 MiB/s, 119.60 obj/s
+
+|Rook footnoteref:[rook, During the benchmark the OSD crashed and restarted. It still came back up. But it's evident that it would require more tweaking.]
+|0.15 obj/s
+|6.82 MiB/s
+|5.92 MiB/s
+|0.45 obj/s
+|9.10 MiB/s, 1.51 obj/s
+
+|Ozone footnoteref:[ozone, The cluster crashed unrecoverably]
+|Cluster crashed
+|Cluster crashed
+|Cluster crashed
+|Cluster crashed
+|Cluster crashed
+
+|Minio footnote:[Minio aggressively stores temp data to the point that it was the only solution that completely filled up the disk during the mixed test, using over 100Gb of storage]
+|10.26 obj/s
+|459.90 MiB/s
+|153.44 MiB/s
+|30.70 obj/s
+|613.34 MiB/s
+
+|===
+
+==== List
+
+This test was to see if the solutions can handle a large amount of objects without failing.
+The test first creates 1 million small objects and then it will list them all.
+
+The command used was: `warp list --obj.size="1Ki" --objects=1000000 --concurrent=16`
+
+[cols=3]
+|===
+|Solution
+|Creation AVG
+|List AVG
+
+|Seaweedfs
+|4572 obj/s
+|224930.38 obj/s
+
+|Garage
+|2877 obj/s
+|27694.61 obj/s
+
+|Rook footnoteref:[rook]
+|Did not run
+|Did not run
+
+|Ozone footnoteref:[ozone]
+|Did not run
+|Did not run
+
+|Minio
+|498 obj/s
+|4573 obj/s
+
+|===
+
+While for mixed operations Garage and Seaweedfs provide solid performance, Garage is a clear winner overtaking Seaweedfs.
+
+Seaweedfs really shines with a lot of small objects.
+There it takes the crown by surpassing Garage almost 2 times for put and 10 times for list.
+
+==== Resource Usage
+
+While no in-depth analysis of the resource usage was made during the benchmarks, here are a few observations:
+
+- Generally all solutions ate all the CPU they could get during the benchmark stress testing
+- Garage was by far the least memory hungry with less than 200Mb usage during the stress test, idling at less than 20Mb
+- SeaweedFS and Rook ceph were somewhat on par with around 500Mb memory usage. Although Rook was not deployed with an HA cluster config
+- Ozone takes the last place with over 2Gb memory usage before crashing footnote:[The crashes don't seem memory related, there were stacktraces about missing objects.]
+
+== Decision
+Garage with the community operator.
+
+Garage's performance is overall pretty good and it can handle 1 million files.
+It's the least complex solution and offers good integration into AppCat via their operator.
+
+
+== Consequences
+A new composition for Garage needs to be implemented.
+
+As with Minio, it can't be a self-service product if integration with AppCat is required. This is due to needing specific `ObjectBucket` compositions for each instance.
