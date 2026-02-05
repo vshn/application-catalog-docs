@@ -1,0 +1,322 @@
+= Restore PostgreSQL by VSHN Database (CNPG)
+
+During emergencies, we need a reliable and precise solution to restore PostgreSQL databases with CloudNativePG (CNPG).
+This guide provides step-by-step instructions for restoring a CNPG-based PostgreSQL database from backup, helping to minimize downtime and service disruption for customers.
+
+== Step 1 - Prepare the Original Cluster for Restore
+
+Before restoring the database, the original cluster must be paused and hibernated to prevent conflicts during the restore operation.
+
+=== Step 1.1 - Pause the Release
+
+First, get the release name of the database you want to restore and annotate it to stop reconciliation.
+This prevents Crossplane from making changes during the restore process.
+
+[source,bash]
+----
+kubectl annotate release <release-name> crossplane.io/paused="true" --as=system:admin
+----
+
+=== Step 1.2 - Hibernate the CNPG Cluster
+
+Hibernate the CNPG cluster in the instance namespace to stop all database activity.
+This ensures no writes occur during the restore process.
+
+[source,bash]
+----
+kubectl annotate clusters.postgresql.cnpg.io postgresql cnpg.io/hibernation="on" --overwrite -n <instance-namespace>
+----
+
+NOTE: Hibernation will shut down all PostgreSQL pods in the cluster. Ensure the customer is aware of the downtime.
+
+== Step 2 - Create and Bootstrap the Restore Cluster
+
+Create a temporary restore cluster from the backup to retrieve the data.
+
+=== Step 2.1 - Create the Restore Cluster
+
+Create a new CNPG cluster that bootstraps from the existing backup.
+Apply the following manifest in the instance namespace:
+
+[source,yaml]
+----
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgresql-restored
+  namespace: <instance-namespace> # <1>
+spec:
+  instances: 1
+
+  # Use PostgreSQL version to match original cluster
+  imageCatalogRef:
+    apiGroup: postgresql.cnpg.io
+    kind: ImageCatalog
+    major: 16 # <2>
+    name: postgresql
+
+  # Bootstrap from backup using recovery
+  bootstrap:
+    recovery:
+      source: postgresql-backup
+      # Optional: Point-in-time recovery (PITR)
+      # recoveryTarget:
+      #   targetTime: "2023-08-11 11:14:21.00000+02" # <3>
+
+  # Reference to the original cluster backup
+  externalClusters:
+    - name: postgresql-backup
+      plugin:
+        name: barman-cloud.cloudnative-pg.io
+        parameters:
+          barmanObjectName: postgresql-object-store
+          serverName: postgresql
+
+  # Storage configuration - match original cluster
+  storage:
+    size: 20Gi # <4>
+
+  walStorage:
+    size: 1Gi
+
+  # Match original cluster settings
+  postgresql:
+    parameters:
+      timezone: Europe/Zurich
+      max_connections: "100"
+
+  # Resources matching original
+  resources:
+    limits:
+      cpu: 400m
+      memory: 1936Mi
+    requests:
+      cpu: 400m
+      memory: 1936Mi
+
+  # Enable superuser access for manual operations
+  enableSuperuserAccess: true
+
+  logLevel: info
+----
+<1> The instance namespace where the original cluster is running
+<2> PostgreSQL major version - must match the original cluster version
+<3> Optional: Specify a timestamp for point-in-time recovery to restore to a specific moment
+<4> Storage size should match or exceed the original cluster's storage
+
+=== Step 2.2 - Wait for Restore Cluster to be Ready
+
+Monitor the restore cluster until it's fully operational:
+
+[source,bash]
+----
+kubectl get clusters.postgresql.cnpg.io postgresql-restored -n <instance-namespace> --watch
+----
+
+Check the logs to verify the restore is successful:
+
+[source,bash]
+----
+kubectl logs postgresql-restored-1 -n <instance-namespace> -f
+----
+
+=== Step 2.3 - Hibernate the Restore Cluster
+
+Once the restore cluster is up and the data has been successfully restored, hibernate it to prepare for data synchronization:
+
+[source,bash]
+----
+kubectl annotate clusters.postgresql.cnpg.io postgresql-restored cnpg.io/hibernation="on" --overwrite -n <instance-namespace>
+----
+
+== Step 3 - Synchronize Data to Original Cluster
+
+Use rsync jobs to copy the restored data and WAL files to the original cluster's persistent volumes.
+
+=== Step 3.1 - Identify the Primary Instance (HA Clusters)
+
+If the original cluster has multiple replicas (HA setup), you must identify the primary instance to ensure data is synced to the correct PVCs.
+
+[source,bash]
+----
+kubectl get clusters.postgresql.cnpg.io -n <instance-namespace>
+----
+
+Example output:
+----
+NAME          AGE   INSTANCES   READY   STATUS                     PRIMARY
+postgresql    24m   3                   Cluster in healthy state   postgresql-1
+----
+
+The `PRIMARY` column shows which instance is the primary (in this example, `postgresql-1`).
+
+IMPORTANT: For HA clusters, sync data only to the primary instance's PVCs. In the rsync jobs below, use the primary instance name in the target PVC names (for example, `postgresql-1` and `postgresql-1-wal`).
+
+=== Step 3.2 - Sync WAL Storage
+
+Create a job to synchronize the Write-Ahead Log (WAL) storage from the restored cluster to the original cluster:
+
+[source,yaml]
+----
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: rsync-pgwal
+  namespace: <instance-namespace>
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: rsync
+        image: alpine:latest
+        command:
+        - sh
+        - -c
+        - |
+          set -e
+          echo "Installing rsync..."
+          apk add --no-cache rsync
+
+          echo "Source WAL PVC contents:"
+          ls -la /source/
+
+          echo "Target WAL PVC contents before rsync:"
+          ls -la /target/
+
+          echo "Starting rsync from postgresql-restored-1-wal to postgresql-1-wal..."
+          rsync -av --delete /source/ /target/
+
+          echo "Rsync completed successfully!"
+          echo "Target WAL PVC contents after rsync:"
+          ls -la /target/
+        volumeMounts:
+        - name: source
+          mountPath: /source
+        - name: target
+          mountPath: /target
+      volumes:
+      - name: source
+        persistentVolumeClaim:
+          claimName: postgresql-restored-1-wal # <1>
+      - name: target
+        persistentVolumeClaim:
+          claimName: postgresql-1-wal # <2>
+----
+<1> PVC name for the restored cluster's WAL storage
+<2> PVC name for the primary instance's WAL storage (for example, `postgresql-1-wal` if postgresql-1 is the primary)
+
+Monitor the job completion:
+
+[source,bash]
+----
+kubectl logs job/rsync-pgwal -n <instance-namespace> -f
+----
+
+=== Step 3.3 - Sync Data Storage
+
+Create a job to synchronize the main database data from the restored cluster to the original cluster:
+
+[source,yaml]
+----
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: rsync-pgdata
+  namespace: <instance-namespace>
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: rsync
+        image: alpine:latest
+        command:
+        - sh
+        - -c
+        - |
+          set -e
+          echo "Installing rsync..."
+          apk add --no-cache rsync
+
+          echo "Source PVC contents:"
+          ls -la /source/
+
+          echo "Target PVC contents before rsync:"
+          ls -la /target/
+
+          echo "Starting rsync from postgresql-restored-1 to postgresql-1..."
+          rsync -av --delete /source/ /target/
+
+          echo "Rsync completed successfully!"
+          echo "Target PVC contents after rsync:"
+          ls -la /target/
+        volumeMounts:
+        - name: source
+          mountPath: /source
+        - name: target
+          mountPath: /target
+      volumes:
+      - name: source
+        persistentVolumeClaim:
+          claimName: postgresql-restored-1 # <1>
+      - name: target
+        persistentVolumeClaim:
+          claimName: postgresql-1 # <2>
+----
+<1> PVC name for the restored cluster's data storage
+<2> PVC name for the primary instance's data storage (for example, `postgresql-1` if postgresql-1 is the primary)
+
+Monitor the job completion:
+
+[source,bash]
+----
+kubectl logs job/rsync-pgdata -n <instance-namespace> -f
+----
+
+== Step 4 - Clean Up and Restore Service
+
+After the data has been synchronized, clean up the temporary restore cluster and bring the original cluster back online.
+
+=== Step 4.1 - Delete the Restore Cluster
+
+Remove the temporary restore cluster as it's no longer needed:
+
+[source,bash]
+----
+kubectl delete cluster postgresql-restored -n <instance-namespace>
+----
+
+=== Step 4.2 - Unhibernate the Original Cluster
+
+Remove the hibernation annotation to restart the original cluster with the restored data:
+
+[source,bash]
+----
+kubectl annotate clusters.postgresql.cnpg.io postgresql cnpg.io/hibernation- -n <instance-namespace>
+----
+
+=== Step 4.3 - Unpause the Release
+
+Remove the pause annotation from the release to resume normal reconciliation:
+
+[source,bash]
+----
+kubectl annotate release <release-name> crossplane.io/paused- --as=system:admin
+----
+
+=== Step 4.4 - Verify the Restore
+
+Check that the original cluster is running and healthy:
+
+[source,bash]
+----
+kubectl get clusters.postgresql.cnpg.io postgresql -n <instance-namespace>
+----
+
+Verify the database is accessible and contains the expected data:
+
+[source,bash]
+----
+kubectl logs postgresql-1 -n <instance-namespace>
+----

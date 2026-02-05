@@ -7,7 +7,8 @@
 * xref:service/postgresql/index.adoc[]
 ** Runbooks
 *** xref:service/postgresql/runbooks/alert-postgresqlconnectionscritical.adoc[]
-*** xref:service/postgresql/runbooks/howto-manual-restore.adoc[]
+*** xref:service/postgresql/runbooks/howto-manual-restore-stackgres.adoc[]
+*** xref:service/postgresql/runbooks/howto-manual-restore-cnpg.adoc[]
 
 * xref:service/redis/index.adoc[]
 
