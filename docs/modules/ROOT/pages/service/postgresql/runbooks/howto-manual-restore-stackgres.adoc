@@ -1,7 +1,7 @@
-= Restore PostgreSQL by VSHN Database
-:page-aliases: how-tos/appcat/vshn/postgres/manual-restore.adoc
+= Restore PostgreSQL by VSHN Database (StackGres)
+:page-aliases: how-tos/appcat/vshn/postgres/manual-restore.adoc, service/postgresql/runbooks/howto-manual-restore.adoc
 
-During emergencies, we need a reliable and a precise solution to restore PostgreSQL databases with Stackgres.
+During emergencies, we need a reliable and a precise solution to restore PostgreSQL databases with StackGres.
 This will help reduce significantly the downtime of databases thus resulting in short outage for the customer.
 Below are a number of steps to be taken when such outage occurs.
 
