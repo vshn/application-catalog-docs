@@ -27,6 +27,9 @@
 ** Runbooks
 *** xref:service/exoscale-dbaas/runbooks/restore_dbaas.adoc[]
 
+* xref:service/odoo/index.adoc[]
+** xref:service/odoo/architecture.adoc[]
+
 * CSP: Exoscale
 ** xref:csp/exoscale/osbapi.adoc[]
 
@@ -132,6 +135,7 @@
 
 * Control Plane
 ** xref:control-plane/central-control-plane-arch.adoc[]
+** xref:control-plane/odoo-webshop.adoc[]
 ** xref:control-plane/split-architecture.adoc[]
 ** xref:control-plane/split-sli-prober.adoc[]
 
