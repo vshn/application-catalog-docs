@@ -1,0 +1,45 @@
+= Alert rule: AppCatMaintenanceJobFailed
+:page-aliases: how-tos/appcat/AppCatMaintenanceJobFailed.adoc
+
+== icon:glasses[] Overview
+
+This alert triggers if the maintenance job failed for any given AppCat service.
+
+== icon:bug[] Steps for Debugging
+
+All AppCat maintenance runs as a Kubernetes Job (scheduled via CronJob).
+To figure out what went wrong, connect to the K8s cluster and look at the logs of the failed job.
+
+=== Find the failed job
+
+For most services, the maintenance CronJob lives in the control namespace:
+
+[source,bash]
+----
+kubectl -n $controlNamespace get jobs
+kubectl -n $controlNamespace logs job/$failedJobName
+----
+
+Operator-based services like PostgreSQL have their maintenance in the instance namsepace:
+
+[source,bash]
+----
+kubectl -n $instanceNamespace get jobs
+kubectl -n $instanceNamespace logs job/$failedJobName
+----
+
+If the job pod is gone, describe the CronJob to see recent execution history:
+
+[source,bash]
+----
+kubectl -n $instanceNamespace describe cronjob/maintenancejob
+----
+
+=== Most probable causes
+
+* *Pre-maintenance backup failed*: Maintenance always attempts a backup first.
+If the backup fails, the entire maintenance job is aborted.
+* *Image registry unreachable*: Helm-based services query a Docker registry to find the latest version.
+A registry outage or rate limit will cause the job to fail.
+* *Upstream service unresponsive*: For PostgreSQL (StackGres), the maintenance job communicates with the StackGres API.
+If the StackGres operator is unhealthy, the job will time out (default: 1 hour).
