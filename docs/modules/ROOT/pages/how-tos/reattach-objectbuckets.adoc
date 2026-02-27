@@ -1,0 +1,74 @@
+= Reattach a lost ObjectBucket
+
+This guide assumes that the bucket and all the IAM still exists on the CSP.
+So we try to attach these orphaned bucket to Crossplane again.
+It also assumes knowledge and access to https://kb.vshn.ch/oc4/how-tos/recover-from-backup.html[cluster backups].
+
+== Identify Manifests to restore
+
+In general these manifests have to be restored:
+
+- Claim
+- Composite
+- CSP specific managed resources
+- Connection secret referenced in the claim, if it's an `ObjectBucket`
+- If it's a service claim, the connection secreted referenced in the composite needs to be restored
+
+Depending on the CSP, there are different manifests that need restoring.
+To figure out which those are, first identify the composite.
+To do so look at the claim belonging to the bucket.
+These can be `ObjectBuckets` or any of the `VSHN*` service instance claims, as they usually also contain a bucket for backups.
+
+Every claim contains a `spec.resourceRef` field containing the composite.
+Service claims won't reference the `XObjectBucket` directly.
+However, the name of the `XObjectBucket` is derived from the composite name and will help find the corresponding `XObjectBucket`.
+They are usually in the form of `$compositeName-backup` for services, for `ObjectBuckets` they are usually `$claimName-$randomstring`.
+
+[source,yaml]
+----
+spec:
+  resourceRef:
+    apiVersion: appcat.vshn.io/v1
+    kind: XObjectBucket
+    name: my-cool-bucket-78llv
+  # Connection secret to also restore
+  writeConnectionSecretToRef:
+    name: objectbucket-creds
+----
+
+The composite looks very similar to the claim.
+To identify the CSP specific manifests, take a look at `spec.resourceRefs`.
+These resources are cluster scoped like the composite itself.
+
+[source,yaml]
+----
+spec:
+  resourceRefs:
+  - apiVersion: minio.crossplane.io/v1
+    kind: Bucket
+    name: my-bucket-change-name
+  - apiVersion: minio.crossplane.io/v1
+    kind: Policy
+    name: my-bucket-change-name
+  - apiVersion: minio.crossplane.io/v1
+    kind: User
+    name: my-bucket-change-name
+  # also restore connection secret here
+  writeConnectionSecretToRef:
+    name: ab769fd2-3893-4365-9940-cc371913e72d
+    namespace: syn-crossplane
+----
+
+Restore all the resources from `spec.resourceRefs` from the cluster backup.
+
+Then stop Crossplane and make sure it's not running while applying the restored resources.
+
+WARNING: Do not apply any of the restored resources to the cluster before making sure that Crossplane is NOT running!
+
+[source,bash]
+----
+kubectl -n syn-crossplane scale deployment crossplane --replicas 0
+kubectl -n syn-crossplane get pods
+kubectl apply -f /path/to/restored/files
+kubectl -n syn-crossplane scale deployment crossplane --replicas 1
+----
