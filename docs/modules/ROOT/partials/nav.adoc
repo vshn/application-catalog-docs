@@ -124,6 +124,7 @@
 ** Runbooks
 *** xref:framework/runbooks/AppCatRelease.adoc[]
 *** xref:framework/runbooks/AppCatBackupJobError.adoc[]
+*** xref:framework/runbooks/AppCatMaintenanceJobFailed.adoc[]
 *** xref:framework/runbooks/AppCatRollback.adoc[]
 *** xref:framework/runbooks/AppCatRedis.adoc[]
 *** xref:framework/runbooks/GuaranteedUptimeTarget.adoc[]
