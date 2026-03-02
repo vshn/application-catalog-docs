@@ -20,7 +20,7 @@ kubectl -n $controlNamespace get jobs
 kubectl -n $controlNamespace logs job/$failedJobName
 ----
 
-Operator-based services like PostgreSQL have their maintenance in the instance namsepace:
+Operator-based services like PostgreSQL have their maintenance in the instance namespace:
 
 [source,bash]
 ----
