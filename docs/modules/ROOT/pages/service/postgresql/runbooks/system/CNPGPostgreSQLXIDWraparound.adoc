@@ -1,0 +1,47 @@
+= Alert rule: CNPGPostgreSQLXIDWraparound
+
+== icon:glasses[] Overview
+
+This alert triggers when a database's transaction ID (XID) age exceeds 300 million.
+PostgreSQL will shut itself down at 2 billion XIDs to prevent data corruption (wraparound).
+At 300 million, autovacuum may not be keeping up - immediate action is required.
+
+== icon:bug[] Steps for Debugging
+
+Step one:: Identify the affected namespace and database from the alert labels (`datname`). Set the namespace as a variable.
++
+[source,bash]
+----
+INSTANCE_NAMESPACE='<instance-namespace>'
+----
++
+Step two:: Find the primary pod and check the current XID age for all databases.
++
+[source,bash]
+----
+PRIMARY=$(kubectl get cluster postgresql -n $INSTANCE_NAMESPACE -o jsonpath='{.status.currentPrimary}')
+kubectl exec -n $INSTANCE_NAMESPACE $PRIMARY -- psql -U postgres -c "SELECT datname, age(datfrozenxid) AS xid_age FROM pg_database ORDER BY xid_age DESC;"
+----
++
+Step three:: Check if autovacuum is currently running on the affected database.
++
+[source,bash]
+----
+kubectl exec -n $INSTANCE_NAMESPACE $PRIMARY -- psql -U postgres -c "SELECT pid, datname, phase, heap_blks_scanned, heap_blks_vacuumed FROM pg_stat_progress_vacuum;"
+----
++
+Step four:: Check for tables blocking autovacuum (long-running transactions or locks).
++
+[source,bash]
+----
+kubectl exec -n $INSTANCE_NAMESPACE $PRIMARY -- psql -U postgres -c "SELECT pid, now() - pg_stat_activity.query_start AS duration, query FROM pg_stat_activity WHERE state = 'active' ORDER BY duration DESC LIMIT 10;"
+----
++
+Step five:: Run `VACUUM FREEZE` on the affected database immediately (replace `<datname>` with the database name from the alert).
++
+[source,bash]
+----
+kubectl exec -n $INSTANCE_NAMESPACE $PRIMARY -- psql -U postgres -d <datname> -c "VACUUM FREEZE VERBOSE;"
+----
+
+WARNING: `VACUUM FREEZE` on large databases can take a long time and generate significant I/O. Coordinate with the customer before running on production.

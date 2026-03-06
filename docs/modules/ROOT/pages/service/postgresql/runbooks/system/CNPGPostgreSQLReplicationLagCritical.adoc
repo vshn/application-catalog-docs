@@ -1,0 +1,54 @@
+= Alert rule: CNPGPostgreSQLReplicationLagCritical
+
+== icon:glasses[] Overview
+
+This alert triggers when the replication lag between the primary and a replica exceeds 300 seconds.
+Sustained lag means the replica is falling behind and may be unable to take over quickly if the primary fails.
+
+== icon:bug[] Steps for Debugging
+
+Step one:: Identify the affected namespace and replica from the alert labels. Set them as variables.
+The `application_name` label in the alert matches the replica pod name.
++
+[source,bash]
+----
+INSTANCE_NAMESPACE='<instance-namespace>'
+REPLICA_POD='<application_name-from-alert>'
+----
++
+Step two:: Find the primary pod and list all pods with their roles.
++
+[source,bash]
+----
+kubectl get pods -n $INSTANCE_NAMESPACE -l cnpg.io/cluster=postgresql -L cnpg.io/instanceRole
+PRIMARY=$(kubectl get cluster postgresql -n $INSTANCE_NAMESPACE -o jsonpath='{.status.currentPrimary}')
+----
++
+Step three:: Check replication status on the primary.
++
+[source,bash]
+----
+kubectl exec -n $INSTANCE_NAMESPACE $PRIMARY -- psql -U postgres -c "SELECT application_name, state, sent_lsn, replay_lsn, (sent_lsn - replay_lsn) AS lag_bytes FROM pg_stat_replication;"
+----
++
+Step four:: Check the WAL receiver status on the lagging replica.
++
+[source,bash]
+----
+kubectl exec -n $INSTANCE_NAMESPACE $REPLICA_POD -- psql -U postgres -c "SELECT status, last_msg_send_time, last_msg_receipt_time, latest_end_lsn FROM pg_stat_wal_receiver;"
+----
++
+Step five:: Check the replica pod logs for errors.
++
+[source,bash]
+----
+kubectl logs $REPLICA_POD -n $INSTANCE_NAMESPACE | grep -i "error\|fatal\|replication"
+----
++
+Step six:: Check network connectivity and resource pressure on both pods.
++
+[source,bash]
+----
+kubectl describe pod $REPLICA_POD -n $INSTANCE_NAMESPACE
+kubectl top pod -n $INSTANCE_NAMESPACE
+----

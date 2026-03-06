@@ -1,0 +1,49 @@
+= Alert rule: CNPGClusterZoneSpreadWarning
+
+== icon:glasses[] Overview
+
+This alert triggers when PostgreSQL pods are not evenly spread across availability zones - specifically when the number of pods exceeds the number of distinct zones hosting them.
+This means at least one zone contains multiple instances, reducing availability zone redundancy.
+
+NOTE: This alert can fire at the same time as `CNPGClusterInstancesOnSameNode`. Zone co-location is a broader condition: pods may be on different nodes but still in the same zone.
+
+== icon:bug[] Steps for Debugging
+
+Step one:: Identify the affected namespace from the alert. Set it as a variable.
++
+[source,bash]
+----
+INSTANCE_NAMESPACE='<instance-namespace>'
+----
++
+Step two:: List all PostgreSQL pods and the node they are running on.
++
+[source,bash]
+----
+kubectl get pods -n $INSTANCE_NAMESPACE -l cnpg.io/cluster=postgresql -o wide
+----
++
+Step three:: Check which availability zone each node belongs to.
++
+[source,bash]
+----
+kubectl get nodes -L topology.kubernetes.io/zone
+----
++
+Step four:: Cross-reference the pod nodes from step two with the zone output from step three to identify which zone has multiple instances.
+Step five:: Check how many nodes are available per zone.
++
+[source,bash]
+----
+kubectl get nodes -L topology.kubernetes.io/zone --no-headers | awk '{print $NF}' | sort | uniq -c
+----
++
+Step six:: If a zone has only one node and the cluster has more instances than zones, the scheduler cannot spread pods evenly.
+Check the number of instances configured.
++
+[source,bash]
+----
+kubectl get cluster postgresql -n $INSTANCE_NAMESPACE -o jsonpath='{.spec.instances}'
+----
+
+NOTE: CNPG uses a soft topology spread constraint by default. Uneven spread occurs when zone capacity is insufficient to host one instance per zone.

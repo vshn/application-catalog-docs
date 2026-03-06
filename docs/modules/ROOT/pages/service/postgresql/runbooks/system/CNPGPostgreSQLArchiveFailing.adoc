@@ -1,0 +1,47 @@
+= Alert rule: CNPGPostgreSQLArchiveFailing
+
+== icon:glasses[] Overview
+
+This alert triggers when WAL archiving has been failing - specifically when the last failed archive attempt is more recent than the last successful one.
+Failing archiving puts point-in-time recovery (PITR) and backups at risk.
+CNPG will not recycle WAL segments that have not been successfully archived - instead they accumulate in `pg_wal/`, which can fill up the disk and crash the instance.
+
+== icon:bug[] Steps for Debugging
+
+Step one:: Identify the affected namespace from the alert. Set it as a variable.
++
+[source,bash]
+----
+INSTANCE_NAMESPACE='<instance-namespace>'
+----
++
+Step two:: Find the primary pod and check the archive status.
++
+[source,bash]
+----
+PRIMARY=$(kubectl get cluster postgresql -n $INSTANCE_NAMESPACE -o jsonpath='{.status.currentPrimary}')
+kubectl exec -n $INSTANCE_NAMESPACE $PRIMARY -- psql -U postgres -c "SELECT archived_count, last_archived_wal, last_archived_time, failed_count, last_failed_wal, last_failed_time FROM pg_stat_archiver;"
+----
++
+Step three:: Check the primary pod logs for archiving errors.
++
+[source,bash]
+----
+kubectl logs $PRIMARY -n $INSTANCE_NAMESPACE | grep -i "archive\|barman\|error\|fatal"
+----
++
+Step four:: Check the object store secret and connectivity. The barman plugin logs the archive command output.
++
+[source,bash]
+----
+kubectl get secret -n $INSTANCE_NAMESPACE | grep backup
+kubectl get scheduledbackup -n $INSTANCE_NAMESPACE
+kubectl describe scheduledbackup -n $INSTANCE_NAMESPACE
+----
++
+Step five:: Check the `ScheduledBackup` and `Backup` resources for recent status.
++
+[source,bash]
+----
+kubectl get backup.postgresql.cnpg.io -n $INSTANCE_NAMESPACE --sort-by='.metadata.creationTimestamp'
+----
