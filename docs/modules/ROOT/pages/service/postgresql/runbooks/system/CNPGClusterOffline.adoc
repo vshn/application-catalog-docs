@@ -1,0 +1,52 @@
+= Alert rule: CNPGClusterOffline
+
+== icon:glasses[] Overview
+
+This alert triggers when all CNPG collectors in a namespace report `cnpg_collector_up == 0`, indicating that the cluster is unhealthy or the monitoring exporter has failed on all instances.
+
+WARNING: This alert relies on `cnpg_collector_up` being present. If all pods are killed and the metric is absent entirely, this alert will not fire. In that case, investigate manually.
+
+== icon:bug[] Steps for Debugging
+
+Step one:: Identify the affected namespace from the alert. Set it as a variable.
++
+[source,bash]
+----
+INSTANCE_NAMESPACE='<instance-namespace>'
+----
++
+Step two:: Check if any PostgreSQL pods are running.
++
+[source,bash]
+----
+kubectl get pods -n $INSTANCE_NAMESPACE
+----
++
+Step three:: Check the CNPG cluster resource for status conditions.
++
+[source,bash]
+----
+kubectl describe cluster postgresql -n $INSTANCE_NAMESPACE
+----
++
+Step four:: If pods exist but the collector is not healthy, check the pod logs for errors.
++
+[source,bash]
+----
+kubectl logs -n $INSTANCE_NAMESPACE -l cnpg.io/cluster=postgresql --prefix | grep -i "collector\|error\|fatal"
+----
++
+Step five:: If no pods are running, check recent events and node pressure.
++
+[source,bash]
+----
+kubectl get events -n $INSTANCE_NAMESPACE --sort-by='.lastTimestamp'
+kubectl describe nodes | grep -A5 "Conditions:"
+----
++
+Step six:: If the cluster is hibernated, check for the hibernation annotation.
++
+[source,bash]
+----
+kubectl get cluster postgresql -n $INSTANCE_NAMESPACE -o jsonpath='{.metadata.annotations}'
+----

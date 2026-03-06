@@ -1,0 +1,35 @@
+= Alert rule: PostgreSQLLongRunningTransaction
+:navtitle: PostgreSQLLongRunningTransaction
+:page-aliases: how-tos/appcat/vshn/postgres/PostgreSQLLongRunningTransaction.adoc
+
+== icon:glasses[] Overview
+
+This alert triggers when a transaction on a PostgreSQL instance has been running for more than 5 minutes.
+Long-running transactions hold locks, prevent autovacuum from cleaning up dead rows, and can cause performance degradation for other queries.
+
+== icon:bug[] Steps for Debugging
+
+There are two ways to solve this issue:
+
+First Option:: Identify and terminate the long-running transaction.
+Contact the application owner and ask them to review and terminate the transaction from the application side if possible.
+As a last resort, the transaction can be terminated from the database.
+
+.Find long-running transactions
+[source,sql]
+----
+SELECT pid, now() - pg_stat_activity.query_start AS duration, query, state
+FROM pg_stat_activity
+WHERE state = 'active'
+  AND now() - pg_stat_activity.query_start > interval '5 minutes'
+ORDER BY duration DESC;
+----
+
+.Terminate a specific transaction
+[source,sql]
+----
+SELECT pg_terminate_backend(<pid>);
+----
+
+Second Option:: Increase the threshold for your application if long-running transactions are expected (for example, batch jobs).
+Consider adjusting the application to commit more frequently or break large transactions into smaller ones.

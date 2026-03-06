@@ -6,7 +6,23 @@
 
 * xref:service/postgresql/index.adoc[]
 ** Runbooks
-*** xref:service/postgresql/runbooks/alert-postgresqlconnectionscritical.adoc[]
+*** User
+**** xref:service/postgresql/runbooks/user/alert-postgresqlconnectionscritical.adoc[]
+**** xref:service/postgresql/runbooks/user/alert-postgresqllongrunningtransaction.adoc[]
+**** xref:service/postgresql/runbooks/user/alert-postgresqlbackendswaiting.adoc[]
+**** xref:service/postgresql/runbooks/user/alert-postgresqldeadlockconflicts.adoc[]
+*** System
+**** xref:service/postgresql/runbooks/system/CNPGPostgreSQLReplicationLagCritical.adoc[]
+**** xref:service/postgresql/runbooks/system/CNPGPostgreSQLReplicaFailingReplication.adoc[]
+**** xref:service/postgresql/runbooks/system/CNPGPostgreSQLManualSwitchoverRequired.adoc[]
+**** xref:service/postgresql/runbooks/system/CNPGPostgreSQLNoStreamingReplicas.adoc[]
+**** xref:service/postgresql/runbooks/system/CNPGPostgreSQLXIDWraparound.adoc[]
+**** xref:service/postgresql/runbooks/system/CNPGPostgreSQLFencingOn.adoc[]
+**** xref:service/postgresql/runbooks/system/CNPGPostgreSQLArchiveFailing.adoc[]
+**** xref:service/postgresql/runbooks/system/CNPGClusterHAWarning.adoc[]
+**** xref:service/postgresql/runbooks/system/CNPGClusterOffline.adoc[]
+**** xref:service/postgresql/runbooks/system/CNPGClusterInstancesOnSameNode.adoc[]
+**** xref:service/postgresql/runbooks/system/CNPGClusterZoneSpreadWarning.adoc[]
 *** xref:service/postgresql/runbooks/howto-manual-restore-stackgres.adoc[]
 *** xref:service/postgresql/runbooks/howto-manual-restore-cnpg.adoc[]
 
