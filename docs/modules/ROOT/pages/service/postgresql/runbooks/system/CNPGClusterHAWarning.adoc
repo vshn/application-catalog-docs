@@ -1,0 +1,47 @@
+= Alert rule: CNPGClusterHAWarning
+
+== icon:glasses[] Overview
+
+This alert triggers when a CNPG PostgreSQL HA cluster has fewer than 2 streaming replicas connected to the primary.
+The cluster is still operational but redundancy is reduced - if the primary fails, recovery depends on fewer standbys than expected.
+
+This alert only fires for clusters that have replicas configured. Standalone single-instance deployments are excluded.
+
+== icon:bug[] Steps for Debugging
+
+Step one:: Identify the affected namespace from the alert. Set it as a variable.
++
+[source,bash]
+----
+INSTANCE_NAMESPACE='<instance-namespace>'
+----
++
+Step two:: Check the overall cluster status and how many instances are ready.
++
+[source,bash]
+----
+kubectl get cluster postgresql -n $INSTANCE_NAMESPACE
+----
++
+Step three:: Check which pods are running and their roles.
++
+[source,bash]
+----
+kubectl get pods -n $INSTANCE_NAMESPACE -l cnpg.io/cluster=postgresql -L cnpg.io/instanceRole
+----
++
+Step four:: Resolve the primary pod name and check the replication status.
++
+[source,bash]
+----
+PRIMARY=$(kubectl get cluster postgresql -n $INSTANCE_NAMESPACE -o jsonpath='{.status.currentPrimary}')
+kubectl exec -n $INSTANCE_NAMESPACE $PRIMARY -- psql -U postgres -c "SELECT application_name, state, sync_state FROM pg_stat_replication;"
+----
++
+Step five:: Describe and check logs for all replica pods to identify scheduling or crash issues.
++
+[source,bash]
+----
+kubectl describe pods -n $INSTANCE_NAMESPACE -l cnpg.io/cluster=postgresql,cnpg.io/instanceRole=replica
+kubectl logs -n $INSTANCE_NAMESPACE -l cnpg.io/cluster=postgresql,cnpg.io/instanceRole=replica --prefix | grep -i "error\|fatal\|replication\|receiver"
+----

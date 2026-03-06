@@ -1,0 +1,45 @@
+= Alert rule: CNPGPostgreSQLReplicaFailingReplication
+
+== icon:glasses[] Overview
+
+This alert triggers when a replica is in recovery mode but its WAL receiver is not running.
+The replica is not receiving WAL from the primary, meaning it is stale and cannot be promoted safely.
+
+== icon:bug[] Steps for Debugging
+
+Step one:: Identify the affected namespace and replica pod from the alert labels (`pod` label). Set them as variables.
++
+[source,bash]
+----
+INSTANCE_NAMESPACE='<instance-namespace>'
+REPLICA_POD='<replica-pod>'
+----
++
+Step two:: Check the WAL receiver status on the replica.
++
+[source,bash]
+----
+kubectl exec -n $INSTANCE_NAMESPACE $REPLICA_POD -- psql -U postgres -c "SELECT status, last_msg_send_time, last_msg_receipt_time FROM pg_stat_wal_receiver;"
+----
++
+Step three:: Check replica pod logs for connection or streaming errors.
++
+[source,bash]
+----
+kubectl logs $REPLICA_POD -n $INSTANCE_NAMESPACE | grep -i "error\|fatal\|wal\|receiver\|replication"
+----
++
+Step four:: Check the CNPG cluster status for any reported conditions.
++
+[source,bash]
+----
+kubectl describe cluster postgresql -n $INSTANCE_NAMESPACE
+----
++
+Step five:: Check replication slots on the primary to see if a slot is blocking WAL cleanup.
++
+[source,bash]
+----
+PRIMARY=$(kubectl get cluster postgresql -n $INSTANCE_NAMESPACE -o jsonpath='{.status.currentPrimary}')
+kubectl exec -n $INSTANCE_NAMESPACE $PRIMARY -- psql -U postgres -c "SELECT slot_name, active, restart_lsn FROM pg_replication_slots;"
+----

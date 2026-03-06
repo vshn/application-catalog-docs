@@ -1,0 +1,38 @@
+= Alert rule: CNPGPostgreSQLManualSwitchoverRequired
+
+== icon:glasses[] Overview
+
+This alert triggers when the CNPG operator has set `cnpg_collector_manual_switchover_required == 1`, indicating that a primary switchover is needed but cannot proceed automatically.
+This typically occurs after a maintenance operation or when the `primaryUpdateStrategy` is set to `Supervised`.
+
+== icon:bug[] Steps for Debugging
+
+Step one:: Identify the affected namespace from the alert. Set it as a variable.
++
+[source,bash]
+----
+INSTANCE_NAMESPACE='<instance-namespace>'
+----
++
+Step two:: Check the cluster status and which instance is the current primary.
++
+[source,bash]
+----
+kubectl get cluster postgresql -n $INSTANCE_NAMESPACE
+----
++
+Step three:: Check the cluster conditions for the reason a manual switchover is required.
++
+[source,bash]
+----
+kubectl describe cluster postgresql -n $INSTANCE_NAMESPACE | grep -A10 "Conditions:"
+----
++
+Step four:: Perform the switchover using the CNPG kubectl plugin.
++
+[source,bash]
+----
+kubectl cnpg promote postgresql <target-instance> -n $INSTANCE_NAMESPACE
+----
+
+NOTE: Replace `<target-instance>` with the name of the replica pod to promote (for example, `postgresql-2`).
