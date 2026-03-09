@@ -1,0 +1,43 @@
+= Alert rule: CNPGPostgreSQLFencingOn
+
+== icon:glasses[] Overview
+
+This alert triggers when a PostgreSQL instance has fencing enabled (`cnpg_collector_fencing_on == 1`).
+A fenced instance is forcibly shut down and isolated - the operator will not restart it until fencing is removed.
+Fencing is always applied manually and always requires manual removal.
+
+== icon:bug[] Steps for Debugging
+
+Step one:: Identify the affected namespace from the alert. Set it as a variable.
++
+[source,bash]
+----
+INSTANCE_NAMESPACE='<instance-namespace>'
+----
++
+Step two:: Check which instance is fenced.
++
+[source,bash]
+----
+kubectl get cluster postgresql -n $INSTANCE_NAMESPACE -o jsonpath='{.metadata.annotations}'
+----
++
+Step three:: If fencing was applied intentionally (for maintenance or inspection), complete the required work and then unfence.
+Step four:: Remove fencing using the CNPG kubectl plugin.
++
+[source,bash]
+----
+# Unfence a specific instance
+kubectl cnpg fencing off postgresql <instance-name> -n $INSTANCE_NAMESPACE
+
+# Unfence all instances in the cluster
+kubectl cnpg fencing off postgresql "*" -n $INSTANCE_NAMESPACE
+----
++
+Step five:: Verify the cluster recovers and all instances are running.
++
+[source,bash]
+----
+kubectl get pods -n $INSTANCE_NAMESPACE -l cnpg.io/cluster=postgresql
+kubectl get cluster postgresql -n $INSTANCE_NAMESPACE
+----

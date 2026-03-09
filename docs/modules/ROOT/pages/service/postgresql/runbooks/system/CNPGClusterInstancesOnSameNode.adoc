@@ -1,0 +1,48 @@
+= Alert rule: CNPGClusterInstancesOnSameNode
+
+== icon:glasses[] Overview
+
+This alert triggers when multiple PostgreSQL pods from the same cluster are scheduled on the same Kubernetes node.
+This defeats node-level redundancy: if the node fails, multiple instances go down simultaneously.
+
+== icon:bug[] Steps for Debugging
+
+Step one:: Identify the affected namespace from the alert. Set it as a variable.
++
+[source,bash]
+----
+INSTANCE_NAMESPACE='<instance-namespace>'
+----
++
+Step two:: List all PostgreSQL pods and their nodes.
++
+[source,bash]
+----
+kubectl get pods -n $INSTANCE_NAMESPACE -l cnpg.io/cluster=postgresql -o wide
+----
++
+Step three:: Check if the node has any issues preventing other nodes from accepting pods (taints, resource pressure). Use the node name from the output above.
++
+[source,bash]
+----
+NODE_NAME='<node-name>'
+kubectl describe node $NODE_NAME | grep -E -A5 "Taints|Conditions|Allocatable"
+----
++
+Step four:: Check if a pod anti-affinity rule is configured on the cluster.
++
+[source,bash]
+----
+kubectl get cluster postgresql -n $INSTANCE_NAMESPACE -o jsonpath='{.spec.affinity}'
+----
++
+Step five:: If the cluster is undersized (fewer nodes than instances), the scheduler has no choice but to co-locate pods.
+Check the number of available nodes vs. the number of PostgreSQL instances.
++
+[source,bash]
+----
+kubectl get nodes
+kubectl get cluster postgresql -n $INSTANCE_NAMESPACE -o jsonpath='{.spec.instances}'
+----
+
+NOTE: CNPG sets pod anti-affinity by default but it is a soft preference (`preferredDuringSchedulingIgnoredDuringExecution`). Co-location can still occur when the cluster has fewer nodes than instances.

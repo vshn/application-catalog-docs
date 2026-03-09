@@ -1,0 +1,45 @@
+= Alert rule: CNPGPostgreSQLNoStreamingReplicas
+
+== icon:glasses[] Overview
+
+This alert triggers when the primary has zero streaming replicas connected, while replicas are expected to exist.
+HA is completely broken - if the primary fails now, there is no replica to promote.
+
+== icon:bug[] Steps for Debugging
+
+Step one:: Identify the affected namespace from the alert. Set it as a variable.
++
+[source,bash]
+----
+INSTANCE_NAMESPACE='<instance-namespace>'
+----
++
+Step two:: Check which pods are running and their roles.
++
+[source,bash]
+----
+kubectl get pods -n $INSTANCE_NAMESPACE -l cnpg.io/cluster=postgresql -L cnpg.io/instanceRole
+----
++
+Step three:: Resolve the primary pod name and check replication status.
++
+[source,bash]
+----
+PRIMARY=$(kubectl get cluster postgresql -n $INSTANCE_NAMESPACE -o jsonpath='{.status.currentPrimary}')
+kubectl exec -n $INSTANCE_NAMESPACE $PRIMARY -- psql -U postgres -c "SELECT application_name, state, sync_state FROM pg_stat_replication;"
+----
++
+Step four:: Check logs for all replica pods for connection errors.
++
+[source,bash]
+----
+kubectl logs -n $INSTANCE_NAMESPACE -l cnpg.io/cluster=postgresql,cnpg.io/instanceRole=replica --prefix | grep -i "error\|fatal\|replication\|receiver"
+----
++
+Step five:: Check the overall cluster status for conditions or events.
++
+[source,bash]
+----
+kubectl describe cluster postgresql -n $INSTANCE_NAMESPACE
+kubectl get events -n $INSTANCE_NAMESPACE --sort-by='.lastTimestamp'
+----
