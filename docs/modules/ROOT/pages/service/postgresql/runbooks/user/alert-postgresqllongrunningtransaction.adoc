@@ -33,3 +33,5 @@ SELECT pg_terminate_backend(<pid>);
 
 Second Option:: Increase the threshold for your application if long-running transactions are expected (for example, batch jobs).
 Consider adjusting the application to commit more frequently or break large transactions into smaller ones.
+
+NOTE: In case the alert requires adjustments, please reach out to schedar@vshn.ch
