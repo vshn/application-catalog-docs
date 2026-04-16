@@ -121,9 +121,10 @@
 *** xref:framework/framework-2-0/testing.adoc[]
 ** xref:framework/non-converged.adoc[]
 ** Billing
+*** xref:framework/billing.adoc[]
 *** xref:framework/cloud-usage-reporting.adoc[]
-*** xref:framework/vshn-usage-reporting.adoc[]
-*** xref:framework/backfill_billing.adoc[]
+*** xref:framework/vshn-usage-reporting.adoc[] _(Deprecated)_
+*** xref:framework/backfill_billing.adoc[] _(Deprecated)_
 ** xref:framework/quality-requirements.adoc[]
 *** xref:framework/quality-requirements/maintainability/readiness-standards.adoc[]
 *** xref:framework/quality-requirements/portability/backup-exports.adoc[]

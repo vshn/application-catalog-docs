@@ -1,6 +1,14 @@
 = Cloud Based AppCat Services
 :page-aliases: reference/cloud-usage-reporting.adoc
 
+[NOTE]
+====
+This page covers metered billing for Object Storage on Cloudscale and Exoscale only.
+This system remains active and has **not** been replaced for these services.
+
+For the full billing picture including VSHN managed services (PostgreSQL, Redis, etc.), see xref:framework/billing.adoc[AppCat Billing].
+====
+
 IMPORTANT: This is only applicable for APPUiO Cloud! APPUiO Managed cloud resources get directly passed through to the customer.
 
 This page explains how cloud based services handle usage reporting.

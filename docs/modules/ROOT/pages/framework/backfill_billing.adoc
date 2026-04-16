@@ -1,5 +1,22 @@
-= Backfill Billing Data
+= Backfill Billing Data (Deprecated)
 :page-aliases: how-tos/appcat/backfill_billing.adoc
+
+[WARNING]
+====
+*This page is deprecated.*
+
+The script on this page applies only to the legacy metered billing CronJobs and is only relevant for Object Buckets on Cloudscale/Exoscale.
+
+For VSHN managed services (PostgreSQL, Redis, etc.) that use Event-Based Billing, use the resend annotation instead:
+
+[source,shell]
+----
+kubectl -n syn-appcat annotate billingservice <name> \
+  appcat.vshn.io/resend=failed --overwrite
+----
+
+See xref:framework/billing.adoc[AppCat Billing] for full documentation.
+====
 
 It might happen that Odoo is down for more than 3 hours.
 In that case we need to backfill the billing data for VSHN services.

@@ -1,0 +1,278 @@
+= AppCat Billing
+:navtitle: Billing Overview
+
+This page is the single source of truth for how AppCat bills customers.
+
+There are two billing systems in use:
+
+* <<event-based-billing,Event-Based Billing>> - the default for all VSHN managed services (PostgreSQL, Redis, MariaDB, Forgejo, Nextcloud, Keycloak, etc.)
+* <<metered-billing,Metered Billing (Legacy)>> - still used exclusively for Object Buckets on Cloudscale and Exoscale
+
+[NOTE]
+====
+For details on how billing events are processed and stored in Odoo, see the https://docs.central.vshn.ch/event-billing.html[Odoo Event Billing documentation^].
+====
+
+[[event-based-billing]]
+== Event-Based Billing (VSHN Managed Services)
+
+Event-based billing was adopted as per xref:adr/0033-event-based-billing-oddo.adoc[ADR-0033].
+Instead of periodically polling Prometheus metrics, the system reacts to lifecycle events: service creation, scaling, and deletion.
+
+=== How It Works
+
+Each service instance has a corresponding `BillingService` Custom Resource (CR) in the `syn-appcat` namespace.
+
+The full lifecycle looks like this:
+
+. A user creates, updates, or deletes a service claim.
+. The AppCat composition function reconciles the claim and creates or updates a `BillingService` CR in `syn-appcat`.
+. The AppCat controller watches `BillingService` CRs and detects changes (creation, scaling, deletion).
+. For each change, the controller appends a billing event to `status.events` and sends it to Odoo via the Event Billing REST API.
+. The event is marked `sent`, `pending`, or `failed` in `status.events`. Failed events are retried with exponential backoff.
+. After deletion, the `BillingService` CR is retained for `spec.keepAfterDeletion` days (default: 365) for audit purposes.
+
+=== BillingService CR
+
+The `BillingService` CR (API: `appcat.vshn.io/v1`) lives in `syn-appcat` and holds both the static service metadata and the full event history.
+
+[source,yaml]
+----
+apiVersion: appcat.vshn.io/v1
+kind: BillingService
+metadata:
+  name: <composite-name>-billing-service     # <1>
+  namespace: syn-appcat                       # <2>
+  labels:
+    appcat.vshn.io/claim-name: my-pg-claim
+    appcat.vshn.io/claim-namespace: my-namespace
+    appcat.vshn.io/service-name: postgresql
+  annotations:
+    appcat.vshn.io/instance-creation-timestamp: "2025-06-01T10:00:00Z"
+    appcat.vshn.io/resend: "all|not-sent|failed"  # <3>
+  finalizers:
+  - billing.appcat.vshn.io/delete-protection  # <4>
+spec:
+  keepAfterDeletion: 365                       # <5>
+  odoo:
+    serviceID: <composite-name>               # <6>
+    salesOrderID: "SO0042"                    # <7>
+    organization: "my-org"                    # <8>
+    items:                                    # <9>
+    - productID: "appcat-vshn-postgresql-besteffort"
+      value: "1"
+      itemDescription: "APPUiO Cloud - Cluster: c-appuio-cloudscale-lpg-2 / Namespace: my-namespace"
+      itemGroupDescription: "my-pg-claim"
+      instanceID: "<composite-name>-<sha>"   # <10>
+status:
+  events:                                     # <11>
+  - type: "create"
+    productID: "appcat-vshn-postgresql-besteffort"
+    instanceID: "<composite-name>-<sha>"
+    value: "1"
+    timestamp: "2025-06-01T10:00:00Z"
+    state: "sent"
+    retryCount: 0                             # <12>
+    lastAttemptTime: "2025-06-01T10:00:05Z"  # <13>
+    itemDescription: "..."
+    itemGroupDescription: "my-pg-claim"
+  conditions:
+  - type: Synced
+    status: "True"
+----
+<1> Named `<composite-name>-billing-service` for standard services.
+<2> All BillingService CRs live in `syn-appcat`.
+<3> Patch this annotation to trigger a resend of events by state (`all`, `not-sent`, `failed`).
+<4> Controller finalizer prevents accidental deletion.
+<5> Days to retain the CR after the service is deleted (default: 365, configurable via the `crDeletionAfter` component parameter).
+<6> Unique identifier for the service instance in Odoo - matches the composite name.
+<7> Sales order for APPUiO Managed clusters (set from component parameter `billing.salesOrder`).
+<8> Organization for APPUiO Cloud clusters (read from the `appuio.io/organization` label on the claim namespace).
+<9> One item per billable product.
+<10> Unique product event identifier in Odoo. Format: `{composite-name}-{first 8 hex chars of SHA-256(productID)}`.
+<11> Full event history ordered by descending timestamp. State can be `sent`, `pending`, `failed`, `resend`, or `superseded`.
+<12> Number of failed delivery attempts. Resets to 0 on success.
+<13> Timestamp of the last delivery attempt (RFC3339). Useful for diagnosing stuck events.
+
+=== Product IDs
+
+AppCat Product IDs follow the pattern:
+
+----
+appcat-vshn-{service}-{sla}
+----
+
+Where `sla` is `guaranteed` when the service has more than one instance **and** the SLA tier is set to `guaranteed` in the claim; otherwise `besteffort`.
+
+Examples: `appcat-vshn-postgresql-besteffort`, `appcat-vshn-redis-guaranteed`.
+
+=== APPUiO Cloud vs. APPUiO Managed
+
+The way a sales order is resolved differs between deployment types:
+
+[cols="1,1,1"]
+|===
+|Deployment type |How sales order is set |Notes
+
+|APPUiO Cloud
+|Organization is read from the `appuio.io/organization` label on the claim namespace by the comp-function. The controller then resolves `salesOrderID` from the Organization CR in APPUiO Control.
+|`appuio.io/organization` label is stamped on the claim namespace by APPUiO Cloud at namespace creation time; `salesOrderID` is populated automatically by the controller
+
+|APPUiO Managed
+|Set via the `billing.salesOrder` component parameter in `component-appcat`
+|`salesOrderID` field is set directly
+|===
+
+=== AppCat vs. Servala
+
+There is a key architectural difference in how billing metadata is provided, depending on which platform manages the service:
+
+[cols="1,1,1"]
+|===
+|Platform |How billing info is provided |Where the logic lives
+
+|AppCat
+|Computed internally by the composition function based on service type, SLA, and cluster configuration
+|Inside the comp-function (Go code in `appcat` repo, `pkg/comp-functions/functions/common/billing_service.go`)
+
+|Servala
+|Passed via annotations on the claim/composite by the Servala portal
+|The comp-function reads annotations with the prefix configured in `servalaBillingAnnotationPrefix`; the billing operator sets them on the composite
+|===
+
+==== Servala Annotation Protocol
+
+For Servala clusters, the billing operator stamps the following annotations on the composite resource before the comp-function reconciles it:
+
+[source,yaml]
+----
+billing.servala.com/salesOrderID: "SO0099"   # <1>
+billing.servala.com/items: |                  # <2>
+  {
+    "items": [
+      {
+        "productID": "appcat-vshn-postgresql-besteffort",
+        "value": "1",
+        "itemDescription": "Servala - Cluster: my-cluster / Namespace: my-ns",
+        "itemGroupDescription": "my-claim"
+      }
+    ]
+  }
+----
+<1> The sales order to use - overrides any cluster-level `salesOrder` config.
+<2> A JSON-encoded list of billable items. The comp-function parses this and populates `spec.odoo.items` on the `BillingService` CR.
+
+The annotation prefix (`billing.servala.com`) is configured globally in `component-appcat`.
+
+=== Disabling Billing for Dependency Services
+
+When a service depends on another (for example Keycloak → PostgreSQL), the dependency's billing must be suppressed to avoid double-billing.
+
+The parent service creates a ConfigMap named after the dependency's instance namespace in the `appcat-control` namespace.
+The ConfigMap contains a `billingDisabled` key that the dependency's comp-function reads at reconciliation time.
+
+See the `disable-billing.adoc` page in the `appcat` repository for full implementation details.
+
+=== Resending Events
+
+To trigger a resend of events for a given `BillingService`, patch the `appcat.vshn.io/resend` annotation:
+
+[source,shell]
+----
+kubectl -n syn-appcat annotate billingservice <name> \
+  appcat.vshn.io/resend=failed --overwrite
+----
+
+Valid values: `all`, `not-sent`, `failed`.
+
+=== Operational Tips
+
+[source,shell]
+----
+# List all BillingService CRs
+kubectl -n syn-appcat get billingservice
+
+# Check sync status for a specific instance
+kubectl -n syn-appcat get billingservice <name> -o jsonpath='{.status.conditions}'
+
+# Inspect full event history
+kubectl -n syn-appcat get billingservice <name> -o jsonpath='{.status.events}'
+----
+
+[[metered-billing]]
+== Metered Billing (Object Buckets - Cloudscale & Exoscale)
+
+[NOTE]
+====
+This system remains active and is **not** being replaced for Object Buckets on Cloudscale and Exoscale.
+====
+
+=== How It Works
+
+For Object Storage provided directly by a cloud provider (Cloudscale and Exoscale), usage data is collected via the https://github.com/vshn/billing-collector-cloudservices/[Billing Collector for Cloud Services].
+
+The collector:
+
+. Queries the cloud provider API (Cloudscale or Exoscale) for Object Storage usage.
+. Sends the data directly to Odoo.
+
+This is the _only_ billing path for:
+
+* `ObjectBucket` resources on Cloudscale (via `buckets.cloudscale.crossplane.io`)
+* `ObjectBucket` resources on Exoscale (via `buckets.exoscale.crossplane.io`)
+* Exoscale DBaaS (via `postgresqls.exoscale.crossplane.io`) - deprecated, no new instances should exist
+
+NOTE: APPUiO Managed cloud resources (cloud resources used inside an APPUiO Managed cluster) are billed differently and do not go through this collector.
+
+=== Cloudscale Configuration
+
+[source,yaml]
+----
+billing:
+  cloudscale:
+    enabled: false
+    collectIntervalHours: 23 # <1>
+    billingHour: 6           # <2>
+    days: 1                  # <3>
+----
+<1> Object Storage existence is checked daily.
+<2> Time of day when usage data is collected.
+<3> Number of days of historical usage data to retrieve.
+
+=== Exoscale Configuration
+
+[source,yaml]
+----
+billing:
+  exoscale:
+    enabled: false
+    dbaas:
+      enabled: false
+      collectIntervalMinutes: 15 # <1>
+    objectStorage:
+      enabled: false
+      collectIntervalHours: 23   # <2>
+      billingHour: 6             # <3>
+----
+<1> DBaaS instances are checked every 15 minutes.
+<2> Object Storage existence is checked daily.
+<3> Time of day when usage data is collected.
+
+The complete configuration for both providers is in https://github.com/vshn/component-appcat/blob/master/class/defaults.yml[component-appcat defaults.yml].
+
+=== Odoo Integration
+
+Data is processed in Odoo via the https://central.vshn.ch/web#action=1172&model=queue_message.metered_usage&view_type=list&menu_id=587&cids=1[Job Queue^].
+Each job corresponds to a collection run, and messages are either accepted or rejected.
+Accepted data is visible on the https://central.vshn.ch/web#action=1171&model=vshn.metered.usage&view_type=list&menu_id=216&cids=1[Sales page^].
+
+NOTE: Some links require specific Odoo permissions.
+
+=== Data Model and Flow
+
+See the https://docs.central.vshn.ch/metered-billing-data-flow.html[Metered Billing Data Model and Flow^] for a generic overview.
+
+== Special Testing Namespace
+
+On each APPUiO cluster there is a testing namespace excluded from billing under both systems.
+It is typically `vshn-test` and is configured via `appcat.billing.ignoreNamespace` in `component-appcat`.
