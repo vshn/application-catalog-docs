@@ -8,7 +8,7 @@ This approach has been tested with https://docs.anthropic.com/en/docs/claude-cod
 == How it works
 
 The AppCat repo contains a `CLAUDE.md` and per-service agent configurations.
-Rather than writing code directly, agents serve as reviewers and advisors for the main coding session:
+Agents serve as reviewers and advisors for the main coding session:
 
 * Each agent is scoped to a specific AppCat service, keeping its context focused and relevant.
 * The main session can bounce ideas and implementation approaches off the agent.
@@ -25,8 +25,8 @@ Rather than writing code directly, agents serve as reviewers and advisors for th
 
 === Don't
 
-* Don't let AI do the work for you. You are responsible for the code you submit.
-* Don't let others review code you yourself have not yet reviewed.
+* Don't blindly accept AI output. You are responsible for the code you submit.
+* Don't submit AI-written code for review without reviewing it yourself first.
 * Don't blindly trust AI-generated tests. Verify they actually test meaningful behavior and not just the implementation.
 
 == Recommended plugins
@@ -105,3 +105,15 @@ Claude fetches the blog post, explores existing types and composition functions,
 
 Claude then asks clarifying questions (PoC vs. production?), proposes approaches, presents a design, and writes a design document, all before any code.
 ====
+
+=== Debugging
+
+AI can act as a rubber duck for debugging.
+Explaining a problem to Claude often helps clarify your own thinking, and it can suggest angles you haven't considered.
+
+.Example prompt
+----
+VSHNPostgreSQL instances intermittently fail to become ready after restore.
+The backup exists and the restore job completes, but the cluster never reaches
+a running state. What could cause this?
+----
