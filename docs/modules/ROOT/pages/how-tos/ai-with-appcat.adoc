@@ -1,0 +1,119 @@
+= Using AI with AppCat
+
+The AppCat repository includes configuration for AI-assisted development using Claude Code.
+Each AppCat service has its own dedicated agent configuration that acts as a domain-specific knowledge worker and coding buddy.
+
+This approach has been tested with https://docs.anthropic.com/en/docs/claude-code/overview[Claude Code] and no other AI coding tools at this time.
+
+== How it works
+
+The AppCat repo contains a `CLAUDE.md` and per-service agent configurations.
+Agents serve as reviewers and advisors for the main coding session:
+
+* Each agent is scoped to a specific AppCat service, keeping its context focused and relevant.
+* The main session can bounce ideas and implementation approaches off the agent.
+* This creates a continuous review loop without requiring the full project context in every session.
+* Agents guide the main session and act as knowledge workers, they don't write code themselves.
+
+== Dos and don'ts
+
+=== Do
+
+* Use AI to assist your work: brainstorming, drafting, reviewing, debugging.
+* Review all AI output before using it. Ensure it is correct and meets our standards.
+* Keep your own understanding of the code you're working on. If you can't explain it, you don't own it.
+
+=== Don't
+
+* Don't blindly accept AI output. You are responsible for the code you submit.
+* Don't submit AI-written code for review without reviewing it yourself first.
+* Don't blindly trust AI-generated tests. Verify they actually test meaningful behavior and not just the implementation.
+
+== Recommended plugins
+
+The following Claude Code plugins are recommended to improve the AI-assisted workflow:
+
+https://github.com/JuliusBrussee/caveman[Caveman]::
+Compresses Claude's output by cutting filler words. Gets straight to the point and saves tokens.
+
+https://github.com/anthropics/claude-code/tree/main/plugins/code-review[Code Review]::
+Structured code review with a scoring system that filters out false positives.
+
+https://github.com/obra/superpowers[Superpowers]::
+Adds structured workflows to Claude Code. Starts by clarifying intent, builds a spec, then creates an implementation plan emphasizing TDD and YAGNI. Launches sub-agents to work through tasks with built-in review checkpoints, enabling longer autonomous sessions without deviating from the plan.
+
+== Usecases
+
+Usecases for AI with AppCat:
+
+=== Code Reviews
+
+Claude can assist in code reviews and help spot hard-to-find bugs.
+To filter out false positives, use the Code Review plugin described above.
+It can be invoked using `/code-review:code-review`.
+
+NOTE: Use this to support your reviewing process, not to replace it.
+Only relying on Claude as a reviewer does *not* count as a proper review.
+Also refrain from letting Claude publish reviews autonomously, in accordance with https://distantprovince.by/posts/its-rude-to-show-ai-output-to-people/[this post on showing AI output to people].
+
+=== Build understanding
+
+AI is effective at answering cross-cutting questions about the codebase that would otherwise require reading through multiple packages and services manually.
+
+.Example prompt
+----
+Which services use K8up for backups and which don't? Explain why.
+----
+
+[%collapsible]
+.Example output
+====
+*Services using K8up:* Redis, MariaDB, Forgejo, Nextcloud.
+All four follow the same pattern in `pkg/comp-functions/functions/common/backup/backup.go`: create an `XObjectBucket` for S3 storage, generate a K8up repository password, create a `k8upv1.Schedule`, and mount a custom backup script via ConfigMap.
+These services have no built-in backup operator, so K8up (wrapping restic) provides generic pod-level backup to S3.
+
+*Services not using K8up:*
+
+* *PostgreSQL (StackGres/CNPG)*, both operators have native continuous WAL archiving and PITR, which is superior to file-level backup.
+* *Keycloak*, stateless app that delegates backup to its embedded VSHNPostgreSQL dependency.
+* *MinIO/Garage*, object storage is the backup destination itself; backing it up would be circular.
+
+*Key insight:* K8up is the generic fallback for Helm-deployed apps without native backup operators. When an operator provides its own backup (StackGres, CNPG), that is preferred because it enables WAL-level PITR.
+====
+
+=== Plan implementations
+
+AI can help plan feature implementations before writing code.
+Plugins like Superpowers add a structured workflow: clarify intent, explore codebase, propose approach.
+
+.Example prompt
+----
+I want to add a parameter to VSHNPostgreSQL that orders a pizza once the instance
+has successfully provisioned. Use this as a reference:
+https://blog.crossplane.io/providers-101-ordering-pizza-with-kubernetes-and-crossplane/
+Guide me through how I could implement such a feature.
+----
+
+[%collapsible]
+.Example output
+====
+Claude fetches the blog post, explores existing types and composition functions, then highlights a key difference:
+
+* Blog describes a Crossplane Provider, a standalone controller making direct external API calls.
+* AppCat uses Composition Functions, gRPC pipeline steps that emit Kubernetes resources, no direct API calls.
+* So "ordering pizza" means emitting a Job or CronJob that calls the API, not calling it from the function.
+
+Claude then asks clarifying questions (PoC vs. production?), proposes approaches, presents a design, and writes a design document, all before any code.
+====
+
+=== Debugging
+
+AI can act as a rubber duck for debugging.
+Explaining a problem to Claude often helps clarify your own thinking, and it can suggest angles you haven't considered.
+
+.Example prompt
+----
+VSHNPostgreSQL instances intermittently fail to become ready after restore.
+The backup exists and the restore job completes, but the cluster never reaches
+a running state. What could cause this?
+----
