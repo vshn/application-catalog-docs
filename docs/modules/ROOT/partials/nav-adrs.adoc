@@ -48,3 +48,4 @@
 ** xref:adr/0048-evaluating-vector-databases-as-appcat-services.adoc[]
 ** xref:adr/0049-managed-openbao.adoc[]
 ** xref:adr/0050-alternatives-to-minio-for-s3-compatible-object-storage.adoc[]
+** xref:adr/0051-standarized-status-fields-for-appcat-services.adoc[]
