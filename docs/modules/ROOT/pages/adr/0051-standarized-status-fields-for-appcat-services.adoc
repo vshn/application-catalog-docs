@@ -1,0 +1,292 @@
+= ADR 0051 - Standarized Status Fields for AppCat Services
+:adr_author:    Nicolas Bigler
+:adr_owner:     Schedar
+:adr_reviewers: 
+:adr_date:      2026-04-20
+:adr_upd_date:  2026-04-20
+:adr_status:    draft
+:adr_tags:      framework,servala,service
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+Introduce a shared `VSHNServiceStatus` struct embedded in all AppCat service status types. It exposes a standardized
+`phase` enum (`Provisioning`, `Ready`, `Scaling`, `Maintenance`, `Degraded`, `Failed`, `Deleting`, `Unknown`) with 
+optional `phaseReason` and `phaseMessage` fields. This gives consumers (for example Servala portal) a single machine-readable lifecycle field without service-specific knowledge, while keeping existing condition-based detail for operators.
+====
+
+== Context
+
+With AppCat/Servala we manage multiple services. Each service exposes different status fields with no consistent schema.
+Consumers (for example Servala portal) cannot reliably determine the service lifecycle state without service-specific
+knowledge. This makes it harder to create a unified dashboard.
+
+The current state:
+- No unified "phase" or "state" field across services
+- Transition states (provisioning, scaling, maintenance) are not exposed
+- Some services expose internal implementation details
+- Inconsistent depth (PostgreSQL has 11 conditions, Garage has none)
+
+=== Solution Ideas
+
+==== Option 1: Single phase field (enum string)
+
+Add a top-level `phase` field (for example `Provisioning`, `Ready`, `Scaling`, `Maintenance`, `Degrated`, `Failed`, 
+`Deleting`, `Unknown`) to a new `VSHNServiceStatus` struct shared across all services.
+
+[cols="1,1",options="header"]
+|===                                                                                                                                                                                                        
+| Pros | Cons                                                                                                                                 
+
+| Single field. Trivial to read for consumers and UIs                                                                                                                                                      
+| Mutually exclusive. Can only represent one state at a time
+                                                                                            
+| Machine-readable enum, easy to act on                                                                                                                                                                     
+| Priority rules required when multiple states apply simultaneously
+                                                                                                                                                                                                            
+| No condition-evaluation logic in consumers                                                                                                                                                                
+| New states require enum extension (CRD update + re-deploy)                                                                                                                                                
+                                                                                                                                                                                                            
+| Easy to default via mutating webhook                                                                                                        
+| Loses detail: no reason/message per state without extra fields                                                                                                                                            
+|===
+
+==== Option 2: Standard Kubernetes conditions only (`metav1.Condition[]`)                                                                                                                                   
+                                                                                                                                                
+Use standard `metav1.Condition` with well-known `type` values:                                                                                                                                              
+`Ready`, `Provisioning`, `Maintenance`, `Degraded`, `Scaling`.
+                                                                                                                                                                                                            
+[cols="1,1",options="header"]                                                                                                                 
+|===                                                                                                                                                                                                        
+| Pros | Cons                                                                                                                                 
+                                                                                                                                                                                                            
+| Follows Kubernetes convention. Familiar to operators
+| No single "current state". Consumers must evaluate N conditions                                                                                                                                          
+                                                                                                                                                                                                            
+| Append-only, additive. No breaking changes when adding new condition types
+| `status: True/False/Unknown` per condition is confusing for states like `Maintenance`                                                                                                                     
+                                                                                                                                                                                                            
+| Rich per-condition `reason`/`message`/`lastTransitionTime`                                                                                                                                                
+| UI/portal must implement condition-evaluation logic per consumer                                                                                                                                          
+                                                                                                                                                                                                            
+| Already partially in place via `xpv1.ResourceStatus`                                                                                                                                                      
+| Verbose. Harder to display in a dashboard without transformation                                                                                                                                         
+|===                                                                                                                                                                                                        
+                                                                                                                                              
+==== Option 3: Hybrid approach with phase field + conditions                                                                                                                                                            
+                                                                                                                                              
+Combine both: top-level `phase` enum for quick state summary, plus                                                                                                                                          
+`metav1.Condition[]` for detail and reason tracking per transition.                                                                           
+                                                                                                                                                                                                            
+[cols="1,1",options="header"]                                                                                                                                                                               
+|===
+| Pros | Cons                                                                                                                                                                                               
+                                                                                                                                              
+| Best of both: simple summary + rich detail
+| More fields to maintain and keep consistent
+                                                                                                                                                                                                            
+| Phase set by controller; conditions carry the why                                                                                                                                                         
+| Phase and conditions can diverge if not updated atomically                                                                                                                                                
+                                                                                                                                                                                                            
+| Consumers choose abstraction level (phase for UI, conditions for automation)                                                                                                                              
+| Slightly more complex webhook defaulting                                                                                                                                                                  
+                                                                                                                                                                                                            
+| Extensible: new conditions don't break existing phase consumers                                                                                                                                           
+| Requires clear ownership rules (who sets what)                                                                                                                                                            
+|===                                                                                                                                                                                                        
+                                                                                                                                              
+==== Option 4: Follow Crossplane's `Ready`/`Synced` pattern only                                                                                                                                            
+ 
+No new fields. Rely entirely on existing `xpv1.ResourceStatus` conditions                                                                                                                                   
+(`Ready=True/False`, `Synced=True/False`) that Crossplane already populates.                                                                  
+                                                                                                                                                                                                            
+[cols="1,1",options="header"]                                                                                                                 
+|===                                                                                                                                                                                                        
+| Pros | Cons                                                                                                                                 
+
+| Zero implementation cost                                                                                                                                                                                  
+| Only two states expressible: ready or not
+                                                                                                                                                                                                            
+| Already works for Crossplane tooling                                                                                                        
+| No transition states (provisioning, maintenance, scaling). Servala requirement unmet                                                                                                                     
+                                                                                                                                                                                                            
+| No migration needed                                                                                                                                                                                       
+| Consumers must understand Crossplane internals                                                                                                                                                            
+                                                                                                                                                                                                            
+| Consistent with upstream conventions                                                                                                        
+| `Synced=False` covers too many distinct failure modes
+|===
+
+== Decision
+
+Introduce a standard `VSHNServiceStatus` struct embedded in all service status types.                                                                                                                       
+  
+=== Standard Fields (all services)                                                                                                                                                                          
+                                                                                                                                              
+[source,go]
+----
+type VSHNServiceStateStatus struct {
+    // Phase summarizes the lifecycle state of the service.
+    // +kubebuilder:validation:Enum=Provisioning;Ready;Scaling;Maintenance;Degraded;Failed;Deleting;Unknown
+    // +kubebuilder:default=Unknown
+    Phase VSHNServicePhase `json:"phase,omitempty"`
+
+    // Reason is a short CamelCase reason for the current phase.
+    // +optional
+    Reason string `json:"reason,omitempty"`
+
+    // Message is a human-readable explanation of the current phase.
+    // +optional
+    Message string `json:"message,omitempty"`
+
+    // LastTransitionTime is when the phase last changed.
+    // +optional
+    LastTransitionTime *metav1.Time `json:"lastTransitionTime,omitempty"`
+}
+
+type VSHNServiceStatus struct {
+    // ServiceState summarizes the lifecycle state of the service.
+    // +optional
+    ServiceState VSHNServiceStateStatus `json:"serviceState,omitempty"`
+}                                                                                                                                                                                                           
+                                                                                                                                              
+type VSHNServicePhase string                                                                                                                                                                                
+                                                                                                                                              
+const (
+    VSHNServicePhaseProvisioning VSHNServicePhase = "Provisioning"
+    VSHNServicePhaseReady        VSHNServicePhase = "Ready"
+    VSHNServicePhaseScaling      VSHNServicePhase = "Scaling"                                                                                                                                               
+    VSHNServicePhaseMaintenance  VSHNServicePhase = "Maintenance"
+    VSHNServicePhaseDegraded     VSHNServicePhase = "Degraded"                                                                                                                                              
+    VSHNServicePhaseFailed       VSHNServicePhase = "Failed"                                                                                  
+    VSHNServicePhaseDeleting     VSHNServicePhase = "Deleting"                                                                                                                                              
+    VSHNServicePhaseUnknown      VSHNServicePhase = "Unknown"                                                                                                                                               
+)
+----                                                                                                                                                                                                        
+                                                                                                                                              
+Embed in every service status:                                                                                                                                                                              
+
+[source,go]                                                                                                                                                                                                 
+----                                                                                                                                          
+type VSHNPostgreSQLStatus struct {
+    VSHNServiceStatus `json:",inline"`
+    // ... existing fields ...
+}
+----
+
+=== Phase Transition Rules
+
+[cols="1,3",options="header"]                                                                                                                                                                               
+|===
+| Phase | Condition                                                                                                                                                                                         
+                                                                                                                                              
+| `Provisioning`
+| `instanceNamespace` not yet set OR initial resource creation
+
+| `Ready`
+| Crossplane `Ready=True`, `Synced=True`, not in maintenance
+                                                                                                                                                                                                            
+| `Maintenance`
+| Maintenance window active (tracked by maintenance controller)                                                                                                                                             
+                                                                                                                                              
+| `Scaling`
+| Spec change in progress (for example replica count)
+
+| `Degraded`
+| `Ready=True` but health check failing, OR partial replica availability
+                                                                                                                                                                                                            
+| `Failed`
+| `Ready=False` for > threshold OR unrecoverable error                                                                                                                                                      
+                                                                                                                                              
+| `Deleting`
+| `deletionTimestamp` set
+
+| `Unknown`
+| Insufficient information to determine state
+|===                                                                                                                                                                                                        
+
+Priority when multiple conditions active:                                                                                                                                                                   
+                                                                                                                                              
+----
+Deleting > Failed > Provisioning > Maintenance > Scaling > Degraded > Ready > Unknown
+----
+
+=== Internal Conditions Cleanup                                                                                                                                                                             
+
+Internal implementation-detail conditions (`pgclusterConditions`,                                                                                                                                     
+`namespaceConditions`, etc.) should be:                                                                                                       
+
+* Kept but marked `// +optional` with clear doc that these are *internal*
+* Not surfaced in API docs aimed at consumers
+* Evaluated for removal in a follow-up (separate ADR)                                                                                                                                                       
+
+=== Service-Specific Fields                                                                                                                                                                                 
+                                                                                                                                              
+Keep existing service-specific fields (`currentVersion`, `currentReleaseTag`,
+`sshPort`, etc.). Additive and useful. Standardize naming:
+                                                                                                                                                                                                            
+* Use `currentVersion` for version strings (not `currentReleaseTag` / `mariadbVersion`)
+                                                                                                                                                                                                            
+=== Extensibility
+
+New status fields added as optional (`omitempty`). Mutating webhook sets defaults
+for new fields on existing objects (backfill). No breaking changes to consumers
+reading existing fields.
+
+Example: a billing controller adds a `VSHNBillingStatus` sub-object to expose
+cost and usage information to the Servala dashboard without touching existing fields:
+
+[source,go]
+----
+type VSHNBillingStatus struct {
+    // CurrentMonthlyPrice is the current estimated monthly price in CHF.
+    // Set by the billing controller.
+    // +optional
+    CurrentMonthlyPrice *resource.Quantity `json:"currentMonthlyPrice,omitempty"`
+
+    // Unit is the unit of measurement for consumption (e.g. "GiB", "minutes").
+    // +optional
+    Unit string `json:"unit,omitempty"`
+
+    // QuantityConsumed is the amount consumed in the current billing period, in Unit.
+    // +optional
+    QuantityConsumed *resource.Quantity `json:"quantityConsumed,omitempty"`
+}
+
+type VSHNServiceStatus struct {
+    // ServiceState summarizes the lifecycle state of the service.
+    // +optional
+    ServiceState VSHNServiceStateStatus `json:"serviceState,omitempty"`
+
+    // Billing exposes cost and usage information, populated by the billing controller.
+    // +optional
+    Billing *VSHNBillingStatus `json:"billing,omitempty"`
+}
+----
+
+Consumers that don't read `billing` are unaffected. The billing controller owns this
+field; the mutating webhook defaults it to `nil` (absent) on existing objects.                                                                                                                                                                                    
+
+== Consequences
+
+=== Positive
+
+* Servala gets machine-readable lifecycle state without service-specific logic
+* Operators can write generic tooling against any AppCat service
+* Future services required to set phase from day one
+
+=== Negative
+
+* Composition functions must set `phase` correctly. Ongoing maintenance burden
+* Phase transitions need to be tested
+* Scaling detection requires comparing spec to actual state (non-trivial)
+
+== Open Questions
+
+. *Servala specifics:* Do we need additional states beyond the 8 proposed?
+. *Scaling detection:* How to reliably detect scaling in progress without polling?
+. *Condition cleanup:* Remove internal condition slices now or in follow-up?
+. *Degraded threshold:* What defines degraded vs. failed?
+
