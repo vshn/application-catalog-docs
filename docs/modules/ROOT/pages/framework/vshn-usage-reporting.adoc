@@ -1,7 +1,19 @@
-= VSHN Based AppCat Services
+= VSHN Based AppCat Services (Deprecated)
 :page-aliases: reference/vshn-usage-reporting.adoc
 
-This page explains how VSHN based services handle usage reporting.
+[WARNING]
+====
+*This page is deprecated.*
+
+This page describes the legacy Prometheus/Mimir-based metered billing for VSHN managed services.
+This system has been superseded by Event-Based Billing using the `BillingService` CRD.
+
+See xref:framework/billing.adoc[AppCat Billing] for up-to-date documentation.
+
+This page is kept for historical reference only.
+====
+
+This page explains how VSHN based services handled usage reporting under the legacy metered billing system.
 
 == Data Flow Overview
 
