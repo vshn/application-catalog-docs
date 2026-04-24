@@ -1,0 +1,128 @@
+= ADR 0052 - Day 2 Operations With AppCat
+:adr_author:    Mike Ditton
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2026-04-23
+:adr_upd_date:  2026-04-24
+:adr_status:    draft
+:adr_tags:      framework,framework2,operations,maintenance,crossplane,helm
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+This ADR defines where day 2 operations logic lives in AppCat services and which mechanism implements each class of operation.
+
+Business logic that shapes Kubernetes objects belongs in the service Helm chart.
+Composition functions return desired state only.
+One-off operations use https://docs.crossplane.io/latest/operations/operation/[Crossplane Operations] (Crossplane 2.x).
+Recurring operations use Kubernetes Jobs driven by CronJobs.
+Observation of existing cluster state uses https://docs.crossplane.io/latest/composition/compositions/#required-resources[Crossplane required resources].
+====
+
+== Context
+
+Day 2 operations are all actions that happen to a service instance after its initial provisioning: upgrades, restarts, restores, credential rotations, configuration changes, backups, maintenance window execution, and ad-hoc interventions.
+
+AppCat services today mix these concerns across several layers.
+VSHNPostgreSQL, built on https://cloudnative-pg.io/[CloudNativePG], is the current reference case: we forked the upstream cluster Helm chart to adapt it to our needs, which moved parts of the business logic out of the composition function and into the chart.
+Without a clear rule for where each kind of logic belongs, behaviour drifts between services and the composition function grows into a catch-all.
+
+Related decisions:
+
+* xref:adr/0045-service-orchestration-crossplane-2-0.adoc[ADR 0045] selects Crossplane 2.x composition functions as the orchestration layer.
+* xref:adr/0047-service-maintenance-and-upgrades-framework-2-0.adoc[ADR 0047] selects CronJobs for scheduled maintenance, deferring Argo Workflows / Crossplane Operations to a later phase.
+
+=== Problem
+
+We need a consistent answer to these questions for every AppCat service:
+
+* Where does business logic that shapes a Kubernetes object live — the composition function or the Helm chart?
+* How do we perform a one-off operation (for example, a manual failover, a forced upgrade, a credential reset) without polluting the composition function's reconcile loop?
+* How do we run recurring operations (maintenance, version checks, scheduled backups) in a way that is observable and operable?
+* How does the composition function observe existing state on the cluster without owning it?
+
+=== Forces
+
+* Composition functions run on every reconcile.
+  Any branching that sometimes returns a resource and sometimes withholds it leads to drift, flapping, or accidental deletion.
+* Helm charts are the natural home for Kubernetes object shape: they template, they version, and operators already understand them.
+* Crossplane 2.x introduces https://docs.crossplane.io/latest/operations/operation/[Operations], a mechanism for imperative, one-off actions that is not part of the steady-state reconcile loop.
+* Some state the composition depends on (secrets, status of managed resources, upstream objects) must be read but not owned.
+  Crossplane https://docs.crossplane.io/latest/composition/compositions/#required-resources[required resources] exist for exactly this.
+
+== Decision
+
+=== Composition functions return desired state only
+
+Composition functions describe what the cluster should look like for a given claim at steady state.
+They do not perform one-off actions, do not mutate external systems, and do not conditionally omit resources as a form of imperative control.
+
+If a piece of logic cannot be expressed as "given this input, this is the desired resource," it does not belong in the composition function.
+
+=== Helm charts own Kubernetes object shape
+
+The service Helm chart is the single source of truth for the shape of the Kubernetes objects that make up a service instance.
+The composition function configures the chart by setting values conditionally.
+
+Where the upstream chart (for example, CloudNativePG) is insufficient, we fork and extend it rather than rebuilding its behaviour inside the composition function.
+This keeps service-shaped business logic in a place that is testable with Helm tooling, reviewable as templates, and reusable outside of Crossplane.
+
+=== One-off operations target Crossplane Operations
+
+Imperative, one-off actions (manual failover, forced upgrade, targeted restart, ad-hoc restore) are the target use case for https://docs.crossplane.io/latest/operations/operation/[Crossplane Operations] once we adopt them.
+
+Rationale: an Operation runs outside the steady-state composition pipeline, so it can perform an action without the composition function having to conditionally return or withhold resources on subsequent reconciles.
+This avoids the state-toggling pattern that makes current compositions brittle.
+
+Crossplane Operations are not yet in use in AppCat but shall be used for new implementations where applicable.
+
+=== Recurring operations use Kubernetes Jobs
+
+Recurring maintenance work (maintenance-window upgrades, version checks, scheduled backups, periodic housekeeping) runs as Kubernetes Jobs, scheduled via CronJobs, consistent with xref:adr/0047-service-maintenance-and-upgrades-framework-2-0.adoc[ADR 0047].
+
+The CronJob is built by the composition function and runs the `appcat maintenance` subcommand, which dispatches to service-specific maintenance logic.
+This keeps per-service scheduling and RBAC in the composition function while centralising the maintenance runtime in the `appcat` binary.
+The service Helm chart is not involved.
+
+=== Observation uses Crossplane required resources
+
+When the composition function needs to read state it does not own (for example, a certificate secret produced by cert-manager, or status from a managed resource), it declares those as https://docs.crossplane.io/latest/composition/compositions/#required-resources[required resources] rather than creating or re-reconciling them.
+
+This keeps ownership explicit and avoids accidental takeover of resources produced by other controllers.
+
+This applies to new implementations; existing code is not refactored as part of this ADR.
+
+=== Summary table
+
+[cols="1,2,2", options="header"]
+|===
+| Concern | Mechanism | Notes
+
+| Desired steady state
+| Composition function + Helm chart
+| Function sets chart values; chart renders objects.
+
+| Kubernetes object shape
+| Helm chart (fork upstream where needed)
+| Single source of truth for manifests.
+
+| One-off action
+| Crossplane Operation (target)
+| Not yet adopted; today, ad-hoc or folded into reconcile.
+
+| Recurring action
+| Kubernetes Job via CronJob
+| CronJob built by the composition function; Job runs `appcat maintenance`, per ADR 0047.
+
+| Reading unowned state
+| Crossplane required resources
+| For new implementations; existing code not refactored.
+|===
+
+== Consequences
+
+Since the new AppCat framework is on the horizon, the rules in this ADR apply to new implementations only; existing services are not refactored as part of this work.
+
+This document is the source of truth for how day 2 operations are structured in AppCat going forward.
