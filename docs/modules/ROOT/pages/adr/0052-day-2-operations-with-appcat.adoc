@@ -3,7 +3,7 @@
 :adr_owner:     Schedar
 :adr_reviewers: Schedar
 :adr_date:      2026-04-23
-:adr_upd_date:  2026-04-24
+:adr_upd_date:  2026-04-27
 :adr_status:    draft
 :adr_tags:      framework,framework2,operations,maintenance,crossplane,helm
 
@@ -16,83 +16,170 @@ This ADR defines where day 2 operations logic lives in AppCat services and which
 
 Business logic that shapes Kubernetes objects belongs in the service Helm chart.
 Composition functions return desired state only.
-One-off operations use https://docs.crossplane.io/latest/operations/operation/[Crossplane Operations] (Crossplane 2.x).
+One-off operations are Jobs emitted by the composition function, running `appcat operation <op>` (mirroring the maintenance pattern); Crossplane Operations remain a long-term target.
 Recurring operations use Kubernetes Jobs driven by CronJobs.
 Observation of existing cluster state uses https://docs.crossplane.io/latest/composition/compositions/#required-resources[Crossplane required resources].
 ====
 
 == Context
 
-Day 2 operations are all actions that happen to a service instance after its initial provisioning: upgrades, restarts, restores, credential rotations, configuration changes, backups, maintenance window execution, and ad-hoc interventions.
+Day 2 operations are all actions on a service instance after initial provisioning: upgrades, restarts, restores, credential rotations, configuration changes, backups, maintenance, ad-hoc interventions.
 
-AppCat services today mix these concerns across several layers.
-VSHNPostgreSQL, built on https://cloudnative-pg.io/[CloudNativePG], is the current reference case: we forked the upstream cluster Helm chart to adapt it to our needs, which moved parts of the business logic out of the composition function and into the chart.
-Without a clear rule for where each kind of logic belongs, behaviour drifts between services and the composition function grows into a catch-all.
+AppCat services today mix these concerns across composition functions, Helm charts, and ad-hoc plumbing.
+VSHNPostgreSQL on https://cloudnative-pg.io/[CloudNativePG] is the reference case: the upstream cluster chart was forked to move business logic out of the composition function and into the chart.
+Without clear rules, behaviour drifts between services and the composition function becomes a catch-all.
 
-Related decisions:
+Related: xref:adr/0045-service-orchestration-crossplane-2-0.adoc[ADR 0045] (Crossplane 2.x composition functions); xref:adr/0047-service-maintenance-and-upgrades-framework-2-0.adoc[ADR 0047] (CronJobs for scheduled maintenance, Operations deferred).
 
-* xref:adr/0045-service-orchestration-crossplane-2-0.adoc[ADR 0045] selects Crossplane 2.x composition functions as the orchestration layer.
-* xref:adr/0047-service-maintenance-and-upgrades-framework-2-0.adoc[ADR 0047] selects CronJobs for scheduled maintenance, deferring Argo Workflows / Crossplane Operations to a later phase.
+== Options
 
-=== Problem
+=== Concern: One-off operations
 
-We need a consistent answer to these questions for every AppCat service:
+[cols="1,2,1,3", options="header"]
+|===
+| Option | Mechanism | Verdict | Summary
 
-* Where does business logic that shapes a Kubernetes object live — the composition function or the Helm chart?
-* How do we perform a one-off operation (for example, a manual failover, a forced upgrade, a credential reset) without polluting the composition function's reconcile loop?
-* How do we run recurring operations (maintenance, version checks, scheduled backups) in a way that is observable and operable?
-* How does the composition function observe existing state on the cluster without owning it?
+| A
+| Crossplane Operations (`Operation`, `CronOperation`, `WatchOperation`)
+| Deferred (long-term target)
+| Native Crossplane primitive, but alpha gating and SDK fork drift make it costly today.
 
-=== Forces
+| B
+| Job emitted by the composition function, runs `appcat operation <op>`
+| **Chosen**
+| Mirrors the maintenance pattern; reuses Job primitives; no alpha dependencies.
 
-* Composition functions run on every reconcile.
-  Any branching that sometimes returns a resource and sometimes withholds it leads to drift, flapping, or accidental deletion.
-* Helm charts are the natural home for Kubernetes object shape: they template, they version, and operators already understand them.
-* Crossplane 2.x introduces https://docs.crossplane.io/latest/operations/operation/[Operations], a mechanism for imperative, one-off actions that is not part of the steady-state reconcile loop.
-* Some state the composition depends on (secrets, status of managed resources, upstream objects) must be read but not owned.
-  Crossplane https://docs.crossplane.io/latest/composition/compositions/#required-resources[required resources] exist for exactly this.
+| C
+| Imperative composition logic
+| Rejected
+| State-toggling causes drift, flapping, accidental deletion.
+
+| D
+| Helm-templated conditional Job in the service chart
+| Rejected
+| Forces a fork of upstream charts and reacts only on release reconcile.
+
+| E
+| Dedicated day-2 ops Helm chart (vshn-owned)
+| Considered, may revisit
+| Useful if a single ops Job is reused across services; otherwise extra artifact.
+
+| F
+| Custom controller
+| Rejected
+| Reinvents Crossplane Operations; ongoing maintenance cost.
+|===
+
+==== Option A: Crossplane Operations
+
+Description::
+
+Use Crossplane 2.x https://docs.crossplane.io/latest/operations/operation/[Operations] (`Operation`, `CronOperation`, `WatchOperation`) to trigger function steps outside the composition pipeline. The function step renders the desired Kubernetes object (typically a Job).
+
+PoC: https://github.com/vshn/appcat/pull/654[appcat#654].
+
+Advantages::
+
+* Native Crossplane primitive, aligned with Crossplane 2.x direction.
+* Runs outside the composition reconcile loop; avoids the state-toggling pattern.
+* `WatchOperation` reacts to resource events as they happen on the cluster.
+
+Disadvantages::
+
+* Operations are alpha; require `--enable-operations` on Crossplane core.
+* Bumping `function-sdk-go` to expose the new `required_resources` proto field cascades into `vshn/apiserver-runtime` fork breakage.
+* Operations cannot delete resources; no built-in cleanup story.
+* Failure feedback lands on the `Operation` CR, not on the originating service claim; surfacing requires extra plumbing.
+
+==== Option B: Job emitted by the composition function
+
+Description::
+
+The composition function emits a Job whose container runs `appcat operation <subcommand>`.
+A shared helper in `pkg/comp-functions/functions/common` builds the Job, mirroring the maintenance helper.
+
+Gating uses stable, identity-keyed Job names so re-emission is a no-op once the Job exists. Two patterns:
+
+. Observed state matches desired—read the target resource via `ExtraResources` or required resources, emit the Job once the match is detected (for example, a post-major-version-upgrade backup).
+. A claim field flipped by the user or an external controller, encoded into the Job name (for example, a generation counter); bumping the field produces a new Job.
+
+PoC: https://github.com/vshn/appcat/pull/655[appcat#655].
+
+Advantages::
+
+* Reuses the maintenance pattern already in production.
+* Operation runtime lives in the `appcat` binary, alongside maintenance logic.
+* Job lifecycle, logging, status, and cleanup are well-understood Kubernetes primitives.
+* No alpha dependencies; no extra Crossplane plumbing.
+* Failure feedback lands on a Job that the composition function already manages.
+
+Disadvantages::
+
+* Operation logic written in Go inside the `appcat` binary adds to that binary's responsibilities.
+* Failure feedback lands on the Job, not on the originating service claim; surfacing requires extra plumbing (same gap as Option A).
+
+==== Other options considered
+
+Option C—Imperative composition logic.::
+Branch in the composition function to include or exclude managed resources based on observed state.
+Rejected: state-toggling causes drift, flapping, accidental deletion; couples one-off concerns to the reconcile loop.
+
+Option D—Helm-templated conditional Job in the service chart.::
+Render a Job in the service chart conditionally on values matching observed state, gated with `kubectl wait`. See closed https://github.com/vshn/appcat-charts/pull/29[appcat-charts#29].
+Rejected: forces a fork of upstream charts; Helm reacts only on release reconcile; gating splits between chart and composition function.
+
+Option E—Dedicated day-2 ops Helm chart (vshn-owned).::
+A separate vshn-owned chart packaging ops Jobs and CronJobs, deployed alongside the service chart.
+Considered: avoids the upstream-fork burden of Option D, but adds an artifact and another templating layer. Revisit only if a single ops Job becomes shared across services.
+
+Option F—Custom controller.::
+A controller that watches service CRs, executes operations on events, surfaces status to the claim.
+Rejected: reinvents Crossplane Operations; ongoing maintenance cost.
+
+=== Concern: Observation of unowned state
+
+[cols="1,2,1,3", options="header"]
+|===
+| Option | Mechanism | Verdict | Summary
+
+| A
+| Crossplane required resources
+| **Chosen**
+| Native Crossplane primitive with explicit read-only ownership semantics.
+
+| B
+| `SetDesiredKubeObject` + `KubeOptionObserve` (read back via `GetObservedKubeObject`)
+| Existing pattern, not refactored
+| Widely used in the codebase today; less explicit about read-only intent.
+|===
+
+New implementations declare observed-but-unowned resources as https://docs.crossplane.io/latest/composition/compositions/#required-resources[required resources]. Existing `KubeOptionObserve` usage is not refactored as part of this ADR.
 
 == Decision
 
 === Composition functions return desired state only
 
-Composition functions describe what the cluster should look like for a given claim at steady state.
-They do not perform one-off actions, do not mutate external systems, and do not conditionally omit resources as a form of imperative control.
+Composition functions describe steady state for a given claim. They do not perform one-off actions, mutate external systems, or omit resources conditionally as a form of imperative control.
 
 If a piece of logic cannot be expressed as "given this input, this is the desired resource," it does not belong in the composition function.
 
 === Helm charts own Kubernetes object shape
 
-The service Helm chart is the single source of truth for the shape of the Kubernetes objects that make up a service instance.
-The composition function configures the chart by setting values conditionally.
+The service Helm chart is the single source of truth for the shape of the service's Kubernetes objects. The composition function sets chart values; it does not template workload manifests itself. Forks of upstream charts are acceptable when the upstream is insufficient.
 
-Where the upstream chart (for example, CloudNativePG) is insufficient, we fork and extend it rather than rebuilding its behaviour inside the composition function.
-This keeps service-shaped business logic in a place that is testable with Helm tooling, reviewable as templates, and reusable outside of Crossplane.
+=== One-off operations use Jobs emitted by the composition function
 
-=== One-off operations target Crossplane Operations
+Use Option B: the composition function emits a Job whose container runs `appcat operation <subcommand>`. New operations are added by writing the subcommand and wiring it through the shared helper in `pkg/comp-functions/functions/common`.
 
-Imperative, one-off actions (manual failover, forced upgrade, targeted restart, ad-hoc restore) are the target use case for https://docs.crossplane.io/latest/operations/operation/[Crossplane Operations] once we adopt them.
-
-Rationale: an Operation runs outside the steady-state composition pipeline, so it can perform an action without the composition function having to conditionally return or withhold resources on subsequent reconciles.
-This avoids the state-toggling pattern that makes current compositions brittle.
-
-Crossplane Operations are not yet in use in AppCat but shall be used for new implementations where applicable.
+Crossplane Operations (Option A) remain the long-term target; re-evaluation is deferred per the Phase 2 note in xref:adr/0047-service-maintenance-and-upgrades-framework-2-0.adoc[ADR 0047]. A dedicated day-2 ops chart (Option E) will be reconsidered if a single ops Job becomes shared across services.
 
 === Recurring operations use Kubernetes Jobs
 
-Recurring maintenance work (maintenance-window upgrades, version checks, scheduled backups, periodic housekeeping) runs as Kubernetes Jobs, scheduled via CronJobs, consistent with xref:adr/0047-service-maintenance-and-upgrades-framework-2-0.adoc[ADR 0047].
-
-The CronJob is built by the composition function and runs the `appcat maintenance` subcommand, which dispatches to service-specific maintenance logic.
-This keeps per-service scheduling and RBAC in the composition function while centralising the maintenance runtime in the `appcat` binary.
-The service Helm chart is not involved.
+Recurring work (maintenance-window upgrades, version checks, scheduled backups, periodic housekeeping) runs as Jobs scheduled by CronJobs, per xref:adr/0047-service-maintenance-and-upgrades-framework-2-0.adoc[ADR 0047]. The CronJob is built by the composition function and runs `appcat maintenance`. The service Helm chart is not involved.
 
 === Observation uses Crossplane required resources
 
-When the composition function needs to read state it does not own (for example, a certificate secret produced by cert-manager, or status from a managed resource), it declares those as https://docs.crossplane.io/latest/composition/compositions/#required-resources[required resources] rather than creating or re-reconciling them.
-
-This keeps ownership explicit and avoids accidental takeover of resources produced by other controllers.
-
-This applies to new implementations; existing code is not refactored as part of this ADR.
+State the composition function reads but does not own (for example, secrets produced by another controller, status from a managed resource) is declared as a https://docs.crossplane.io/latest/composition/compositions/#required-resources[required resource]. Applies to new implementations; existing `KubeOptionObserve` usage is not refactored as part of this ADR.
 
 === Summary table
 
@@ -109,8 +196,8 @@ This applies to new implementations; existing code is not refactored as part of 
 | Single source of truth for manifests.
 
 | One-off action
-| Crossplane Operation (target)
-| Not yet adopted; today, ad-hoc or folded into reconcile.
+| Job emitted by composition function, runs `appcat operation <op>`
+| Crossplane Operations (Option A) deferred as long-term target.
 
 | Recurring action
 | Kubernetes Job via CronJob
@@ -123,6 +210,4 @@ This applies to new implementations; existing code is not refactored as part of 
 
 == Consequences
 
-Since the new AppCat framework is on the horizon, the rules in this ADR apply to new implementations only; existing services are not refactored as part of this work.
-
-This document is the source of truth for how day 2 operations are structured in AppCat going forward.
+Rules apply to new implementations only; existing services are not refactored as part of this work, given the new AppCat framework is on the horizon. This document is the source of truth for how day 2 operations are structured going forward.
