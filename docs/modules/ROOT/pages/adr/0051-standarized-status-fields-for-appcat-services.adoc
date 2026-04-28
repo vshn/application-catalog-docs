@@ -33,7 +33,7 @@ The current state:
 
 ==== Option 1: Single phase field (enum string)
 
-Add a top-level `phase` field (for example `Provisioning`, `Ready`, `Scaling`, `Maintenance`, `Degrated`, `Failed`, 
+Add a top-level `phase` field (for example `Provisioning`, `Ready`, `Scaling`, `Maintenance`, `Degraded`, `Failed`, 
 `Deleting`, `Unknown`) to a new `VSHNServiceStatus` struct shared across all services.
 
 [cols="1,1",options="header"]
