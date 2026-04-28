@@ -185,7 +185,8 @@ type VSHNPostgreSQLStatus struct {
 | `instanceNamespace` not yet set OR initial resource creation
 
 | `Ready`
-| Crossplane `Ready=True`, `Synced=True`, not in maintenance
+| Crossplane `Ready=True`, `Synced=True`, all service pods in `instanceNamespace` are `Ready`, not in maintenance.
+See <<pod-readiness>> below.
                                                                                                                                                                                                             
 | `Maintenance`
 | Maintenance window active (tracked by maintenance controller)                                                                                                                                             
@@ -211,6 +212,54 @@ Priority when multiple conditions active:
 ----
 Deleting > Failed > Provisioning > Maintenance > Scaling > Degraded > Ready > Unknown
 ----
+
+[#pod-readiness]
+==== Pod Readiness
+
+All AppCat services are deployed via Helm. Crossplane marks a service `Ready=True` and `Synced=True` as soon as the Helm release is successfully applied.
+It does not track pod lifecycle. This means a service can report `Ready` while its pods are still initializing,
+terminating from a previous revision, or in `CrashLoopBackOff`.
+
+To guard against premature `Ready` phase the composition function MUST perform an additional pod readiness check:
+
+. After Crossplane conditions are `Ready=True` and `Synced=True`, query all pods in `instanceNamespace`.
+. If any pod is not in `Running` phase with all containers `Ready`, remain in `Provisioning` (initial deploy) or
+  transition to `Degraded` (post-deploy regression) rather than setting `phase=Ready`.
+. Only set `phase=Ready` when Crossplane conditions AND pod readiness are both satisfied.
+
+This check is implemented inside the composition function (function-appcat). It sets a custom condition
+`PodReady` (type `PodReady`, status `True`/`False`) on the composite resource alongside the standard
+Crossplane conditions, giving operators visibility into which layer is not yet healthy:
+
+[cols="2,1,1,2",options="header"]
+|===
+| Scenario | Crossplane `Ready` | `PodReady` condition | `phase`
+
+| Initial provisioning, pods pending
+| False
+| False
+| `Provisioning`
+
+| Helm release applied, pods not yet ready
+| True
+| False
+| `Provisioning`
+
+| All pods running and ready
+| True
+| True
+| `Ready`
+
+| Post-update pod regression (was ready before)
+| True
+| False
+| `Degraded`
+
+| Helm release failed
+| False
+| False
+| `Failed`
+|===
 
 === Internal Conditions Cleanup                                                                                                                                                                             
 
