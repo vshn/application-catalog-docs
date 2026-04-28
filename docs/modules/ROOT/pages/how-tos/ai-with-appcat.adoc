@@ -20,6 +20,7 @@ Agents serve as reviewers and advisors for the main coding session:
 === Do
 
 * Use AI to assist your work: brainstorming, drafting, reviewing, debugging.
+* Run AI coding agents in a xref:how-tos/ai-with-appcat/sandboxing.adoc[sandbox]. This is the expected default for AppCat work.
 * Review all AI output before using it. Ensure it is correct and meets our standards.
 * Keep your own understanding of the code you're working on. If you can't explain it, you don't own it.
 
@@ -29,9 +30,25 @@ Agents serve as reviewers and advisors for the main coding session:
 * Don't submit AI-written code for review without reviewing it yourself first.
 * Don't blindly trust AI-generated tests. Verify they actually test meaningful behavior and not just the implementation.
 
+== Sandboxing
+
+[IMPORTANT]
+====
+AI coding agents must run in a sandbox when working on AppCat.
+Running them directly on your host gives them access to your credentials, SSH keys, cloud tokens, and any other repository on your machine.
+A single prompt-injection or hallucinated `rm` can cause real damage.
+====
+
+We provide a preconfigured https://github.com/vshn/schedar-agents[Docker sandbox template] with all the recommended plugins below already installed.
+A single `sbx run` command gives you a sandboxed Claude Code session with the AppCat-recommended setup, no manual plugin installation required.
+There is no friction reason to skip the sandbox.
+
+See xref:how-tos/ai-with-appcat/sandboxing.adoc[] for setup instructions.
+
 == Recommended plugins
 
-The following Claude Code plugins are recommended to improve the AI-assisted workflow:
+The following Claude Code plugins are recommended to improve the AI-assisted workflow.
+All of them are preinstalled in the xref:how-tos/ai-with-appcat/sandboxing.adoc[sandbox template].
 
 https://github.com/JuliusBrussee/caveman[Caveman]::
 Compresses Claude's output by cutting filler words. Gets straight to the point and saves tokens.

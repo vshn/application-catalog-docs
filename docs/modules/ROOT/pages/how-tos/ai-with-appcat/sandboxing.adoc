@@ -1,0 +1,85 @@
+= Sandboxing AI Sessions
+
+Running an AI coding agent like Claude Code with broad permissions on your workstation is risky.
+Sandboxing isolates the agent from your host so it cannot read secrets outside the project, modify unrelated files, or reach arbitrary network destinations.
+
+== Why sandbox
+
+* Limit filesystem access to the project directory.
+* Restrict outbound network to an explicit allowlist (no exfiltration of credentials, no reaching internal infra by accident).
+* Contain destructive commands (`rm -rf`, package installs, daemon changes) inside a disposable environment.
+* Allow running the agent in a less-restrictive permission mode (for example `--dangerously-skip-permissions`) without putting your host at risk.
+
+There are multiple options to create a sandboxed environment for use with AI.
+We provide a template with the recommended plugins already installed for Docker sandboxes.
+
+== Docker sandbox (`sbx`)
+
+Docker ships a tool called https://docs.docker.com/ai/sandboxes/[Sandboxes] that runs coding agents in a microVM.
+It provides a read-only filesystem by default, configurable network policies, and per-session isolation.
+
+See the https://docs.docker.com/ai/sandboxes/#get-started[Docker Sandboxes setup guide] for installation instructions.
+
+=== Preconfigured setup
+
+We provide a custom image containing the recommended plugins at https://github.com/vshn/schedar-agents[vshn/schedar-agents].
+
+To get started, enter the directory you want to create a sandbox for and run:
+
+[source,bash]
+----
+sbx run claude --template ghcr.io/vshn/schedar-agents
+----
+
+This guides you through the regular Claude setup process.
+Each directory gets its own sandbox.
+
+=== Mounting additional directories
+
+You can mount additional directories that should be available inside the sandbox, for example a related repository or the user documentation.
+Mounts can be read-only by appending `:ro`:
+
+[source,bash]
+----
+sbx run claude . /path/to/repository:ro
+----
+
+=== Custom templates
+
+If you want to add additional configurations, plugins, or authenticated sessions, snapshot a running sandbox and reuse it.
+This also saves you from having to re-authenticate every time you start a new sandbox.
+
+Save a snapshot:
+
+[source,bash]
+----
+sbx template save <my-session> my-cool-template:v1
+----
+
+Start a new sandbox from the snapshot:
+
+[source,bash]
+----
+sbx run -t my-cool-template:v1 claude
+----
+
+=== Network policies
+
+When setting up `sbx`, the *Balanced* profile is recommended.
+It denies network traffic by default but allows common developer destinations such as GitHub.
+
+To allow an additional domain:
+
+[source,bash]
+----
+sbx policy allow network vshn.ch
+----
+
+To inspect blocked requests during a session:
+
+[source,bash]
+----
+sbx policy log
+----
+
+For more advanced use cases, see the https://docs.docker.com/reference/cli/sbx/[`sbx` command reference].
