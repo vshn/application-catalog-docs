@@ -1,4 +1,4 @@
-= ADR 0051 - Standarized Status Fields for AppCat Services
+= ADR 0051 - Standardized Status Fields for AppCat Services
 :adr_author:    Nicolas Bigler
 :adr_owner:     Schedar
 :adr_reviewers: 
@@ -12,9 +12,7 @@ include::partial$adr-meta.adoc[]
 [NOTE]
 .Summary
 ====
-Introduce a shared `VSHNServiceStatus` struct embedded in all AppCat service status types. It exposes a standardized
-`phase` enum (`Provisioning`, `Ready`, `Scaling`, `Maintenance`, `Degraded`, `Failed`, `Deleting`, `Unknown`) with 
-optional `phaseReason` and `phaseMessage` fields. This gives consumers (for example Servala portal) a single machine-readable lifecycle field without service-specific knowledge, while keeping existing condition-based detail for operators.
+Introduce a shared `VSHNServiceStatus` struct embedded in all AppCat service status types using a hybrid approach. It exposes a `phase` enum (`Provisioning`, `Ready`, `Scaling`, `Maintenance`, `Degraded`, `Failed`, `Deleting`, `Unknown`) for quick machine-readable summary, plus standard `metav1.Condition[]` for rich transition history and detail. This aligns with the Crossplane way of working: consumers can read `phase` for a simple lifecycle view while operators and automation can inspect conditions for full history and reasoning.
 ====
 
 == Context
@@ -121,13 +119,13 @@ No new fields. Rely entirely on existing `xpv1.ResourceStatus` conditions
 
 == Decision
 
-Introduce a standard `VSHNServiceStatus` struct embedded in all service status types.                                                                                                                       
-  
-=== Standard Fields (all services)                                                                                                                                                                          
-                                                                                                                                              
+Use the hybrid approach (Option 3): a single `VSHNServiceStatus` struct with a `phase` enum for quick summary and `metav1.Condition[]` for history and detail. No intermediate wrapper struct.
+
+=== Standard Fields (all services)
+
 [source,go]
 ----
-type VSHNServiceStateStatus struct {
+type VSHNServiceStatus struct {
     // Phase summarizes the lifecycle state of the service.
     // +kubebuilder:validation:Enum=Provisioning;Ready;Scaling;Maintenance;Degraded;Failed;Deleting;Unknown
     // +kubebuilder:default=Unknown
@@ -144,25 +142,26 @@ type VSHNServiceStateStatus struct {
     // LastTransitionTime is when the phase last changed.
     // +optional
     LastTransitionTime *metav1.Time `json:"lastTransitionTime,omitempty"`
+
+    // Conditions holds the detailed transition history and per-state reasons.
+    // Follows the Crossplane convention: each phase transition is recorded as a condition.
+    // +optional
+    // +listType=map
+    // +listMapKey=type
+    Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
-type VSHNServiceStatus struct {
-    // ServiceState summarizes the lifecycle state of the service.
-    // +optional
-    ServiceState VSHNServiceStateStatus `json:"serviceState,omitempty"`
-}                                                                                                                                                                                                           
-                                                                                                                                              
-type VSHNServicePhase string                                                                                                                                                                                
-                                                                                                                                              
+type VSHNServicePhase string
+
 const (
     VSHNServicePhaseProvisioning VSHNServicePhase = "Provisioning"
     VSHNServicePhaseReady        VSHNServicePhase = "Ready"
-    VSHNServicePhaseScaling      VSHNServicePhase = "Scaling"                                                                                                                                               
+    VSHNServicePhaseScaling      VSHNServicePhase = "Scaling"
     VSHNServicePhaseMaintenance  VSHNServicePhase = "Maintenance"
-    VSHNServicePhaseDegraded     VSHNServicePhase = "Degraded"                                                                                                                                              
-    VSHNServicePhaseFailed       VSHNServicePhase = "Failed"                                                                                  
-    VSHNServicePhaseDeleting     VSHNServicePhase = "Deleting"                                                                                                                                              
-    VSHNServicePhaseUnknown      VSHNServicePhase = "Unknown"                                                                                                                                               
+    VSHNServicePhaseDegraded     VSHNServicePhase = "Degraded"
+    VSHNServicePhaseFailed       VSHNServicePhase = "Failed"
+    VSHNServicePhaseDeleting     VSHNServicePhase = "Deleting"
+    VSHNServicePhaseUnknown      VSHNServicePhase = "Unknown"
 )
 ----                                                                                                                                                                                                        
                                                                                                                                               
@@ -225,7 +224,7 @@ Internal implementation-detail conditions (`pgclusterConditions`,
 === Service-Specific Fields                                                                                                                                                                                 
                                                                                                                                               
 Keep existing service-specific fields (`currentVersion`, `currentReleaseTag`,
-`sshPort`, etc.). Additive and useful. Standardize naming:
+`sshPort`, etc.), but standarize the naming by adding a common field for all services:
                                                                                                                                                                                                             
 * Use `currentVersion` for version strings (not `currentReleaseTag` / `mariadbVersion`)
                                                                                                                                                                                                             
@@ -236,7 +235,8 @@ for new fields on existing objects (backfill). No breaking changes to consumers
 reading existing fields.
 
 Example: a billing controller adds a `VSHNBillingStatus` sub-object to expose
-cost and usage information to the Servala dashboard without touching existing fields:
+cost and usage information to the Servala dashboard without touching existing fields.
+Service-specific extensions are added directly to the service status type, not to `VSHNServiceStatus`:
 
 [source,go]
 ----
@@ -255,14 +255,14 @@ type VSHNBillingStatus struct {
     QuantityConsumed *resource.Quantity `json:"quantityConsumed,omitempty"`
 }
 
-type VSHNServiceStatus struct {
-    // ServiceState summarizes the lifecycle state of the service.
-    // +optional
-    ServiceState VSHNServiceStateStatus `json:"serviceState,omitempty"`
+type VSHNPostgreSQLStatus struct {
+    VSHNServiceStatus `json:",inline"`
 
     // Billing exposes cost and usage information, populated by the billing controller.
     // +optional
     Billing *VSHNBillingStatus `json:"billing,omitempty"`
+
+    // ... existing fields ...
 }
 ----
 
