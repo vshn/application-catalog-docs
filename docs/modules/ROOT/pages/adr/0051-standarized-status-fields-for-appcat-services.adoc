@@ -119,7 +119,7 @@ No new fields. Rely entirely on existing `xpv1.ResourceStatus` conditions
 
 == Decision
 
-Use the hybrid approach (Option 3): a single `VSHNServiceStatus` struct with a `phase` enum for quick summary and `metav1.Condition[]` for history and detail. No intermediate wrapper struct.
+We use Option 3 (hybrid approach), because it gives consumers the best of both worlds: a single `phase` enum for a quick machine-readable summary without condition-evaluation logic, plus `metav1.Condition[]` for rich transition history and detail that operators and automation can inspect. New conditions don't break existing phase consumers, making the approach extensible without CRD-breaking changes. No intermediate wrapper struct.
 
 === Standard Fields (all services)
 
@@ -192,7 +192,8 @@ See <<pod-readiness>> below.
 | Maintenance window active (tracked by maintenance controller)                                                                                                                                             
                                                                                                                                               
 | `Scaling`
-| Spec change in progress (for example replica count)
+| Composition function detects a scaling operation (for example replica count change), sets `phase=Scaling` and marks the service unready.
+Returns to `Ready` only once the scaling completes and pod readiness is re-confirmed.
 
 | `Degraded`
 | `Ready=True` but health check failing, OR partial replica availability
@@ -223,7 +224,7 @@ terminating from a previous revision, or in `CrashLoopBackOff`.
 To guard against premature `Ready` phase the composition function MUST perform an additional pod readiness check:
 
 . After Crossplane conditions are `Ready=True` and `Synced=True`, query all pods in `instanceNamespace`.
-. If any pod is not in `Running` phase with all containers `Ready`, remain in `Provisioning` (initial deploy) or
+. If any service pod is not in `Running` phase with all containers `Ready`, remain in `Provisioning` (initial deploy) or
   transition to `Degraded` (post-deploy regression) rather than setting `phase=Ready`.
 . Only set `phase=Ready` when Crossplane conditions AND pod readiness are both satisfied.
 
@@ -330,12 +331,11 @@ field; the mutating webhook defaults it to `nil` (absent) on existing objects.
 
 * Composition functions must set `phase` correctly. Ongoing maintenance burden
 * Phase transitions need to be tested
-* Scaling detection requires comparing spec to actual state (non-trivial)
+* Scaling transitions managed by composition function: sets unready on scale start, re-checks pod readiness on completion
 
 == Open Questions
 
 . *Servala specifics:* Do we need additional states beyond the 8 proposed?
-. *Scaling detection:* How to reliably detect scaling in progress without polling?
 . *Condition cleanup:* Remove internal condition slices now or in follow-up?
 . *Degraded threshold:* What defines degraded vs. failed?
 
