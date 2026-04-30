@@ -18,7 +18,7 @@ Initial maintenance runs immediately after provisioning and currently does three
 * Pin the claim to the current production composition revision (selector + update policy)
 * Run the regular maintenance side effects (EOL checks, `autoUpdate` handling).
 
-The pod restarts triggered during the instance bootstrap, can corrupt the state of certain services (eg. MariaDB).
+The pod restarts triggered during the instance bootstrap can corrupt the state of certain services (e.g. MariaDB).
 
 The decision is a two-step rollout:
 
@@ -28,7 +28,7 @@ The decision is a two-step rollout:
 A small `autoUpdate` controller keeps the "flip label -> immediate prod-to-test" behaviour.
 ====
 
-== Problem
+== Context
 
 Services are provisioned with only the major image tag (PostgreSQL `16`, Redis `7`, ...) because the composition only knows the major version from the claim.
 To ensure instances run on the latest patch and on the right production revision from day one, AppCat triggers an *initial maintenance* job immediately after provisioning.
@@ -43,30 +43,36 @@ Running step 1 while the instance is still bootstrapping is unsafe:
 
 * *Uncontrolled restarts*: pods that have not finished their first-time init sequence (for example cluster bootstrap) get restarted during the bootstrap process.
 * *State corruption*: observed across several services, most notably on MariaDB.
-* *Provisioning latency*: every new instance will unecessarily restart, which delays the provisioning process. This is especially noticable on services with long start up times (for example Keycloak).
+* *Provisioning latency*: every new instance will unnecessarily restart, which delays the provisioning process. This is especially noticeable on services with long start-up times (for example Keycloak).
 
 Steps 2 and 3 are not corruption-causing but are now coupled to step 1: if we drop initial maintenance wholesale, new claims would be unpinned (floating on every new revision == test-instance semantics) and the `autoUpdate` fast-path would be lost.
 
-Any replacement must therefore:
+=== Current implementation
+
+* `pkg/comp-functions/functions/common/maintenance/maintenance.go` creates a one-time `Job` (`<composite>-initial-maintenance`) on first reconcile and keeps it in the desired state for 30 minutes after completion.
+* Per-service maintenance under `pkg/maintenance/` (`postgresql.go`, `postgresqlcnpg.go`, `redis.go`, `mariadb.go`, `keycloak.go`, `nextcloud.go`, `forgejo.go`, `minio.go`) runs the same code paths for initial and scheduled maintenance:
+** security upgrade / minor version upgrade for SGCluster/CNPG/Helm releases (the part that restarts pods)
+** `ReleaseLatest` via `pkg/maintenance/release/release.go`: Sets composition revision selector + update policy on the claim.
+** EOL status propagation, repack, vacuum, etc.
+* Composition revisions are labelled with `metadata.appcat.vshn.io/revision`. The `ReleaseLatest` flow picks the latest revision older than `minimumRevisionAge` and writes that label into the claim's `compositionRevisionSelector`.
+* Claims created by users have *no* revision selector until initial maintenance sets one.
+
+== Requirements
+
+Any replacement must:
 
 . Deliver the correct full semver image tag to the pod without a restart-after-bootstrap cycle.
 . Pin new claims to the current production composition revision on creation.
 . Honour `metadata.appcat.vshn.io/autoUpdate` transitions *immediately*, not at the next maintenance window (this flag switches the instance from prod revision pin to floating latest, that is prod->test).
 . Preserve the remaining side effects (EOL, registry auth, service-specific ops) or move them explicitly elsewhere.
 
-== Current State
+== Options
 
-* `pkg/comp-functions/functions/common/maintenance/maintenance.go` creates a one-time `Job` (`<composite>-initial-maintenance`) on first reconcile and keeps it in the desired state for 30 minutes after completion.
-* Per-service maintenance under `pkg/maintenance/` (`postgresql.go`, `postgresqlcnpg.go`, `redis.go`, `mariadb.go`, `keycloak.go`, `nextcloud.go`, `forgejo.go`, `minio.go`) runs the same code paths for initial and scheduled maintenance:
-  - security upgrade / minor version upgrade for SGCluster/CNPG/Helm releases (the part that restarts pods)
-  - `ReleaseLatest` via `pkg/maintenance/release/release.go`: Sets composition revision selector + update policy on the claim.
-  - EOL status propagation, repack, vacuum, etc.
-* Composition revisions are labelled with `metadata.appcat.vshn.io/revision`. The `ReleaseLatest` flow picks the latest revision older than `minimumRevisionAge` and writes that label into the claim's `compositionRevisionSelector`.
-* Claims created by users have *no* revision selector until initial maintenance sets one.
+=== Image tag resolution
 
-== Solutions
+These options address how to deliver the correct full semver tag without a post-bootstrap restart.
 
-=== Option A: Image catalogue with weekly updater
+==== Option A: Image catalogue with weekly updater
 
 *Description:*
 
@@ -86,15 +92,15 @@ Composition functions read the catalogue when resolving the service image tag, s
 * *Up to 7 days stale*.
 * *New component*: CRD + controller + tests + ops.
 * *Compatibility modelling is non-trivial*.
-* *Does not solve revision pinning on its own*: must be combined with C or H.
+* *Does not solve revision pinning on its own*: must be combined with E or F.
 
-=== Option B: Native Crossplane `EnvironmentConfig` as catalogue
+==== Option B: Native Crossplane `EnvironmentConfig` as catalogue
 
 *Description:*
 
 Instead of a custom `ImageCatalogue` CRD (Option A), store the `service + majorVersion -> latest full semver` mapping in one or more `apiextensions.crossplane.io/EnvironmentConfig` resources.
 Compositions already support reading `EnvironmentConfig` via the function pipeline, so the resolved tag is available at render time natively.
-A weekly CronJob (or the `CronOperation` from Option D) patches the `EnvironmentConfig`.
+A weekly CronJob (or the `CronOperation` from Option H) patches the `EnvironmentConfig`.
 
 *Advantages:*
 
@@ -107,9 +113,52 @@ A weekly CronJob (or the `CronOperation` from Option D) patches the `Environment
 * *Up to 7 days stale*.
 * *Schema flexibility limited*: `EnvironmentConfig` is a flat key-value bag. Compatibility matrices and structured constraints need to be encoded as conventions.
 * *Validation*: no CRD means no `kubebuilder` validation on the catalogue contents. Validation lives in the updater and the consuming function.
-* *Does not solve revision pinning on its own*: must be combined with C or H.
+* *Does not solve revision pinning on its own*: must be combined with E or F.
 
-=== Option C: Revision-selector controller
+==== Option C: HTTP client in composition functions (rejected)
+
+*Description:*
+
+Composition functions call upstream (Docker Hub, GHCR, StackGres API) to resolve the latest patch for the requested major version at render time.
+
+*Advantages:*
+
+* *Always fresh*.
+
+*Disadvantages:*
+
+* *Against Crossplane best practices*: functions must be deterministic.
+* *External dependency on the render path*: registry outage degrades every reconcile.
+* *Non-reproducible renders*.
+* *Rate limits become a production concern*.
+* *Does not address revision pinning.*
+
+Rejected on principle.
+
+==== Option D: Reuse `image-reflector-controller` (Flux) as the updater
+
+*Description:*
+
+Instead of writing the weekly catalogue updater from scratch, use Flux's `image-reflector-controller` (`ImageRepository` + `ImagePolicy`) to scan upstream registries and resolve the latest semver matching a given major.
+The selected tag is written to the catalogue (Option A) or `EnvironmentConfig` (Option B) by a small glue controller, or by an `ImageUpdateAutomation`-style process.
+
+*Advantages:*
+
+* *Battle-tested registry scanning*: auth, pagination, rate-limit handling already solved.
+* *Rich semver filtering*: `ImagePolicy` supports semver ranges, regex, numeric filters natively.
+* *Cuts build-from-scratch cost*: no need to re-implement registry clients per registry type.
+
+*Disadvantages:*
+
+* *Flux dependency*: adds `image-reflector-controller` as an operational dependency, even for clusters that do not otherwise run Flux.
+* *Glue layer still required*: Flux writes status on `ImagePolicy`, but translating that into catalogue entries is our code.
+* *Operational ownership*: new controller to monitor, upgrade, secure.
+
+=== Revision pinning
+
+These options address how to pin new claims to the current production revision at creation time.
+
+==== Option E: Revision-selector controller
 
 *Description:*
 
@@ -132,28 +181,31 @@ Image tag resolution is *not* part of this option. This is handled by the compos
 * *New controller*: one more reconciler to own and monitor.
 * *Race window on create*: claim may briefly float before the controller reconciles (mitigation: default the composition to a policy that prefers the current revision until the selector is written, or reconcile-on-create).
 
-=== Option D: Crossplane Operations (CronOperation / WatchOperation)
+==== Option F: Mutating admission webhook
 
 *Description:*
 
-Replace the dedicated controller of Option C with Crossplane's `WatchOperation`: it reacts to claim create/update events and writes `compositionRevisionSelector` + `compositionUpdatePolicy`, handling `autoUpdate` label transitions in the same pipeline.
-
-Same pipeline model as the regular composition functions, same SDK, same deployment path.
+A mutating webhook on the claim resolves `majorVersion` -> full semver at admission time (reading the catalogue from Option A), and also writes the current production revision selector + update policy onto the claim.
+Subsequent revision rotation still needs another mechanism (maintenance or a controller) to update the selector.
 
 *Advantages:*
 
-* *No new controller code*: reuses the function framework the team already owns.
-* *Tightly integrated with Crossplane*: direct access to claim/composite state and the composition revision API.
-* *Declarative*: operations defined as CRs, not Go reconcilers.
-* *Aligns with ADR0047 phase 2*: the deferred decision explicitly reserves space for evaluating Operations as complexity grows.
+* *Happens before any pod starts*: no bootstrap restart.
+* *Simple per service*: one mutation rule per kind.
+* *Covers both image tag and revision pinning* at creation time.
 
 *Disadvantages:*
 
-* *Still alpha*: `CronOperation`/`WatchOperation` are alpha in Crossplane. Production use is a risk vs. a plain controller-runtime controller.
-* *Maintenance logic embedded in function code*: same ergonomic downsides as regular composition functions.
-* *No multi-step workflows*: fine for this use case, but means a future rollout/rollback need still falls back to CronJob or Workflows (per ADR0047).
+* *Webhook on the critical path*: admission failures block every create/update of the claim.
+* *Still needs a catalogue and a rotation mechanism*: does not stand alone.
+* *Reconciliation drift*: a tag written into the claim does not re-resolve on later patches unless another mechanism owns updates (overlap with Option E).
+* *User-visible mutation*: users see a semver they did not write.
 
-=== Option E: Pod-readiness check in initial maintenance
+=== Initial maintenance mitigation
+
+These options address the immediate problem of unsafe pod restarts during initial maintenance.
+
+==== Option G: Pod-readiness check in initial maintenance
 
 *Description:*
 
@@ -171,30 +223,31 @@ Steps 2 (revision pinning) and 3 (side effects) are unchanged.
 *Disadvantages:*
 
 * *Does not remove the coupling*: initial maintenance is still on the critical path.
-* *Provisioning is still slow*: new instances still restart unecessarily.
+* *Provisioning is still slow*: new instances still restart unnecessarily.
 * *Per-service readiness logic* needs to be maintained.
 
-=== Option F: HTTP client in composition functions
+==== Option H: Crossplane Operations (CronOperation / WatchOperation)
 
 *Description:*
 
-Composition functions call upstream (Docker Hub, GHCR, StackGres API) to resolve the latest patch for the requested major version at render time.
+Replace the dedicated controller of Option E with Crossplane's `WatchOperation`: it reacts to claim create/update events and writes `compositionRevisionSelector` + `compositionUpdatePolicy`, handling `autoUpdate` label transitions in the same pipeline.
+
+Same pipeline model as the regular composition functions, same SDK, same deployment path.
 
 *Advantages:*
 
-* *Always fresh*.
+* *No new controller code*: reuses the function framework the team already owns.
+* *Tightly integrated with Crossplane*: direct access to claim/composite state and the composition revision API.
+* *Declarative*: operations defined as CRs, not Go reconcilers.
+* *Aligns with ADR0047 phase 2*: the deferred decision explicitly reserves space for evaluating Operations as complexity grows.
 
 *Disadvantages:*
 
-* *Against Crossplane best practices*: functions must be deterministic.
-* *External dependency on the render path*: registry outage degrades every reconcile.
-* *Non-reproducible renders*.
-* *Rate limits become a production concern*.
-* *Does not address revision pinning.*
+* *Still alpha*: `CronOperation`/`WatchOperation` are alpha in Crossplane. Production use is a risk vs. a plain controller-runtime controller.
+* *Maintenance logic embedded in function code*: same ergonomic downsides as regular composition functions.
+* *No multi-step workflows*: fine for this use case, but means a future rollout/rollback need still falls back to CronJob or Workflows (per ADR0047).
 
-Rejected on principle.
-
-=== Option G: Deploy with replicas=0, scale up after image update
+==== Option I: Deploy with replicas=0, scale up after image update (rejected)
 
 *Description:*
 
@@ -213,27 +266,7 @@ An init step (maintenance-like) resolves the image tag, patches the workload, an
 * *Confusing UX*: users see a service "stuck" at 0 replicas.
 * *Does not address revision pinning.*
 
-=== Option H: Mutating admission webhook
-
-*Description:*
-
-A mutating webhook on the claim resolves `majorVersion` -> full semver at admission time (reading the catalogue from Option A), and also writes the current production revision selector + update policy onto the claim.
-Subsequent revision rotation still needs another mechanism (maintenance or a controller) to update the selector.
-
-*Advantages:*
-
-* *Happens before any pod starts*: no bootstrap restart.
-* *Simple per service*: one mutation rule per kind.
-* *Covers both image tag and revision pinning* at creation time.
-
-*Disadvantages:*
-
-* *Webhook on the critical path*: admission failures block every create/update of the claim.
-* *Still needs a catalogue and a rotation mechanism*: does not stand alone.
-* *Reconciliation drift*: a tag written into the claim does not re-resolve on later patches unless another mechanism owns updates (overlap with Option C).
-* *User-visible mutation*: users see a semver they did not write.
-
-=== Option I: Drop initial maintenance + dedicated `autoUpdate` controller (standalone)
+==== Option J: Drop initial maintenance + dedicated `autoUpdate` controller standalone (rejected)
 
 *Description:*
 
@@ -248,37 +281,22 @@ Accept that new instances run the major tag and float on the default revision un
 
 * *Leaves patches unapplied for up to a week*: unacceptable for security fixes.
 * *Leaves new claims unpinned*: production instances behave like test instances until first maintenance.
-* Only viable when combined with Option A/B (image catalogue consumed by composition functions) for the image tag and Option C for pinning.
-
-=== Option J: Reuse `image-reflector-controller` (Flux) as the updater
-
-*Description:*
-
-Instead of writing the weekly catalogue updater from scratch, use Flux's `image-reflector-controller` (`ImageRepository` + `ImagePolicy`) to scan upstream registries and resolve the latest semver matching a given major.
-The selected tag is written to the catalogue (Option A) or `EnvironmentConfig` (Option B) by a small glue controller, or by an `ImageUpdateAutomation`-style process.
-
-*Advantages:*
-
-* *Battle-tested registry scanning*: auth, pagination, rate-limit handling already solved.
-* *Rich semver filtering*: `ImagePolicy` supports semver ranges, regex, numeric filters natively.
-* *Cuts build-from-scratch cost*: no need to re-implement registry clients per registry type.
-
-*Disadvantages:*
-
-* *Flux dependency*: adds `image-reflector-controller` as an operational dependency, even for clusters that do not otherwise run Flux.
-* *Glue layer still required*: Flux writes status on `ImagePolicy`, but translating that into catalogue entries is our code.
-* *Operational ownership*: new controller to monitor, upgrade, secure.
+* Only viable when combined with Option A/B (image catalogue consumed by composition functions) for the image tag and Option E for pinning.
 
 == Decision
 
 Two-step rollout.
 
-*Step 1: Short term (stop the corruption):* adopt *Option E*.
+=== Step 1 -- Short term (stop the corruption)
+
+Adopt *Option G*.
 Add a per-service pod-readiness precondition to the initial maintenance path so upgrades only run once the instance has finished bootstrapping.
 Revision pinning and side effects continue to run as today.
 This ships in the next maintenance release.
 
-*Step 2: Long term (remove initial maintenance):* adopt *Option A* *Option B* (image catalogue as the storage primitive) consumed by the composition functions, plus *Option C* (revision-selector controller) and a dedicated `autoUpdate` controller.
+=== Step 2 -- Long term (remove initial maintenance)
+
+Adopt *Option A* or *Option B* (image catalogue as the storage primitive) consumed by the composition functions, plus *Option E* (revision-selector controller) and a dedicated `autoUpdate` controller.
 
 Concretely:
 
@@ -289,37 +307,37 @@ Concretely:
 * The remaining side effects of initial maintenance (registry auth probe, service-specific ops) are audited and either migrated to the regular maintenance CronJob or moved into dedicated controllers.
 * Once the above are in place per service, the initial maintenance job is removed from `pkg/comp-functions/functions/common/maintenance/maintenance.go`.
 
-*Implementation variants to evaluate during Step 2 PoCs:*
+=== Implementation variants to evaluate during Step 2 PoCs
 
 * *Catalogue storage*: custom `ImageCatalogue` CRD (Option A) vs. `EnvironmentConfig` (Option B). Default to `EnvironmentConfig` unless validation needs force a CRD.
-* *Catalogue updater*: custom CronJob (Option A) vs. Flux `image-reflector-controller` (Option J). Default to the custom CronJob unless the registry-scanning surface grows enough to justify the Flux dependency.
-* *Controllers for revision pinning and `autoUpdate`*: plain controller-runtime controllers (Option C) vs. Crossplane `WatchOperation`/`CronOperation` (Option D). Default to plain controllers unless we agree that using the alpha version of Crossplane Operations is acceptable for us.
+* *Catalogue updater*: custom CronJob (Option A) vs. Flux `image-reflector-controller` (Option D). Default to the custom CronJob unless the registry-scanning surface grows enough to justify the Flux dependency.
+* *Controllers for revision pinning and `autoUpdate`*: plain controller-runtime controllers (Option E) vs. Crossplane `WatchOperation`/`CronOperation` (Option H). Default to plain controllers unless we agree that using the alpha version of Crossplane Operations is acceptable for us.
 
-Options F, G, I standalone are rejected for the reasons listed above. Option H is not chosen but its selector-writing mutation remains a fallback if the Step-2 controller-based pinning turns out to race with Crossplane's revision selection on claim creation.
+Options C, I, J standalone are rejected for the reasons listed above. Option F is not chosen but its selector-writing mutation remains a fallback if the Step-2 controller-based pinning turns out to race with Crossplane's revision selection on claim creation.
 
-=== Rationale
+== Rationale
 
 . *Root cause vs. symptom*: the corruption is a symptom of "resolve the version after the pods exist". Catalogue-driven resolution in composition functions moves version resolution to render time, before any pods are created.
 . *Separates image tag from pinning*: catalogue-driven resolution in composition functions delivers the correct full semver at provisioning; the revision-selector controller independently delivers the correct revision selector at provisioning. Neither requires an admission-time hack.
-. *Reuses existing building blocks*: composition revisions, revision labels, update policies and `ReleaseLatest` semantics already exist (ADR0030). Option C extends them rather than duplicating them.
-. *Respects Crossplane best practices*: no HTTP calls from composition functions (rules out F), no admission-time registry lookups (constrains H).
+. *Reuses existing building blocks*: composition revisions, revision labels, update policies and `ReleaseLatest` semantics already exist (ADR0030). Option E extends them rather than duplicating them.
+. *Respects Crossplane best practices*: no HTTP calls from composition functions (rules out C), no admission-time registry lookups (constrains F).
 . *Preserves the `autoUpdate` fast-path*: moving it into a dedicated controller keeps the immediate prod->test behaviour without requiring the rest of the maintenance flow to run.
-. *Staged migration*: Option E is deliberately a stop-gap so production is safe while Option C rolls out per service.
-. *Implementation flexibility preserved*: Options B, D, J are called out as alternative implementations for the catalogue, the updater, and the controllers. They do not change the architectural decision and will be settled by the Step-2 PoCs.
+. *Staged migration*: Option G is deliberately a stop-gap so production is safe while Option E rolls out per service.
+. *Implementation flexibility preserved*: Options B, D, H are called out as alternative implementations for the catalogue, the updater, and the controllers. They do not change the architectural decision and will be settled by the Step-2 PoCs.
 
 == Consequences
 
-*Immediate:*
+=== Immediate (Step 1)
 
 * Initial maintenance still runs, but waits for pod readiness before triggering upgrades.
 * Provisioning becomes slightly slower (observable wait) but no longer corrupts instances.
 * Each service in `pkg/maintenance/` gains an `isSafeToRestart(ctx)` predicate:
-  - StackGres: `SGCluster.Status.Conditions[ClusterIsReady] == True` and no in-flight `SGDbOps`.
-  - CNPG: `Cluster.Status.Phase == "Cluster in healthy state"` and `ReadyInstances == Instances`.
-  - Helm-based (Keycloak, Nextcloud, Forgejo, Garage, MariaDB, Redis): all managed workloads at desired replica count and `Ready`.
+** StackGres: `SGCluster.Status.Conditions[ClusterIsReady] == True` and no in-flight `SGDbOps`.
+** CNPG: `Cluster.Status.Phase == "Cluster in healthy state"` and `ReadyInstances == Instances`.
+** Helm-based (Keycloak, Nextcloud, Forgejo, Garage, MariaDB, Redis): all managed workloads at desired replica count and `Ready`.
 * Revision pinning and `autoUpdate` handling continue to run via initial maintenance.
 
-*Mid-term:*
+=== Mid-term (Step 2)
 
 * Initial maintenance job removed from composition functions; `pkg/comp-functions/functions/common/maintenance/maintenance.go` loses its initial-maintenance branch.
 * Composition functions resolve the service image tag from the image catalogue at render time.
@@ -327,7 +345,7 @@ Options F, G, I standalone are rejected for the reasons listed above. Option H i
 * An `autoUpdate` controller owns label-driven transitions.
 * `pkg/maintenance/release/release.go` `ReleaseLatest` is reduced to the scheduled-maintenance path (revision rotation on existing instances stays there so it respects the instance's maintenance window).
 
-*Risks and follow-ups:*
+=== Risks
 
 * *Catalogue availability*: composition functions now depend on the catalogue being present and populated. Functions must handle a missing or stale catalogue deterministically (fallback to major tag, or fail render explicitly).
 * *Compatibility matrix*: catalogue must encode operator/service compatibility. Initial version can be static per release and grown over time.
@@ -335,17 +353,17 @@ Options F, G, I standalone are rejected for the reasons listed above. Option H i
 * *Race: claim created before revision-selector controller reconciles*: instance could float for a short window before being pinned. Mitigated by defaulting the update policy in the composition to a mode that prefers the current revision until the controller writes an explicit selector, or by making the controller reconcile-on-create.
 * *autoUpdate synchrony semantics*: whether the controller should block on revision switch or be eventually consistent needs a separate design note.
 
-*Follow-up tickets (to be created):*
+== Follow-up tickets
 
-. Implement per-service pod-readiness check in initial maintenance (Option E).
+. Implement per-service pod-readiness check in initial maintenance (Option G).
 . Design + implement `ImageCatalogue` CRD and weekly updater (Option A).
 . Extend composition functions to read the image catalogue and write the resolved full semver onto the composite at render time.
 . Implement revision-selector controller (sets/reconciles `compositionRevisionSelector` and `compositionUpdatePolicy` on claims).
 . Implement `autoUpdate` label controller; remove the corresponding logic from `pkg/maintenance/release/release.go`.
 . Audit non-version side effects of initial maintenance (EOL, registry auth, service-specific ops) and migrate each.
 . Remove initial maintenance job creation from `pkg/comp-functions/functions/common/maintenance/maintenance.go` once per-service migration is complete.
-. PoC: pod-readiness predicate for StackGres + CNPG (validates Option E before rollout).
-. PoC: revision-selector controller writing selector on claim create (validates Option C pinning).
+. PoC: pod-readiness predicate for StackGres + CNPG (validates Option G before rollout).
+. PoC: revision-selector controller writing selector on claim create (validates Option E pinning).
 . PoC: catalogue as `EnvironmentConfig` consumed by a composition function (validates Option B viability before committing to a custom CRD).
-. PoC: `image-reflector-controller` driving the catalogue (validates Option J vs. a custom CronJob updater).
-. Spike: implement the pinning logic as a `WatchOperation` (validates Option D against a plain controller-runtime controller).
+. PoC: `image-reflector-controller` driving the catalogue (validates Option D vs. a custom CronJob updater).
+. Spike: implement the pinning logic as a `WatchOperation` (validates Option H against a plain controller-runtime controller).
