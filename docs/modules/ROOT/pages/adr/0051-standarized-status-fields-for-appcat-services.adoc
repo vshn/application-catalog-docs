@@ -224,7 +224,7 @@ terminating from a previous revision, or in `CrashLoopBackOff`.
 To guard against premature `Ready` phase the composition function MUST perform an additional pod readiness check:
 
 . After Crossplane conditions are `Ready=True` and `Synced=True`, query all pods in `instanceNamespace`.
-. If any pod is not in `Running` phase with all containers `Ready`, remain in `Provisioning` (initial deploy) or
+. If any service pod is not in `Running` phase with all containers `Ready`, remain in `Provisioning` (initial deploy) or
   transition to `Degraded` (post-deploy regression) rather than setting `phase=Ready`.
 . Only set `phase=Ready` when Crossplane conditions AND pod readiness are both satisfied.
 
