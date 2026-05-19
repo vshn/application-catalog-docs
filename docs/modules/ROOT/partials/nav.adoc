@@ -159,6 +159,7 @@ include::partial$nav-adrs.adoc[]
 
 * How-Tos
 ** xref:how-tos/ai-with-appcat.adoc[]
+*** xref:how-tos/ai-with-appcat/sandboxing.adoc[]
 ** xref:how-tos/add-servala-service-cluster.adoc[]
 ** xref:how-tos/add-servala-control-cluster.adoc[]
 ** xref:how-tos/connect-to-servala-control-cluster.adoc[]
