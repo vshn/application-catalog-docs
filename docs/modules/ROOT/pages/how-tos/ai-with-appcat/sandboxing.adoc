@@ -53,13 +53,15 @@ Save the JSON below as `$HOME/.config/nono/profiles/schedar.json` (create the di
     "author": "Schedar"
   },
   "security": {
-    "groups": [],
     "allowed_commands": [],
     "signal_mode": null,
     "process_info_mode": null,
     "ipc_mode": null,
     "capability_elevation": null,
     "wsl2_proxy_policy": null
+  },
+  "groups": {
+    "include": []
   },
   "filesystem": {
     "allow": [ // <1>
@@ -86,10 +88,8 @@ Save the JSON below as `$HOME/.config/nono/profiles/schedar.json` (create the di
     "exclude_groups": [],
     "add_allow_read": [],
     "add_allow_write": [],
-    "add_allow_readwrite": [],
     "add_deny_access": [],
-    "add_deny_commands": [],
-    "override_deny": []
+    "add_deny_commands": []
   },
   "network": {
     "block": false,
