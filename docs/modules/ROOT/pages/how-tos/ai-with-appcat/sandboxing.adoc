@@ -10,76 +10,297 @@ Sandboxing isolates the agent from your host so it cannot read secrets outside t
 * Contain destructive commands (`rm -rf`, package installs, daemon changes) inside a disposable environment.
 * Allow running the agent in a less-restrictive permission mode (for example `--dangerously-skip-permissions`) without putting your host at risk.
 
-There are multiple options to create a sandboxed environment for use with AI.
-We provide a template with the recommended plugins already installed for Docker sandboxes.
+== Nono
 
-== Docker sandbox (`sbx`)
+https://nono.sh[Nono] is a lightweight sandboxing tool that runs commands under a configurable security profile.
+We provide a preconfigured profile (`schedar`) with the AppCat-recommended setup: network allowlist, filesystem scope, and credential handling.
 
-Docker ships a tool called https://docs.docker.com/ai/sandboxes/[Sandboxes] that runs coding agents in a microVM.
-It provides a read-only filesystem by default, configurable network policies, and per-session isolation.
+=== Install
 
-See the https://docs.docker.com/ai/sandboxes/#get-started[Docker Sandboxes setup guide] for installation instructions.
+Follow the https://nono.sh/docs/cli/getting_started/installation[Nono installation guide] for your platform.
 
-=== Preconfigured setup
+=== Run Claude Code
 
-We provide a custom image containing the recommended plugins at https://github.com/vshn/schedar-agents[vshn/schedar-agents].
-
-To get started, enter the directory you want to create a sandbox for and run:
+From the directory you want to work in:
 
 [source,bash]
 ----
-sbx run claude --template ghcr.io/vshn/schedar-agents
+nono run --profile schedar -- claude
 ----
 
-This guides you through the regular Claude setup process.
-Each directory gets its own sandbox.
+Nono sandboxes at the kernel level on your host and reuses your existing Claude Code configuration, so authentication, plugins, and settings carry over from your regular setup.
+No separate login or per-directory setup is required.
 
-=== Mounting additional directories
+=== Profile
 
-You can mount additional directories that should be available inside the sandbox, for example a related repository or the user documentation.
-Mounts can be read-only by appending `:ro`:
+The `schedar` profile defines the allowed network destinations, filesystem paths, and credential passthrough for AppCat AI sessions.
 
+Save the JSON below as `$HOME/.config/nono/profiles/schedar.json` (create the directory if it does not exist) so `nono run --profile schedar` can find it.
+
+[%collapsible]
+.`schedar.json`
+====
+[source,json]
+----
+{
+  "extends": [
+    "claude-code"
+  ],
+  "meta": {
+    "name": "schedar",
+    "version": "1.0.0",
+    "description": "Claude Code",
+    "author": "Schedar"
+  },
+  "security": {
+    "groups": [],
+    "allowed_commands": [],
+    "signal_mode": null,
+    "process_info_mode": null,
+    "ipc_mode": null,
+    "capability_elevation": null,
+    "wsl2_proxy_policy": null
+  },
+  "filesystem": {
+    "allow": [ // <1>
+      "$HOME/go/pkg/mod",
+      "$HOME/.cache/go-build"
+    ],
+    "read": [
+      "$HOME/go/bin",
+      "$HOME/.config/gh",
+      "~/.local/state/claude/locks"
+    ],
+    "write": [
+      "~/.local/share/claude/versions"
+    ],
+    "allow_file": [],
+    "read_file": [],
+    "write_file": [],
+    "unix_socket": [],
+    "unix_socket_bind": [],
+    "unix_socket_dir": [],
+    "unix_socket_dir_bind": []
+  },
+  "policy": {
+    "exclude_groups": [],
+    "add_allow_read": [],
+    "add_allow_write": [],
+    "add_allow_readwrite": [],
+    "add_deny_access": [],
+    "add_deny_commands": [],
+    "override_deny": []
+  },
+  "network": {
+    "block": false,
+    "allow_domain": [ // <2>
+      "api.anthropic.com",
+      "statsig.anthropic.com",
+      "claude.com",
+      "platform.claude.com",
+      "downloads.claude.ai",
+      "nanoclaw.dev",
+      "models.dev",
+      "api.perplexity.ai",
+      "api.workos.com",
+      "*.chatgpt.com",
+      "chatgpt.com",
+      "*.openai.com",
+      "cdn.openaimerge.com",
+      "*.oaistatic.com",
+      "*.oaiusercontent.com",
+      "*.cursor.sh",
+      "cursor.com",
+      "factory.ai",
+      "*.factory.ai",
+      "gemini.google.com",
+      "generativelanguage.googleapis.com",
+      "play.googleapis.com",
+      "registry.npmjs.org",
+      "npmjs.com",
+      "npmjs.org",
+      "npm.duckdb.org",
+      "*.yarnpkg.com",
+      "yarnpkg.com",
+      "bun.sh",
+      "*.bun.sh",
+      "pypi.org",
+      "pypi.python.org",
+      "pythonhosted.org",
+      "files.pythonhosted.org",
+      "bootstrap.pypa.io",
+      "pypa.io",
+      "crates.io",
+      "index.crates.io",
+      "static.crates.io",
+      "static.rust-lang.org",
+      "rustup.rs",
+      "sh.rustup.rs",
+      "rvm.io",
+      "proxy.golang.org",
+      "sum.golang.org",
+      "pkg.go.dev",
+      "golang.org",
+      "goproxy.io",
+      "gradle.org",
+      "*.gradle.org",
+      "maven.org",
+      "repo.maven.apache.org",
+      "apache.org",
+      "eclipse.org",
+      "spring.io",
+      "java.com",
+      "java.net",
+      "nuget.org",
+      "dot.net",
+      "dotnet.microsoft.com",
+      "packagist.org",
+      "*.packagist.org",
+      "packagist.com",
+      "pub.dev",
+      "ruby-lang.org",
+      "rubygems.org",
+      "rubyonrails.org",
+      "haskell.org",
+      "hex.pm",
+      "metacpan.org",
+      "cpan.org",
+      "nodejs.org",
+      "nodesource.com",
+      "swift.org",
+      "ziglang.org",
+      "astral.sh",
+      "tuf-repo-cdn.sigstore.dev",
+      "github.com",
+      "*.github.com",
+      "*.githubusercontent.com",
+      "*.business.githubcopilot.com",
+      "gitlab.com",
+      "*.gitlab.com",
+      "bitbucket.org",
+      "ghcr.io",
+      "gcr.io",
+      "*.gcr.io",
+      "quay.io",
+      "registry.k8s.io",
+      "k8s.io",
+      "docker.com",
+      "*.docker.com",
+      "docker.io",
+      "*.docker.io",
+      "production.cloudflare.docker.com",
+      "*.production.cloudflare.docker.com",
+      "docker-images-prod.6aa30f8b08e16409b46e0173d6de2f56.r2.cloudflarestorage.com",
+      "public.ecr.aws",
+      "mcr.microsoft.com",
+      "dhi.io",
+      "sourceforge.net",
+      "launchpad.net",
+      "ppa.launchpad.net",
+      "*.amazonaws.com",
+      "*.googleapis.com",
+      "*.googleusercontent.com",
+      "*.gstatic.com",
+      "*.gvt1.com",
+      "apis.google.com",
+      "www.google.com",
+      "dl.google.com",
+      "play.google.com",
+      "csp.withgoogle.com",
+      "*.hashicorp.com",
+      "hashicorp.com",
+      "azure.com",
+      "dev.azure.com",
+      "login.microsoftonline.com",
+      "packages.microsoft.com",
+      "playwright.azureedge.net",
+      "*.visualstudio.com",
+      "visualstudio.com",
+      "fastly.com",
+      "challenges.cloudflare.com",
+      "clerk.com",
+      "vercel.com",
+      "*.public.blob.vercel-storage.com",
+      "supabase.com",
+      "figma.com",
+      "jsdelivr.net",
+      "unpkg.com",
+      "json-schema.org",
+      "json.schemastore.org",
+      "binaries.prisma.sh",
+      "mise.run",
+      "mise-versions.jdx.dev",
+      "app.daytona.io",
+      "archive.ubuntu.com",
+      "security.ubuntu.com",
+      "ports.ubuntu.com",
+      "ubuntu.com",
+      "debian.org",
+      "*.debian.org",
+      "alpinelinux.org",
+      "dl-cdn.alpinelinux.org",
+      "archlinux.org",
+      "centos.org",
+      "fedoraproject.org",
+      "apt.llvm.org",
+      "packagecloud.io",
+      "docs.crossplane.io",
+      "docs.appcat.ch",
+      "kb.vshn.ch"
+    ],
+    "open_port": [],
+    "listen_port": [],
+    "connect_port": [],
+    "custom_credentials": {},
+    "upstream_proxy": null,
+    "upstream_bypass": []
+  },
+  "env_credentials": {
+    "github_token": "GH_TOKEN"
+  },
+  "environment": null,
+  "workdir": {
+    "access": "none"
+  },
+  "hooks": {},
+  "rollback": {
+    "exclude_patterns": [],
+    "exclude_globs": []
+  },
+  "open_urls": null,
+  "allow_launch_services": null,
+  "allow_gpu": null,
+  "allow_parent_of_protected": null,
+  "interactive": false,
+  "skipdirs": [],
+  "packs": [],
+  "command_args": [],
+  "unsafe_macos_seatbelt_rules": []
+}
+----
+<1> Host directories to expose inside the sandbox with read+write access. Use the sibling `read` or `write` arrays if you only need narrower access. Re-run `nono run` after editing.
+<2> Outbound network allowlist. Add any project-specific endpoint the agent needs (private registries, additional doc sites). Anything not listed is blocked.
+====
+
+=== GitHub token
+
+The profile's `env_credentials` block injects a GitHub token into the sandbox as `GH_TOKEN`, so `gh` and other tools can authenticate without exposing your host credentials.
+Nono reads the token from your system keystore at runtime; see the https://nono.sh/docs/cli/features/credential-injection#quick-start[credential injection docs] for details.
+
+. Create a https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token[fine-grained personal access token] scoped to the repositories you work on.
+Grant *read-only* permissions; the sandboxed agent should not be able to push, open PRs, or modify repository state on your behalf.
+
+. Store the token in the keystore under the name `github_token`:
++
 [source,bash]
 ----
-sbx run claude . /path/to/repository:ro
+# macOS
+security add-generic-password -s "nono" -a "github_token" -w "<token>"
+
+# Linux (libsecret)
+secret-tool store --label="nono" service nono account github_token
 ----
++
+See the https://nono.sh/docs/cli/features/credential-injection#quick-start[credential injection docs] for other backends.
 
-=== Custom templates
-
-If you want to add additional configurations, plugins, or authenticated sessions, snapshot a running sandbox and reuse it.
-This also saves you from having to re-authenticate every time you start a new sandbox.
-
-Save a snapshot:
-
-[source,bash]
-----
-sbx template save <my-session> my-cool-template:v1
-----
-
-Start a new sandbox from the snapshot:
-
-[source,bash]
-----
-sbx run -t my-cool-template:v1 claude
-----
-
-=== Network policies
-
-When setting up `sbx`, the *Balanced* profile is recommended.
-It denies network traffic by default but allows common developer destinations such as GitHub.
-
-To allow an additional domain:
-
-[source,bash]
-----
-sbx policy allow network vshn.ch
-----
-
-To inspect blocked requests during a session:
-
-[source,bash]
-----
-sbx policy log
-----
-
-For more advanced use cases, see the https://docs.docker.com/reference/cli/sbx/[`sbx` command reference].
+`GH_TOKEN` is then available inside the sandbox on the next `nono run`.
