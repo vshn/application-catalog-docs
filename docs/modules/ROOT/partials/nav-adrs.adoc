@@ -51,3 +51,5 @@
 ** xref:adr/0051-standarized-status-fields-for-appcat-services.adoc[]
 ** xref:adr/0052-rework-initial-maintenance.adoc[]
 ** xref:adr/0053-day-2-operations-with-appcat.adoc[]
+
+** xref:adr/0054-vshn-managed-forgejo-runners.adoc[]

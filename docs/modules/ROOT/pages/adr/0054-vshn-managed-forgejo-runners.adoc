@@ -1,0 +1,121 @@
+= ADR 0054 - VSHN Managed Forgejo Runners
+:adr_author:    Mike Ditton
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2026-05-20
+:adr_upd_date:  2026-05-26
+:adr_status:    draft
+:adr_tags:      forgejo,ci,code-hosting
+
+include::partial$adr-meta.adoc[]
+
+[NOTE]
+.Summary
+====
+Per-instance Forgejo Actions runners are deployed as a nested service in a dedicated namespace, following the pattern used for PostgreSQL in Keycloak and Nextcloud.
+Registration uses `provider-http` to call the Forgejo API directly; the resulting credential is written as a Kubernetes Secret consumed by the `forgejo-runner` Helm chart.
+====
+
+== Context
+
+Managed Forgejo currently ships without runners.
+Customers have to bring their own to run Forgejo Actions, which is a gap in our offering.
+We want to provide managed runners as part of the service.
+
+This leaves us with two design questions:
+
+. *Where does the runner live?* A single shared runner pool, or a runner per instance — and if per instance, in the instance namespace or as a nested service in its own namespace.
+. *How is the runner registered with Forgejo?* Forgejo has to issue a registration credential, and that credential has to reach the runner's config. We can drive this with a dedicated Crossplane provider, or with `provider-http`.
+
+== Solutions
+
+=== Runner topology
+
+==== Option A: Shared runner pool
+
+A single runner pool shared across all customer instances.
+
+*Disadvantages:*
+
+* Multi-tenancy security risk: jobs from different customers execute on the same infrastructure.
+* Hard to bill: per-customer usage must be tracked across a shared resource.
+* Hard to operate: one pool serving many instances complicates isolation and capacity management.
+
+==== Option B: Per-instance runner in the instance namespace
+
+A dedicated runner per instance, deployed alongside the Forgejo workload in the instance namespace.
+
+*Advantages:*
+
+* Isolation per instance via Kubernetes namespace boundaries.
+* Billing maps cleanly to the instance, the existing unit of billing.
+* Simplest to bootstrap — no extra namespace or nested-service wiring.
+
+*Disadvantages:*
+
+* Runner and Forgejo resource limits are coupled; `LimitRange`/`ResourceQuota` must be shared with the Forgejo workload.
+* Clutters the instance namespace and makes running multiple runners per instance awkward.
+
+==== Option C: Per-instance runner as a nested service
+
+A dedicated runner per instance, deployed in its own namespace as a nested service — the pattern already used for PostgreSQL in Keycloak and Nextcloud.
+
+*Advantages:*
+
+* Same per-instance isolation and billing as Option B.
+* Independent `LimitRange`/`ResourceQuota`, so runner usage is bounded without competing with Forgejo.
+* Reuses a known orchestration pattern and leaves room for multiple runners per instance.
+
+*Disadvantages:*
+
+* More bootstrapping than Option B (provisioning and wiring the nested namespace).
+
+=== Registration mechanism
+
+==== Option A: Custom Forgejo Crossplane provider
+
+A dedicated provider modelling runners (and other Forgejo objects) as first-class managed resources.
+
+*Advantages:*
+
+* Proper reconciliation and a clean resource model for Forgejo objects in general.
+
+*Disadvantages:*
+
+* Significant code to build and maintain for what is essentially a single API call.
+
+==== Option B: provider-http
+
+A composition step uses `provider-http` to call the Forgejo admin API, register a runner, and read the token back from the response.
+The composition renders the `.runner` config secret from that token and points the `forgejo-runner` Helm chart at it, which skips the chart's own registration step.
+
+*Advantages:*
+
+* Much less effort than a custom provider, and enough to drive the whole flow declaratively.
+* No new provider to maintain.
+
+*Disadvantages:*
+
+* Not a reconciled resource model, so it only fits the narrow runner-bootstrap use case.
+
+== Decision
+
+*Per-instance runner as a nested service (topology Option C), registered via `provider-http` (registration Option B).*
+
+The nested service gives us clean per-instance resource isolation and billing, and it follows a pattern we already use for other dependent services.
+For registration, a single admin-API call to obtain the runner credential does not justify the effort of building and maintaining a custom provider, so `provider-http` is the better fit.
+Should we later need full, reconciled management of Forgejo objects, a custom provider can be reconsidered in a separate decision.
+
+=== Proof of concept
+
+We built a proof of concept (https://github.com/vshn/appcat/pull/684[appcat#684]) to validate the registration flow and the Helm chart integration.
+To keep it simple it deployed into the instance namespace (topology Option B) instead of a nested service, but it used the same registration mechanism we are deciding on: `provider-http` registers the runner against the Forgejo admin API, the composition reads the returned token and writes it into a `.runner` config secret, and the `forgejo-runner` Helm chart consumes that secret.
+
+What remains is to move the runner into its own nested-service namespace, and to expose runner enablement and sizing on the claim instead of always provisioning one.
+
+== Consequences
+
+* Each Forgejo instance gets an isolated runner; no cross-tenant job execution is possible.
+* A dedicated runner namespace allows resource limits independent of the Forgejo workload, and billing maps cleanly to the instance.
+* No custom Forgejo provider is needed for runner support; the `provider-http` Crossplane provider must be installed on clusters running managed Forgejo.
+* Multiple runners per instance, and project-scoped runners, are natural extensions of this approach rather than redesigns.
