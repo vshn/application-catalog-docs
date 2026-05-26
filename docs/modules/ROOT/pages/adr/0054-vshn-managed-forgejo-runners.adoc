@@ -26,49 +26,57 @@ This leaves us with two design questions:
 
 . *Where does the runner live?* A single shared runner pool, or a runner per instance — and if per instance, in the instance namespace or as a nested service in its own namespace.
 . *How is the runner registered with Forgejo?* Forgejo has to issue a registration credential, and that credential has to reach the runner's config. We can drive this with a dedicated Crossplane provider, or with `provider-http`.
+. *How are jobs executed and isolated?* The runner runs arbitrary customer CI workloads, so the executor backend and the isolation model need deciding.
+
+== Requirements
+
+// TODO: list the concrete requirements the runner must satisfy. These anchor the
+// comparison criteria in the Solutions section below.
+
+* TODO: tenant isolation expectations
+* TODO: job execution model (what kind of workloads must run)
+* TODO: resource limits / sizing
+* TODO: networking and egress constraints
+* TODO: lifecycle (registration, deregistration, credential rotation)
+* TODO: maintenance / upgrades of the runner
 
 == Solutions
 
 === Runner topology
 
-==== Option A: Shared runner pool
+* *Shared pool*: a single runner pool shared across all customer instances.
+* *Instance namespace*: a dedicated runner per instance, deployed alongside the Forgejo workload in the instance namespace.
+* *Nested service*: a dedicated runner per instance, deployed in its own namespace as a nested service — the pattern already used for PostgreSQL in Keycloak and Nextcloud.
 
-A single runner pool shared across all customer instances.
+[cols="1,1,1,1", options="header"]
+|===
+| Criteria | Shared pool | Instance namespace | Nested service
 
-*Disadvantages:*
+| Tenant isolation
+| ❌ jobs from different customers share infrastructure
+| ✅ per-instance namespace boundary
+| ✅ per-instance namespace boundary
 
-* Multi-tenancy security risk: jobs from different customers execute on the same infrastructure.
-* Hard to bill: per-customer usage must be tracked across a shared resource.
-* Hard to operate: one pool serving many instances complicates isolation and capacity management.
+| Billing
+| ❌ usage must be tracked across a shared resource
+| ✅ maps cleanly to the instance
+| ✅ maps cleanly to the instance
 
-==== Option B: Per-instance runner in the instance namespace
+| Resource limits
+| ⚠️ shared across all tenants
+| ⚠️ coupled with the Forgejo workload
+| ✅ independent `LimitRange`/`ResourceQuota`
 
-A dedicated runner per instance, deployed alongside the Forgejo workload in the instance namespace.
+| Multiple runners per instance
+| ❌
+| ⚠️ clutters the instance namespace
+| ✅ natural to add
 
-*Advantages:*
-
-* Isolation per instance via Kubernetes namespace boundaries.
-* Billing maps cleanly to the instance, the existing unit of billing.
-* Simplest to bootstrap — no extra namespace or nested-service wiring.
-
-*Disadvantages:*
-
-* Runner and Forgejo resource limits are coupled; `LimitRange`/`ResourceQuota` must be shared with the Forgejo workload.
-* Clutters the instance namespace and makes running multiple runners per instance awkward.
-
-==== Option C: Per-instance runner as a nested service
-
-A dedicated runner per instance, deployed in its own namespace as a nested service — the pattern already used for PostgreSQL in Keycloak and Nextcloud.
-
-*Advantages:*
-
-* Same per-instance isolation and billing as Option B.
-* Independent `LimitRange`/`ResourceQuota`, so runner usage is bounded without competing with Forgejo.
-* Reuses a known orchestration pattern and leaves room for multiple runners per instance.
-
-*Disadvantages:*
-
-* More bootstrapping than Option B (provisioning and wiring the nested namespace).
+| Bootstrap effort
+| ✅ single deployment
+| ✅ no extra namespace wiring
+| ⚠️ must provision and wire the nested namespace
+|===
 
 === Registration mechanism
 
@@ -98,9 +106,32 @@ The composition renders the `.runner` config secret from that token and points t
 
 * Not a reconciled resource model, so it only fits the narrow runner-bootstrap use case.
 
+=== Job execution and isolation
+
+// TODO: evaluate the executor backend. forgejo-runner can run jobs via Docker
+// (docker-in-docker, typically privileged), directly on the host, or via a
+// Kubernetes backend. Pick one and justify it against the isolation requirements.
+
+==== Option A: Docker (docker-in-docker)
+
+// TODO: description, advantages, disadvantages
+
+==== Option B: Host executor
+
+// TODO: description, advantages, disadvantages
+
+==== Option C: Kubernetes backend
+
+// TODO: description, advantages, disadvantages
+
+==== Isolation and egress
+
+// TODO: privileged containers? network policy to stop a CI job reaching other
+// instances or internal networks? what isolation do we guarantee between jobs?
+
 == Decision
 
-*Per-instance runner as a nested service (topology Option C), registered via `provider-http` (registration Option B).*
+*Per-instance runner as a nested service, registered via `provider-http` (registration Option B).*
 
 The nested service gives us clean per-instance resource isolation and billing, and it follows a pattern we already use for other dependent services.
 For registration, a single admin-API call to obtain the runner credential does not justify the effort of building and maintaining a custom provider, so `provider-http` is the better fit.
@@ -109,7 +140,7 @@ Should we later need full, reconciled management of Forgejo objects, a custom pr
 === Proof of concept
 
 We built a proof of concept (https://github.com/vshn/appcat/pull/684[appcat#684]) to validate the registration flow and the Helm chart integration.
-To keep it simple it deployed into the instance namespace (topology Option B) instead of a nested service, but it used the same registration mechanism we are deciding on: `provider-http` registers the runner against the Forgejo admin API, the composition reads the returned token and writes it into a `.runner` config secret, and the `forgejo-runner` Helm chart consumes that secret.
+To keep it simple it deployed into the instance namespace instead of a nested service, but it used the same registration mechanism we are deciding on: `provider-http` registers the runner against the Forgejo admin API, the composition reads the returned token and writes it into a `.runner` config secret, and the `forgejo-runner` Helm chart consumes that secret.
 
 What remains is to move the runner into its own nested-service namespace, and to expose runner enablement and sizing on the claim instead of always provisioning one.
 
@@ -119,3 +150,7 @@ What remains is to move the runner into its own nested-service namespace, and to
 * A dedicated runner namespace allows resource limits independent of the Forgejo workload, and billing maps cleanly to the instance.
 * No custom Forgejo provider is needed for runner support; the `provider-http` Crossplane provider must be installed on clusters running managed Forgejo.
 * Multiple runners per instance, and project-scoped runners, are natural extensions of this approach rather than redesigns.
+
+// TODO: lifecycle. The PoC registers the runner with `deletionPolicy: Orphan`.
+// Decide what happens to the Forgejo-side registration when the instance or runner
+// is deleted (deregister vs. leave stale), and whether the credential is rotated.
