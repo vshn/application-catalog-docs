@@ -24,21 +24,16 @@ We want to provide managed runners as part of the service.
 
 This leaves us with two design questions:
 
-. *Where does the runner live?* A single shared runner pool, or a runner per instance — and if per instance, in the instance namespace or as a nested service in its own namespace.
+. *Where does the runner live?* A single shared runner pool, or a runner per instance, and if per instance, in the instance namespace or as a nested service in its own namespace.
 . *How is the runner registered with Forgejo?* Forgejo has to issue a registration credential, and that credential has to reach the runner's config. We can drive this with a dedicated Crossplane provider, or with `provider-http`.
 . *How are jobs executed and isolated?* The runner runs arbitrary customer CI workloads, so the executor backend and the isolation model need deciding.
 
 == Requirements
 
-// TODO: list the concrete requirements the runner must satisfy. These anchor the
-// comparison criteria in the Solutions section below.
-
-* TODO: tenant isolation expectations
-* TODO: job execution model (what kind of workloads must run)
-* TODO: resource limits / sizing
-* TODO: networking and egress constraints
-* TODO: lifecycle (registration, deregistration, credential rotation)
-* TODO: maintenance / upgrades of the runner
+* CI jobs from one customer must not be able to access another customer's workloads or data.
+* Runner must support arbitrary CI workloads including Docker builds.
+* Runner and job containers must run unprivileged; compatible with OpenShift restricted SCCs.
+* Resource usage must be isolatable from the Forgejo workload.
 
 == Solutions
 
@@ -46,7 +41,7 @@ This leaves us with two design questions:
 
 * *Shared pool*: a single runner pool shared across all customer instances.
 * *Instance namespace*: a dedicated runner per instance, deployed alongside the Forgejo workload in the instance namespace.
-* *Nested service*: a dedicated runner per instance, deployed in its own namespace as a nested service — the pattern already used for PostgreSQL in Keycloak and Nextcloud.
+* *Nested service*: a dedicated runner per instance, deployed in its own namespace as a nested service (the pattern already used for PostgreSQL in Keycloak and Nextcloud).
 
 [cols="1,1,1,1", options="header"]
 |===
@@ -92,7 +87,7 @@ A dedicated provider modelling runners (and other Forgejo objects) as first-clas
 
 * Significant code to build and maintain for what is essentially a single API call.
 
-==== Option B: provider-http
+==== Option B: Provider-http
 
 A composition step uses `provider-http` to call the Forgejo admin API, register a runner, and read the token back from the response.
 The composition renders the `.runner` config secret from that token and points the `forgejo-runner` Helm chart at it, which skips the chart's own registration step.
@@ -108,26 +103,42 @@ The composition renders the `.runner` config secret from that token and points t
 
 === Job execution and isolation
 
-// TODO: evaluate the executor backend. forgejo-runner can run jobs via Docker
-// (docker-in-docker, typically privileged), directly on the host, or via a
-// Kubernetes backend. Pick one and justify it against the isolation requirements.
+The runner executes arbitrary customer CI workloads, so the executor backend is a security-relevant choice.
+Since the runner runs as a Kubernetes Pod, host and LXC executors are not viable: host execution requires direct host access, and LXC needs kernel-level container nesting, both incompatible with restricted SCCs on a shared cluster.
+The real choice is between Docker-in-Docker and rootless container execution.
 
-==== Option A: Docker (docker-in-docker)
+Forgejo's https://forgejo.org/docs/latest/admin/actions/security/[official security guidance] and https://forgejo.org/docs/latest/admin/actions/docker-access/[docker access documentation] are the reference for the evaluation below.
+Docker socket automount (`container.docker_host = automount`) is ruled out in both options; Forgejo's docs classify it as offering "no security isolation."
 
-// TODO: description, advantages, disadvantages
+==== Option A: Docker-in-Docker (DinD)
 
-==== Option B: Host executor
+A privileged Docker daemon runs as a sidecar alongside the runner.
+Job containers connect to that daemon instead of the host daemon.
 
-// TODO: description, advantages, disadvantages
+*Advantages:*
 
-==== Option C: Kubernetes backend
+* Straightforward to configure; well-documented in Forgejo's docs.
+* Job containers are isolated from the host Docker daemon.
 
-// TODO: description, advantages, disadvantages
+*Disadvantages:*
 
-==== Isolation and egress
+* The DinD sidecar requires `privileged: true`, conflicting with restricted SCCs and meaning a container escape reaches the node.
+* Concurrent jobs share the same daemon; they can see each other's containers and left-over artifacts.
+* Resource constraints on the runner pod have no effect on containers spawned inside the DinD daemon.
 
-// TODO: privileged containers? network policy to stop a CI job reaching other
-// instances or internal networks? what isolation do we guarantee between jobs?
+==== Option B: Rootless Docker / Podman
+
+Job containers run via a rootless Docker or Podman daemon inside the runner pod.
+No privileged containers are required.
+
+*Advantages:*
+
+* Runner pod stays unprivileged; compatible with restricted SCCs and Kubernetes Pod Security Standards.
+* Follows Forgejo's recommendation for unprivileged runners; `container.privileged = false` enforced by default.
+
+*Disadvantages:*
+
+* More complex to configure than DinD.
 
 == Decision
 
