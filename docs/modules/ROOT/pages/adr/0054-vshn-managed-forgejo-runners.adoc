@@ -42,11 +42,11 @@ This leaves us with two design questions:
 The https://codeberg.org/wrenix/helm-charts[`oci://codeberg.org/wrenix/helm-charts/forgejo-runner`] chart is used to deploy the runner and was already used in the PoC.
 It exposes everything we need:
 
-* `runner.config.existingSecret` — points the runner at a pre-built `.runner` credential file, skipping the chart's own registration job.
+* `runner.config.existingSecret`: points the runner at a pre-built `.runner` credential file, skipping the chart's own registration job.
   This is what makes the `provider-http` registration approach work.
-* `dind.*` values — built-in Docker-in-Docker sidecar support.
-* `runner.config.file.container.privileged` — defaults to `false` for job containers.
-* `securityContext.privileged` — defaults to `true` (required for DinD); must be set to `false` for the rootless option.
+* `dind.*` values: built-in Docker-in-Docker sidecar support.
+* `runner.config.file.container.privileged`: defaults to `false` for job containers.
+* `securityContext.privileged`: defaults to `true` (required for DinD); must be set to `false` for the rootless option.
 
 The chart can be forked if we need to tweak it for our use case in the future, similar to how we handle other third-party charts.
 
