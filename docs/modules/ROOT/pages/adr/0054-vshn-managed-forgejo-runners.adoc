@@ -12,7 +12,7 @@ include::partial$adr-meta.adoc[]
 [NOTE]
 .Summary
 ====
-Per-instance Forgejo Actions runners are deployed as a nested service in a dedicated namespace, following the pattern used for PostgreSQL in Keycloak and Nextcloud.
+Per-instance Forgejo Actions runners are offered as an optional, separately billed *AddOn* (the Collabora model), deployed in a dedicated namespace for isolation.
 Registration uses `provider-http` to call the Forgejo API directly; the resulting credential is written as a Kubernetes Secret consumed by the `forgejo-runner` Helm chart.
 ====
 
@@ -24,7 +24,7 @@ We want to provide managed runners as part of the service.
 
 This leaves us with two design questions:
 
-. *Where does the runner live?* A single shared runner pool, or a runner per instance, and if per instance, in the instance namespace or as a nested service in its own namespace.
+. *How is the runner classified and where does it live?* Is it a nested service or an AddOn, and is it a single shared pool or a runner per instance — and if per instance, in the Forgejo instance namespace or in its own dedicated namespace.
 . *How is the runner registered with Forgejo?* Forgejo has to issue a registration credential, and that credential has to reach the runner's config. We can drive this with a dedicated Crossplane provider, or with `provider-http`.
 . *How are jobs executed and isolated?* The runner runs arbitrary customer CI workloads, so the executor backend and the isolation model need deciding.
 
@@ -52,41 +52,176 @@ It exposes everything we need:
 
 The chart can be forked if we need to tweak it for our use case in the future, similar to how we handle other third-party charts.
 
-=== Runner topology
+=== Runner classification and topology
+
+The runner is modelled as an *AddOn*, not a nested service.
+A nested service is a part the outer service *requires* and cannot run without, and that is not billed separately — the pattern used for PostgreSQL in Keycloak and Nextcloud.
+The runner is the inverse: Forgejo runs perfectly well without it, enabling it is optional, and it carries its own billing — which is exactly an AddOn (the model used for Collabora).
+It is true that the runner cannot function without a Forgejo instance, so it is tightly coupled, but coupling alone does not make something a nested service; optionality and separate billing are what make it an AddOn.
+
+The AddOn classification is independent of *where* the runner Pod is placed — the same AddOn can live in the Forgejo instance namespace or in its own namespace.
+The options below cover the shared-vs-per-instance choice, the per-instance placement choice, and, for completeness, the out-of-cluster alternative.
 
 * *Shared pool*: a single runner pool shared across all customer instances.
-* *Instance namespace*: a dedicated runner per instance, deployed alongside the Forgejo workload in the instance namespace.
-* *Nested service*: a dedicated runner per instance, deployed in its own namespace as a nested service (the pattern already used for PostgreSQL in Keycloak and Nextcloud).
+* *Instance namespace*: a per-instance runner AddOn deployed alongside the Forgejo workload in the instance namespace.
+* *Dedicated namespace*: a per-instance runner AddOn deployed in its own namespace.
+* *CSP compute instance*: a dedicated compute instance (VM) provisioned per instance on the CSP via Crossplane, with the runner hosted on the VM rather than in the cluster.
+  The VM is provisioned through a Crossplane CSP provider (see <<csp-provisioning>>), the `forgejo-runner` is installed on it as a systemd-managed binary or via Docker Compose (see <<csp-runner-install>>), and registration reuses the same `provider-http` admin-API flow: the pre-generated UUID/token are templated into the runner's config so it comes up non-interactively.
+  The runner talks back to the Forgejo server over the network, so the VM lives in an isolated, firewalled subnet rather than being directly reachable.
 
-[cols="1,1,1,1", options="header"]
+[cols="1,1,1,1,1", options="header"]
 |===
-| Criteria | Shared pool | Instance namespace | Nested service
+| Criteria | Shared pool | Instance namespace | Dedicated namespace | CSP compute instance
 
 | Tenant isolation
 | ❌ jobs from different customers share infrastructure
 | ✅ per-instance namespace boundary
 | ✅ per-instance namespace boundary
+| ✅ strongest: dedicated VM, OS-level boundary; an escape only reaches a disposable VM, not shared cluster nodes
 
 | Billing
 | ❌ usage must be tracked across a shared resource
 | ✅ maps cleanly to the instance
 | ✅ maps cleanly to the instance
+| ✅ maps cleanly to the instance, but adds separate CSP compute cost
 
 | Resource limits
 | ⚠️ shared across all tenants
 | ⚠️ coupled with the Forgejo workload
 | ✅ independent `LimitRange`/`ResourceQuota`
+| ✅ fully independent: own VM sizing, zero impact on the cluster
 
 | Multiple runners per instance
 | ❌
 | ⚠️ clutters the instance namespace
 | ✅ natural to add
+| ⚠️ natural (more VMs) but each adds cost and provisioning latency
 
 | Bootstrap effort
 | ✅ single deployment
 | ✅ no extra namespace wiring
-| ⚠️ must provision and wire the nested namespace
+| ⚠️ must provision and wire the dedicated namespace
+| ❌ highest: provision a VM on the CSP, install/register the runner, wire networking; depends on a CSP Crossplane provider
 |===
+
+The CSP compute option also unblocks privileged / Docker-in-Docker execution.
+On a shared cluster a privileged job or container escape reaches the node and potentially other tenants and the control plane, so it must be avoided (see <<job-execution-and-isolation>>).
+On a dedicated, ideally ephemeral (`--ephemeral`, one job per runner) VM the blast radius of an escape is the disposable VM itself, which makes `container.privileged = true` and DinD an acceptable trade-off for builds that genuinely need them.
+The cost is provisioning latency, recurring CSP compute spend, and a dependency on a per-CSP provisioning provider; the residual security item is network segmentation (isolated subnet + firewall) so an escaped job cannot reach internal services.
+
+The two sub-decisions specific to this option — how the runner is installed on the VM, and how the VM itself is provisioned per CSP — are evaluated below.
+
+[#csp-runner-install]
+==== Runner installation on the VM
+
+Forgejo supports installing the runner as an OS-level binary or running it as a container; in both cases registration is decoupled from the runner and can be pre-generated, which is what lets us reuse the `provider-http` admin-API flow.
+
+Registration writes a UUID/token pair into the runner config's `server.connections.forgejo` section.
+The pair can be generated server-side ahead of time (`forgejo forgejo-cli actions register --secret ...`, or the admin API) and templated in, so the runner starts non-interactively — no `forgejo-runner register` prompt.
+The deprecated interactive `register` command still exists but is not needed.
+`--ephemeral` (one job per runner, enforced by Forgejo) is the recommended mode for throwaway per-instance VMs.
+
+===== Option A: Package / binary
+
+Because running Docker builds is a requirement, the VM needs a Docker daemon either way — the two options differ only in *how that daemon is provided and how the runner process itself is managed*, not in whether a daemon exists.
+
+===== Option A: Package / binary + host Docker daemon
+
+A single static `forgejo-runner` binary on the VM, run as a dedicated `runner` user under a systemd unit (`forgejo-runner daemon -c runner-config.yml`; config produced with `forgejo-runner generate-config`, passed explicitly with `-c`/`--config` as it is not auto-discovered).
+Docker is installed on the VM as a normal host daemon (via cloud-init / the golden image), and the runner uses that daemon directly for `docker`-label jobs and builds.
+
+NOTE: The official "packaging" docs only cover NixOS (`services.gitea-actions-runner.*`); for a generic Linux VM the binary-installation path is the relevant one.
+
+*Advantages:*
+
+* Fewest layers: the runner talks to the host Docker daemon directly, so builds run at native performance with no nested daemon.
+* Minimal moving parts to image and operate: one binary, one systemd unit, one config file, plus the host Docker package.
+
+*Disadvantages:*
+
+* We own `forgejo-runner` (and Docker) updates/patching on the VM.
+* Jobs are given access to the host Docker daemon. On a shared host this would be unacceptable, but on a single-tenant disposable VM the whole VM is the trust boundary, so it is fine.
+
+===== Option B: Docker Compose with DinD
+
+The published `docker-compose.yml` runs two services: a `docker:dind` daemon and the `forgejo/runner` image (as non-root `1001:1001`) pointed at the DinD daemon via `DOCKER_HOST`.
+Config is generated with `docker run --rm ... forgejo-runner generate-config`.
+The VM only needs Docker + the compose file; the build daemon is the bundled DinD container.
+
+*Advantages:*
+
+* Self-contained, fully pinned (runner image + DinD image); the runner and its build daemon are reproducible artifacts rather than host packages.
+* The build daemon is a DinD container separate from the host daemon.
+
+*Disadvantages:*
+
+* Extra nesting (DinD) and the stock compose exposes the daemon over plaintext TCP (`--tls=false`), relying on the compose network for isolation.
+* Still requires Docker installed on the VM to run the stack.
+
+Both are viable; the choice is host daemon vs. bundled DinD, not "needs Docker or not."
+Option A is the leaner default — on a single-tenant disposable VM, letting jobs use the host Docker daemon is acceptable (the VM is the blast radius), and it avoids DinD nesting.
+Option B is preferable when we want the runner and its build daemon shipped as one self-contained, version-pinned artifact.
+Either way, because the VM is dedicated and disposable, the privileged/DinD risks that rule these out on the shared cluster are acceptable here, with subnet isolation + firewall as the compensating control and docker-socket automount into *job* containers (`container.docker_host = automount`) still avoided.
+
+[#csp-provisioning]
+==== Provisioning the compute instance
+
+The VM has to be created on each CSP through Crossplane.
+The provider landscape differs per CSP, so there is no single answer; the options below range from official native providers to a Terraform-bridge fallback.
+
+[cols="1,1,1,1", options="header"]
+|===
+| CSP / approach | Provider | Maintenance | Notes
+
+| Exoscale
+| https://github.com/exoscale/provider-exoscale[exoscale/provider-exoscale] (official)
+| ✅ vendor-maintained, active (last commit 2026-05; tag v0.1.0)
+| Upjet v2 over the official Terraform provider. Exposes `Instance`, `SSHKey`, `SecurityGroup(Rule)`, `PrivateNetwork`, `ElasticIP`, `BlockStorageVolume` — everything a runner VM needs. Pre-1.0, tiny user base, but the safest native bet.
+
+| cloudscale
+| https://github.com/onzack/provider-cloudscale[onzack/provider-cloudscale] (third party)
+| ⚠️ third-party (onzack AG, not cloudscale.ch); dormant (last commit 2025-12, ~6 mo stale); no tagged releases
+| Upjet v2 (RC tooling) over the community Terraform provider. VM kind is `Server`, plus `ServerGroup`, `Network`, `Subnet`, `FloatingIP`, `Volume`; no dedicated SSH-key CRD (keys via user-data). Functional but carries clear bus-factor risk.
+
+| OpenStack-based CSPs
+| https://github.com/crossplane-contrib/provider-openstack[crossplane-contrib/provider-openstack] (official Crossplane org)
+| ⚠️ under the `crossplane-contrib` org (same org as the upjet AWS/Azure/GCP providers), maintained by Crossplane community contributors rather than an OpenStack vendor; small (~65★, v0.x) but actively released (v0.9.0, 2026-03); one ~13-month stall in its history
+| Upjet over `terraform-provider-openstack`. One provider deployment + per-CSP `ProviderConfig` covers every OpenStack CSP we run. Full coverage: `InstanceV2`, `KeyPairV2`, `NetworkV2`/`SubnetV2`/`PortV2`, `SecGroupV2(Rule)`, `FloatingIPV2`, `VolumeV3`. Caveat: all CRDs are `v1alpha1` and pre-1.0 — pin versions and smoke-test reconcile/drift on one CSP first.
+
+| CSPs without a maintained provider
+| https://github.com/upbound/provider-opentofu[upbound/provider-opentofu] (fallback)
+| ✅ Upbound-maintained, active (v1.1.3, 2026-05); API still `v1beta1`
+| "Terraform-in-a-pod": a single `Workspace` MR runs an OpenTofu module, surfacing outputs (VM IP/ID) as a connection secret. Covers any CSP with a Terraform provider with no native-provider development. See trade-offs below.
+|===
+
+For Exoscale the official native provider is the clear choice.
+For the OpenStack-based CSPs `provider-openstack` is attractive because a single provider covers many CSPs at once, and the resource coverage genuinely fits; the reservation is that, although it sits in the official `crossplane-contrib` org, it is maintained by community contributors rather than an OpenStack vendor and is still small and pre-1.0 (all `v1alpha1`), so it warrants a pin-and-monitor stance and a validation pass before committing.
+cloudscale has a native provider but it is third-party and currently dormant.
+
+`provider-opentofu` is a deliberate fallback for CSPs that have no maintained native provider: it reuses mature Terraform providers and still presents a Crossplane-shaped interface (XR composition, connection-secret outputs), but it accepts "Terraform-in-a-pod" semantics — a coarse single-`Workspace` resource model rather than first-class MRs, plan-based periodic drift reconciliation, and you-own-the-state (it does *not* persist state by default; a remote backend, e.g. the Kubernetes Secret backend, is mandatory).
+Running arbitrary Terraform with broad CSP credentials inside the controller pod is also a larger security surface.
+Upbound itself frames it as a transition/bridge rather than a permanent substitute, so the recommended posture is to use it only where no native provider exists, mandate a persistent backend with locking, scope `ProviderConfig` credentials per CSP, and migrate to native providers as they mature.
+
+[IMPORTANT]
+.Out of scope
+====
+This whole option was raised on the PR (spin up dedicated runner VMs on a cloud provider instead of running runners and jobs inside Kubernetes) and is worth having evaluated, but it is *deliberately not pursued*.
+Provisioning and maintaining per-instance VMs — golden images, OS and runner patching, lifecycle, networking, and a per-CSP provisioning provider (with the `provider-openstack`/`provider-opentofu` caveats above) — is an operational surface AppCat / Schedar does not otherwise own.
+Every other topology option keeps the runner inside the cluster, where the existing tooling and patterns already apply.
+We therefore treat the CSP compute instance as a fallback to revisit only if a concrete requirement (e.g. workloads that genuinely cannot run unprivileged in-cluster) makes it unavoidable, rather than a path we open now.
+====
+
+[#capacity]
+=== Job concurrency and capacity
+
+A natural concern is whether the runner spawns additional job Pods, and if so whether their number per instance must be capped — this drives capacity management and resource billing.
+
+With the `forgejo-runner` chart it does *not* spawn extra Pods per job.
+A CI run is confined to the pre-provisioned runner Pod(s): jobs execute inside the running runner, and when all runner capacity is busy further jobs queue until a runner frees up rather than scaling out new Pods.
+(Whether multiple jobs can share a single Pod concurrently depends on the runner's `capacity` setting; in the PoC the chart ran jobs within the provisioned Pod rather than fanning out.)
+
+This bounds resource and storage usage to the provisioned runner Pods, which keeps capacity and billing straightforward: concurrency is determined by the configured runner `capacity` and the number of runner Pods per instance, both fixed at provisioning time, instead of an unbounded pool of dynamically spawned job Pods.
+Customers therefore pick from a small set of pre-defined runner sizes (CPU / memory / storage), and the instance's runner footprint is known up front.
 
 === Registration mechanism
 
@@ -116,6 +251,7 @@ The composition renders the `.runner` config secret from that token and points t
 
 * Not a reconciled resource model, so it only fits the narrow runner-bootstrap use case.
 
+[#job-execution-and-isolation]
 === Job execution and isolation
 
 The runner executes arbitrary customer CI workloads, so the executor backend is a security-relevant choice.
@@ -157,22 +293,79 @@ No privileged containers are required.
 
 == Decision
 
-*Per-instance runner as a nested service, registered via `provider-http` (registration Option B).*
+*Per-instance runner as an optional, separately billed AddOn in a dedicated namespace, registered via `provider-http` (registration Option B).*
 
-The nested service gives us clean per-instance resource isolation and billing, and it follows a pattern we already use for other dependent services.
+The runner is classified as an AddOn rather than a nested service: it is optional and separately billed, which is what distinguishes an AddOn from a required, non-billed nested service like PostgreSQL.
+
+For placement there are two defensible choices.
+Deploying the AddOn in the Forgejo instance namespace was argued for on the grounds that the runner is tightly coupled to Forgejo and cannot run without it.
+We instead place it in a *dedicated namespace*: classification as an AddOn is independent of placement, and a separate namespace gives cleaner resource isolation and billing boundaries and keeps the door open to future flexibility — for example offering a runner-only AddOn where the customer brings their own Forgejo instance.
+It is the more complex option but the cleaner one.
+
+Namespace isolation is sufficient on our target platforms, which is also why the in-cluster approach is preferred over CSP VMs: on APPUiO Public customers already run arbitrary workloads in their namespaces behind quotas and existing safeguards, and on Servala the Talos-based hardening goes beyond vanilla Kubernetes; combined with the runner being confined to its pre-provisioned Pod(s), namespace-level isolation covers the requirement.
+The CSP compute instance option is explicitly not chosen: it keeps the runner out of the cluster but at the cost of owning VM provisioning and maintenance, which is an operational can of worms AppCat / Schedar does not otherwise carry (see the out-of-scope note under <<csp-provisioning>>); it stays a fallback for if running unprivileged in-cluster ever proves insufficient.
+
 For registration, a single admin-API call to obtain the runner credential does not justify the effort of building and maintaining a custom provider, so `provider-http` is the better fit.
 Should we later need full, reconciled management of Forgejo objects, a custom provider can be reconsidered in a separate decision.
 
 === Proof of concept
 
 We built a proof of concept (https://github.com/vshn/appcat/pull/684[appcat#684]) to validate the registration flow and the Helm chart integration.
-To keep it simple it deployed into the instance namespace instead of a nested service, but it used the same registration mechanism we are deciding on: `provider-http` registers the runner against the Forgejo admin API, the composition reads the returned token and writes it into a `.runner` config secret, and the `forgejo-runner` Helm chart consumes that secret.
+To keep it simple it deployed into the instance namespace instead of a dedicated one, but it used the same registration mechanism we are deciding on: `provider-http` registers the runner against the Forgejo admin API, the composition reads the returned token and writes it into a `.runner` config secret, and the `forgejo-runner` Helm chart consumes that secret.
 
-What remains is to move the runner into its own nested-service namespace, and to expose runner enablement and sizing on the claim instead of always provisioning one.
+What remains is to move the runner into its own dedicated AddOn namespace, and to expose runner enablement and sizing on the claim instead of always provisioning one.
 
 == Consequences
 
+* The runner is an optional, separately billed AddOn; Forgejo instances without it are unaffected.
 * Each Forgejo instance gets an isolated runner; no cross-tenant job execution is possible.
 * A dedicated runner namespace allows resource limits independent of the Forgejo workload, and billing maps cleanly to the instance.
+* Capacity is bounded: jobs run in the pre-provisioned runner Pod(s) and queue when busy, so concurrency and resource usage are fixed by the chosen runner size and count rather than a dynamic pool of job Pods.
+* A dedicated namespace keeps open a future runner-only AddOn, where a customer brings their own Forgejo instance.
 * No custom Forgejo provider is needed for runner support; the `provider-http` Crossplane provider must be installed on clusters running managed Forgejo.
 * Multiple runners per instance, and project-scoped runners, are natural extensions of this approach rather than redesigns.
+
+== Open questions and operational considerations
+
+The following points were raised in review.
+Some are decided here; others are explicitly deferred to the implementation phase and listed so they are not lost.
+
+=== Runtime isolation hardening
+
+Namespace isolation plus rootless, confined-Pod execution (see <<job-execution-and-isolation>>) is the decided baseline and meets the requirement on our target platforms (see the Decision).
+The following are *optional defence-in-depth* we can layer on if we choose to harden further — not prerequisites:
+
+* *Dedicated node pool*: schedule runner/job workloads onto their own node pool via taints + tolerations, keeping arbitrary CI off the nodes that run platform and other-customer workloads.
+* *Sandboxed runtime*: a hardened `RuntimeClass` — gVisor or Kata Containers — to put a syscall-sandbox or lightweight-VM boundary around job containers, further reducing shared-kernel exposure. Viability differs per platform (Servala/Talos, APPUiO).
+* *Minimal ServiceAccount*: the runner needs no Kubernetes API access to execute jobs, so its ServiceAccount should carry no RBAC and `automountServiceAccountToken` should be disabled. (Cheap; worth doing regardless.)
+* *Spot/preemptible capacity*: CI is interruptible, so spot nodes (or spot VMs in the CSP fallback) are a cost lever worth considering.
+
+=== Egress, caching and storage
+
+CI jobs pull large volumes from external sources — npm, PyPI, Maven, Go modules, ad-hoc `curl … | sh`.
+Spegel covers container image layers on Servala, but not these other artifacts.
+Two gaps to address in implementation:
+
+* *Pull-through caches / proxy* for the common package ecosystems, to cut egress cost and speed up builds.
+* *Persistent build / layer cache*: without a persistent volume the image-layer and dependency caches evaporate on every Pod restart, giving customers cold builds constantly.
+
+Storage sizing for this cache ties into the pre-defined runner sizes from <<capacity>>.
+
+=== Lifecycle
+
+* *Deregistration*: deleting the runner must also remove its Forgejo registration, otherwise a dangling runner entry is left behind. `provider-http` can issue the `DELETE` call, so the composition should deregister on teardown — the mirror of the registration step.
+* *Upgrade / drain*: a chart upgrade restarts the runner Pod and kills in-flight jobs. We need a drain story (e.g. ephemeral runners that exit cleanly after their current job, or cordoning the runner before upgrade).
+* *Version compatibility*: maintain a runner/Forgejo version-compatibility matrix.
+* *Token rotation*: the registration credential should be rotatable.
+
+=== Observability and SLO boundary
+
+Customers need access to their job logs (surfaced in the Forgejo UI) and runner metrics (runner metrics endpoint).
+No SLOs exist on Servala yet, but when they are defined the responsibility line should be drawn explicitly: *runner availability is on us, job success is on the customer*.
+Keeping that distinction clear avoids support-ticket ambiguity.
+
+=== Product integration
+
+* *Enablement*: the runner is enabled as an optional add-on on the Codey/Forgejo claim (a toggle plus sizing), not provisioned by default.
+* *Compute plans*: map runner sizing onto the existing Servala compute-plan concept (CPU/RAM) plus a storage size, rather than inventing a separate sizing mechanism.
+* *Prior art*: Codeberg operates hosted runners (https://codeberg.org/actions/meta[actions/meta], https://codeberg.org/Codeberg-Infrastructure/scripted-configuration[scripted-configuration]); worth reviewing their approach to isolation, caching and operations.
