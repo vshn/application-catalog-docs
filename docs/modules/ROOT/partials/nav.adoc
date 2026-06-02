@@ -149,6 +149,7 @@
 *** xref:framework/runbooks/AppCatHighAvailableDeploymentWarning.adoc[]
 
 * Framework 2.0
+**  xref:framework/framework-2-0/api-converter.adoc[]
 
 * Control Plane
 ** xref:control-plane/central-control-plane-arch.adoc[]
