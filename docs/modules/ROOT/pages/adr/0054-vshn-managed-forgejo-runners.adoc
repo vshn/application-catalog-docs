@@ -3,7 +3,7 @@
 :adr_owner:     Schedar
 :adr_reviewers: Schedar
 :adr_date:      2026-05-20
-:adr_upd_date:  2026-05-26
+:adr_upd_date:  2026-06-02
 :adr_status:    draft
 :adr_tags:      forgejo,ci,code-hosting
 
@@ -13,7 +13,7 @@ include::partial$adr-meta.adoc[]
 .Summary
 ====
 We offer per-instance Forgejo Actions runners as an optional, separately billed *AddOn*, following the Collabora model.
-Each runner is deployed in its own namespace for isolation.
+Each runner is deployed in the Forgejo instance namespace for simplicity.
 Registration uses `provider-http` to call the Forgejo API directly.
 The resulting credential is written as a Kubernetes Secret, which the `forgejo-runner` Helm chart consumes.
 ====
@@ -311,22 +311,27 @@ No privileged containers are required.
 
 == Decision
 
-*Per-instance runner as an optional, separately billed AddOn in a dedicated namespace, registered via `provider-http` (registration Option B).*
+*Per-instance runner as an optional, separately billed AddOn in the Forgejo instance namespace, registered via `provider-http` (registration Option B).*
 
 The runner is classified as an AddOn rather than a nested service.
 It is optional and separately billed, which is what distinguishes an AddOn from a required, non-billed nested service like PostgreSQL.
 
 For placement there are two defensible choices.
-One option is to deploy the AddOn in the Forgejo instance namespace, argued for on the grounds that the runner is tightly coupled to Forgejo and cannot run without it.
-We instead place it in a *dedicated namespace*.
-Classification as an AddOn is independent of placement, and a separate namespace gives cleaner resource isolation and billing boundaries.
-It also keeps the door open to future flexibility, for example a runner-only AddOn where the customer brings their own Forgejo instance.
-It is the more complex option, but the cleaner one.
+One option is a *dedicated namespace*, which gives cleaner resource isolation and billing boundaries and would keep the door open to a future runner-only AddOn where the customer brings their own Forgejo instance.
+We instead place the runner in the *Forgejo instance namespace*, for simplicity.
+The runner is tightly coupled to Forgejo and cannot run without it, so co-locating it avoids the extra namespace wiring and keeps the AddOn next to the workload it serves.
+Classification as an AddOn is independent of placement.
+If a dedicated namespace later proves worthwhile (for example for the runner-only AddOn case, or for stricter resource boundaries), we can move it without revisiting the rest of this decision.
 
 Namespace isolation is sufficient on our target platforms, which is also why we prefer the in-cluster approach over CSP VMs.
-On APPUiO Public, customers already run arbitrary workloads in their namespaces behind quotas and existing safeguards.
-On Servala, the Talos-based hardening goes beyond vanilla Kubernetes.
-Combined with the runner being confined to its pre-provisioned Pod(s), namespace-level isolation covers the requirement.
+The isolation story differs per platform:
+
+* On *Servala*, we additionally isolate the runners with a hardened `RuntimeClass` (gVisor), assigned via the runner Pod's runtime class, putting a syscall-sandbox boundary around the job containers on top of the Talos-based hardening that already goes beyond vanilla Kubernetes.
+  The initial version does not add a separate node pool; we may introduce one later to separate the runners (a bursty, interruptible workload) from platform and other-customer workloads.
+* On *APPUiO Public*, no such sandboxing is needed: customers are already restricted by OpenShift SCCs and can provision arbitrary resources in their own namespaces behind quotas and existing safeguards.
+* On *APPUiO Managed*, the cluster belongs to the customer, who can deploy whatever they like on it, so runner isolation is not our concern.
+
+Combined with the runner being confined to its pre-provisioned Pod(s), this covers the requirement.
 The CSP compute instance option is explicitly not chosen: it keeps the runner out of the cluster, but at the cost of owning VM provisioning and maintenance, an operational can of worms AppCat / Schedar does not otherwise carry (see the out-of-scope note under <<csp-provisioning>>).
 It stays a fallback for if running unprivileged in-cluster ever proves insufficient.
 
@@ -336,18 +341,19 @@ Should we later need full, reconciled management of Forgejo objects, a custom pr
 === Proof of concept
 
 We built a proof of concept (https://github.com/vshn/appcat/pull/684[appcat#684]) to validate the registration flow and the Helm chart integration.
-To keep it simple it deployed into the instance namespace instead of a dedicated one, but it used the same registration mechanism we are deciding on.
+It deploys into the Forgejo instance namespace, matching the placement decided here, and uses the registration mechanism we are deciding on.
 `provider-http` registers the runner against the Forgejo admin API, the composition reads the returned token and writes it into a `.runner` config secret, and the `forgejo-runner` Helm chart consumes that secret.
 
-What remains is to move the runner into its own dedicated AddOn namespace, and to expose runner enablement and sizing on the claim instead of always provisioning one.
+What remains is to expose runner enablement and sizing on the claim instead of always provisioning one, and, on Servala, to wire up the gVisor `RuntimeClass` for the job containers.
 
 == Consequences
 
 * The runner is an optional, separately billed AddOn; Forgejo instances without it are unaffected.
 * Each Forgejo instance gets an isolated runner; no cross-tenant job execution is possible.
-* A dedicated runner namespace allows resource limits independent of the Forgejo workload, and billing maps cleanly to the instance.
+* The runner lives in the Forgejo instance namespace; billing still maps cleanly to the instance, while resource limits are shared with the Forgejo workload. A dedicated namespace remains a future option if stricter separation is needed.
 * Capacity is bounded: jobs run in the pre-provisioned runner Pod(s) and queue when busy, so concurrency and resource usage are fixed by the chosen runner size and count rather than a dynamic pool of job Pods.
-* A dedicated namespace keeps open a future runner-only AddOn, where a customer brings their own Forgejo instance.
+* Runner isolation is platform-specific: on Servala job containers run under a gVisor `RuntimeClass`; APPUiO Public relies on existing SCCs and quotas; APPUiO Managed is the customer's own cluster.
+* Moving the runner to a dedicated namespace later remains possible, which would keep open a future runner-only AddOn where a customer brings their own Forgejo instance.
 * No custom Forgejo provider is needed for runner support; the `provider-http` Crossplane provider must be installed on clusters running managed Forgejo.
 * Multiple runners per instance, and project-scoped runners, are natural extensions of this approach rather than redesigns.
 
@@ -361,8 +367,8 @@ Some are decided here; others are explicitly deferred to the implementation phas
 Namespace isolation plus rootless, confined-Pod execution (see <<job-execution-and-isolation>>) is the decided baseline and meets the requirement on our target platforms (see the Decision).
 The following are *optional defence-in-depth* we can layer on if we choose to harden further, not prerequisites:
 
-* *Dedicated node pool*: schedule runner/job workloads onto their own node pool via taints + tolerations, keeping arbitrary CI off the nodes that run platform and other-customer workloads.
-* *Sandboxed runtime*: a hardened `RuntimeClass` (gVisor or Kata Containers) to put a syscall-sandbox or lightweight-VM boundary around job containers, further reducing shared-kernel exposure. Viability differs per platform (Servala/Talos, APPUiO).
+* *Dedicated node pool*: schedule runner/job workloads onto their own node pool via taints + tolerations, keeping arbitrary CI off the nodes that run platform and other-customer workloads. Not in the initial version on Servala; a candidate for later given the runners' bursty profile.
+* *Sandboxed runtime*: a hardened `RuntimeClass` to put a syscall-sandbox or lightweight-VM boundary around job containers. On Servala this is part of the decision (gVisor, see the Decision); a lightweight-VM boundary (Kata Containers) remains a further option. Not needed on APPUiO Public (SCCs) or APPUiO Managed (customer cluster).
 * *Minimal ServiceAccount*: the runner needs no Kubernetes API access to execute jobs, so its ServiceAccount should carry no RBAC and `automountServiceAccountToken` should be disabled. (Cheap; worth doing regardless.)
 * *Spot/preemptible capacity*: CI is interruptible, so spot nodes (or spot VMs in the CSP fallback) are a cost lever worth considering.
 
@@ -394,4 +400,3 @@ Keeping that distinction clear avoids support-ticket ambiguity.
 
 * *Enablement*: the runner is enabled as an optional add-on on the Codey/Forgejo claim (a toggle plus sizing), not provisioned by default.
 * *Compute plans*: map runner sizing onto the existing Servala compute-plan concept (CPU/RAM) plus a storage size, rather than inventing a separate sizing mechanism.
-* *Prior art*: Codeberg operates hosted runners (https://codeberg.org/actions/meta[actions/meta], https://codeberg.org/Codeberg-Infrastructure/scripted-configuration[scripted-configuration]); worth reviewing their approach to isolation, caching and operations.
