@@ -321,7 +321,7 @@ One option is a *dedicated namespace*, which gives cleaner resource isolation an
 We instead place the runner in the *Forgejo instance namespace*, for simplicity.
 The runner is tightly coupled to Forgejo and cannot run without it, so co-locating it avoids the extra namespace wiring and keeps the AddOn next to the workload it serves.
 Classification as an AddOn is independent of placement.
-If a dedicated namespace later proves worthwhile (for example for the runner-only AddOn case, or for stricter resource boundaries), we can move it without revisiting the rest of this decision.
+If a dedicated namespace later proves worthwhile (for example for the standalone runner case, or for stricter resource boundaries), we can move it without revisiting the rest of this decision (see <<standalone-runner>>).
 
 Namespace isolation is sufficient on our target platforms, which is also why we prefer the in-cluster approach over CSP VMs.
 The isolation story differs per platform:
@@ -353,7 +353,7 @@ What remains is to expose runner enablement and sizing on the claim instead of a
 * The runner lives in the Forgejo instance namespace; billing still maps cleanly to the instance, while resource limits are shared with the Forgejo workload. A dedicated namespace remains a future option if stricter separation is needed.
 * Capacity is bounded: jobs run in the pre-provisioned runner Pod(s) and queue when busy, so concurrency and resource usage are fixed by the chosen runner size and count rather than a dynamic pool of job Pods.
 * Runner isolation is platform-specific: on Servala job containers run under a gVisor `RuntimeClass`; APPUiO Public relies on existing SCCs and quotas; APPUiO Managed is the customer's own cluster.
-* Moving the runner to a dedicated namespace later remains possible, which would keep open a future runner-only AddOn where a customer brings their own Forgejo instance.
+* Moving the runner to a dedicated namespace later remains possible, which would keep open a future standalone runner where a customer brings their own Forgejo instance (see <<standalone-runner>>). That use case cannot reuse the `provider-http` admin-API registration and would instead consume a customer-provided registration token via a claim `secretRef`; it is deliberately out of scope here.
 * No custom Forgejo provider is needed for runner support; the `provider-http` Crossplane provider must be installed on clusters running managed Forgejo.
 * Multiple runners per instance, and project-scoped runners, are natural extensions of this approach rather than redesigns.
 
@@ -400,3 +400,26 @@ Keeping that distinction clear avoids support-ticket ambiguity.
 
 * *Enablement*: the runner is enabled as an optional add-on on the Codey/Forgejo claim (a toggle plus sizing), not provisioned by default.
 * *Compute plans*: map runner sizing onto the existing Servala compute-plan concept (CPU/RAM) plus a storage size, rather than inventing a separate sizing mechanism.
+
+[#standalone-runner]
+=== Standalone runner with a customer-provided Forgejo
+
+Review raised a possible future use case: offering the runner as a *standalone service* where the customer brings their own Forgejo instance, managed by them or a third party, rather than a VSHN-managed one.
+This is *out of scope* for this ADR, which scopes the runner as an AddOn to a VSHN-managed Forgejo instance, and the decision above is unchanged.
+It is captured here so the constraint it imposes is not lost.
+
+The registration mechanism decided here does not extend to that use case.
+`provider-http` registers the runner by calling the Forgejo admin API (`POST /api/v1/admin/actions/runners`) with admin credentials AppCat controls, against the in-cluster instance reached over internal service DNS (`http://<instance>-http.<namespace>.svc:3000`).
+For a customer-owned instance we have neither admin credentials nor any business mutating an instance we do not operate, so server-side registration is off the table.
+
+The natural fit is to invert the flow: instead of AppCat registering the runner, the customer generates a runner registration token on their own Forgejo and hands it to us.
+The claim would carry a `secretRef` (a `corev1.SecretKeySelector`, mirroring the existing `UnmanagedBucket` and Keycloak custom-mount patterns in AppCat) pointing at a Secret with that token, plus the instance's external URL.
+The composition reads the token and renders the `.runner` config Secret directly, then points the `forgejo-runner` chart at it via `runner.config.existingSecret`, the same chart hook the AddOn already uses, just skipping the `provider-http` registration step entirely.
+
+This has knock-on consequences that confirm it belongs in a separate decision rather than this one:
+
+* It is a *standalone service*, not an AddOn coupled to a co-located Forgejo, so it would not live in a Forgejo instance namespace. This reinforces keeping a *dedicated namespace* viable (see the Decision), since the runner would have no instance namespace to share.
+* The runner address becomes a customer-provided FQDN over public ingress rather than internal cluster DNS.
+* The registration lifecycle (deregistration, token rotation) shifts to the customer's side; AppCat only consumes the token it is given.
+
+If this use case is pursued, it should be a new ADR building on the secret-ref idea above, not a modification of this AddOn.
