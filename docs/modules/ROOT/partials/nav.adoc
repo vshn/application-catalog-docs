@@ -106,7 +106,7 @@
 *** xref:csp/spks/vault_backup_restore.adoc[]
 ** xref:csp/spks/enable_plan_upgrade.adoc[]
 
-* Framework
+* Framework 1.0
 ** xref:framework/framework-requirements.adoc[]
 ** xref:framework/service-maturity.adoc[]
 ** xref:framework/ci-cd.adoc[]
@@ -147,6 +147,9 @@
 *** xref:framework/runbooks/GuaranteedUptimeTarget.adoc[]
 *** xref:framework/runbooks/AppCatHighAvailableStatefulsetWarning.adoc[]
 *** xref:framework/runbooks/AppCatHighAvailableDeploymentWarning.adoc[]
+
+* Framework 2.0
+**  xref:framework/framework-2-0/api-converter.adoc[]
 
 * Control Plane
 ** xref:control-plane/central-control-plane-arch.adoc[]
