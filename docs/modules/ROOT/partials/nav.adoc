@@ -107,6 +107,9 @@
 ** xref:csp/spks/enable_plan_upgrade.adoc[]
 
 * Framework 1.0
+** xref:adr/index.adoc[]
+*** xref:adr/working-with.adoc[]
+include::partial$nav-adrs.adoc[]
 ** xref:framework/framework-requirements.adoc[]
 ** xref:framework/service-maturity.adoc[]
 ** xref:framework/ci-cd.adoc[]
@@ -149,16 +152,13 @@
 *** xref:framework/runbooks/AppCatHighAvailableDeploymentWarning.adoc[]
 
 * Framework 2.0
-**  xref:framework/framework-2-0/api-converter.adoc[]
+** ADRs
+***  xref:framework/framework-2-0/adrs/0001-api-converter.adoc[]
 
 * Control Plane
 ** xref:control-plane/central-control-plane-arch.adoc[]
 ** xref:control-plane/split-architecture.adoc[]
 ** xref:control-plane/split-sli-prober.adoc[]
-
-* xref:adr/index.adoc[]
-** xref:adr/working-with.adoc[]
-include::partial$nav-adrs.adoc[]
 
 * How-Tos
 ** xref:how-tos/ai-with-appcat.adoc[]
