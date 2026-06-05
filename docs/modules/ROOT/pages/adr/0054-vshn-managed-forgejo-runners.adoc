@@ -328,8 +328,8 @@ The isolation story differs per platform:
 
 * On *Servala*, we additionally isolate the runners with a hardened `RuntimeClass` (gVisor), assigned via the runner Pod's runtime class, putting a syscall-sandbox boundary around the job containers on top of the Talos-based hardening that already goes beyond vanilla Kubernetes.
   The initial version does not add a separate node pool; we may introduce one later to separate the runners (a bursty, interruptible workload) from platform and other-customer workloads.
-* On *APPUiO Public*, no such sandboxing is needed: customers are already restricted by OpenShift SCCs and can provision arbitrary resources in their own namespaces behind quotas and existing safeguards.
-* On *APPUiO Managed*, the cluster belongs to the customer, who can deploy whatever they like on it, so runner isolation is not our concern.
+* On *APPUiO*, no such sandboxing is needed: customers are already restricted by OpenShift SCCs and can provision arbitrary resources in their own namespaces behind quotas and existing safeguards.
+* On *Managed OpenShift*, the cluster belongs to the customer, who can deploy whatever they like on it, so runner isolation is not our concern.
 
 Combined with the runner being confined to its pre-provisioned Pod(s), this covers the requirement.
 The CSP compute instance option is explicitly not chosen: it keeps the runner out of the cluster, but at the cost of owning VM provisioning and maintenance, an operational can of worms AppCat / Schedar does not otherwise carry (see the out-of-scope note under <<csp-provisioning>>).
