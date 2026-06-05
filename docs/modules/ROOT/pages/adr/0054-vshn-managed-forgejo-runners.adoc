@@ -323,12 +323,15 @@ The runner is tightly coupled to Forgejo and cannot run without it, so co-locati
 Classification as an AddOn is independent of placement.
 If a dedicated namespace later proves worthwhile (for example for the standalone runner case, or for stricter resource boundaries), we can move it without revisiting the rest of this decision (see <<standalone-runner>>).
 
-Namespace isolation is sufficient on our target platforms, which is also why we prefer the in-cluster approach over CSP VMs.
+Namespace isolation is sufficient on the platforms where we offer the AddOn, which is also why we prefer the in-cluster approach over CSP VMs.
+The AddOn is offered on Servala and Managed OpenShift, but *not* on APPUiO.
 The isolation story differs per platform:
 
 * On *Servala*, we additionally isolate the runners with a hardened `RuntimeClass` (gVisor), assigned via the runner Pod's runtime class, putting a syscall-sandbox boundary around the job containers on top of the Talos-based hardening that already goes beyond vanilla Kubernetes.
   The initial version does not add a separate node pool; we may introduce one later to separate the runners (a bursty, interruptible workload) from platform and other-customer workloads.
-* On *APPUiO*, no such sandboxing is needed: customers are already restricted by OpenShift SCCs and can provision arbitrary resources in their own namespaces behind quotas and existing safeguards.
+* On *APPUiO*, the runner AddOn is *not offered*.
+  APPUiO is shared, multi-tenant infrastructure where arbitrary customer CI workloads pose a resource-starvation risk to co-tenants and a security concern that the existing namespace isolation, SCCs and quotas do not fully neutralise.
+  We therefore deliberately restrict the service to Servala and Managed OpenShift rather than expose shared APPUiO nodes to untrusted CI.
 * On *Managed OpenShift*, the cluster belongs to the customer, who can deploy whatever they like on it, so runner isolation is not our concern.
 
 Combined with the runner being confined to its pre-provisioned Pod(s), this covers the requirement.
@@ -352,7 +355,8 @@ What remains is to expose runner enablement and sizing on the claim instead of a
 * Each Forgejo instance gets an isolated runner; no cross-tenant job execution is possible.
 * The runner lives in the Forgejo instance namespace; billing still maps cleanly to the instance, while resource limits are shared with the Forgejo workload. A dedicated namespace remains a future option if stricter separation is needed.
 * Capacity is bounded: jobs run in the pre-provisioned runner Pod(s) and queue when busy, so concurrency and resource usage are fixed by the chosen runner size and count rather than a dynamic pool of job Pods.
-* Runner isolation is platform-specific: on Servala job containers run under a gVisor `RuntimeClass`; APPUiO Public relies on existing SCCs and quotas; APPUiO Managed is the customer's own cluster.
+* The AddOn is offered on Servala and Managed OpenShift only; it is *not* offered on APPUiO, whose shared, multi-tenant infrastructure makes arbitrary customer CI a resource-starvation and security risk to co-tenants.
+* Runner isolation is platform-specific: on Servala job containers run under a gVisor `RuntimeClass`; on Managed OpenShift the cluster is the customer's own.
 * Moving the runner to a dedicated namespace later remains possible, which would keep open a future standalone runner where a customer brings their own Forgejo instance (see <<standalone-runner>>). That use case cannot reuse the `provider-http` admin-API registration and would instead consume a customer-provided registration token via a claim `secretRef`; it is deliberately out of scope here.
 * No custom Forgejo provider is needed for runner support; the `provider-http` Crossplane provider must be installed on clusters running managed Forgejo.
 * Multiple runners per instance, and project-scoped runners, are natural extensions of this approach rather than redesigns.
@@ -368,7 +372,7 @@ Namespace isolation plus rootless, confined-Pod execution (see <<job-execution-a
 The following are *optional defence-in-depth* we can layer on if we choose to harden further, not prerequisites:
 
 * *Dedicated node pool*: schedule runner/job workloads onto their own node pool via taints + tolerations, keeping arbitrary CI off the nodes that run platform and other-customer workloads. Not in the initial version on Servala; a candidate for later given the runners' bursty profile.
-* *Sandboxed runtime*: a hardened `RuntimeClass` to put a syscall-sandbox or lightweight-VM boundary around job containers. On Servala this is part of the decision (gVisor, see the Decision); a lightweight-VM boundary (Kata Containers) remains a further option. Not needed on APPUiO Public (SCCs) or APPUiO Managed (customer cluster).
+* *Sandboxed runtime*: a hardened `RuntimeClass` to put a syscall-sandbox or lightweight-VM boundary around job containers. On Servala this is part of the decision (gVisor, see the Decision); a lightweight-VM boundary (Kata Containers) remains a further option. Not applicable on APPUiO (the AddOn is not offered there) or Managed OpenShift (customer cluster).
 * *Minimal ServiceAccount*: the runner needs no Kubernetes API access to execute jobs, so its ServiceAccount should carry no RBAC and `automountServiceAccountToken` should be disabled. (Cheap; worth doing regardless.)
 * *Spot/preemptible capacity*: CI is interruptible, so spot nodes (or spot VMs in the CSP fallback) are a cost lever worth considering.
 
