@@ -4,7 +4,7 @@
 :adr_owner:     Schedar
 :adr_reviewers: Schedar
 :adr_date:      2026-06-05
-:adr_upd_date:  2026-06-05
+:adr_upd_date:  2026-06-15
 :adr_status:    draft
 :adr_tags:      framework, framework-2-0, converter, crossplane
 
@@ -24,7 +24,7 @@ Constraints feeding the decision:
 * Crossplane v2 introduced namespaced XRDs (no separate Claim resource). The framework targets v2.
 * Service maintainers are not Go developers; the input format must be YAML and authorable without codegen.
 * Schema authoring in raw OpenAPI v3 is verbose and error-prone; kro's `SimpleSchema` already solves this for the kro project and produces a valid OpenAPI v3 subschema.
-* The stdlib of pipeline functions (provisioning, networking, backup, monitoring, maintenance) is work in progress. We need at least custom steps so we can start to create services and extract functions for the stdlib.
+* The stdlib of pipeline functions (provisioning, networking, backup, monitoring, maintenance) is shipped out-of-tree as a versioned artifact; the converter must be able to resolve and load it (see ADR 0002). Custom steps remain supported so maintainers can extract new functions for the stdlib.
 * Composition pipelines mix framework-owned steps (the stdlib) with per-service custom steps. Both must coexist in one declarative pipeline.
 * Crossplane's XRD controller auto-injects standard XR `spec`/`status` fields when generating the CRD, but only those it considers standard. Fields written by composition functions (e.g. `status.ready`) are *not* auto-injected and the SSA typed-patch path rejects them unless declared.
 
@@ -51,7 +51,7 @@ This is useful to model an API in Go, without having a single huge Go struct.
 
 === Pipeline renderer registry with dummy placeholders
 
-Until the stdlib lands, `registerDefaults()` populates the registry with a `dummyRenderer` for each built-in kind that emits a `function-kcl` step writing a placeholder `ConfigMap`. The `customRenderer` is permanent and passes the maintainer's custom function reference through.
+`registerDefaults()` populates the registry with a `dummyRenderer` for each built-in kind that emits a `function-kcl` step writing a placeholder `ConfigMap`. The `customRenderer` is permanent and passes the maintainer's custom function reference through. Dummies are overridden at convert time by stdlib-supplied renderers when a stdlib source is configured (see ADR 0002).
 
 === Minimal XR status stub plus explicit `status.ready`
 
@@ -76,8 +76,8 @@ Positive:
 Negative / neutral:
 
 * Tagged-union encoding means every new `Renderer`/`PipelineStep`/`CredentialValue` variant requires a new Go struct, factory and unit test.
-* The placeholder dummy renderers emit valid-but-meaningless KCL ConfigMaps. Until the stdlib lands, a generated Composition will *deploy*, but the framework-owned steps do nothing useful. This is acceptable for the framework bring-up phase.
-* `FuncRef.VersionConstraint` is parsed and carried on the bundle struct but is *not* propagated into the generated package manifests today. Package management of the referenced Function CR is out of scope for the converter and will be handled by a future package-install step.
+* The placeholder dummy renderers emit valid-but-meaningless KCL ConfigMaps. With `--no-stdlib`, a generated Composition will *deploy* but the framework-owned steps do nothing useful. This is acceptable as a debugging escape hatch.
+* `FuncRef.VersionConstraint` is parsed and carried on the bundle struct; propagation into the generated package manifests is handled by the stdlib pipeline (see ADR 0002). Package management of the referenced Function CR is out of scope for the converter and will be handled by a future package-install step.
 * `status.ready` is the only explicitly declared status field. Future composition functions that write other status fields (e.g. `status.host`, `status.endpoint`) must either rely on the open `x-kubernetes-preserve-unknown-fields` slot (sufficient for read-only display) or extend the converter to declare them.
 * The XRD ships as Crossplane v2 (Namespaced, no Claim). Services that need the classic Claim/XR split are not supported by the converter and must hand-author the XRD; this is a deliberate scope cut.
-* The converter's output directory is hard-coded to `xpkg/`. Configurability is deferred until a concrete need surfaces.
+
