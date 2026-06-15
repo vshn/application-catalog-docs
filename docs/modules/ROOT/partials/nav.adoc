@@ -155,6 +155,8 @@ include::partial$nav-adrs.adoc[]
 ** ADRs
 ***  xref:framework/framework-2-0/adrs/0001-api-converter.adoc[]
 ***  xref:framework/framework-2-0/adrs/0002-claim-lifecycle-and-provisioner-clap.adoc[]
+*** xref:framework/framework-2-0/adrs/0001-api-converter.adoc[]
+*** xref:framework/framework-2-0/adrs/0002-stdlib-loader.adoc[]
 
 * Control Plane
 ** xref:control-plane/central-control-plane-arch.adoc[]

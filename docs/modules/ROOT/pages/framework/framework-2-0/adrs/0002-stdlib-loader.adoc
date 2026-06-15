@@ -1,0 +1,209 @@
+= ADR 0002 - Slapper Stdlib Loader
+
+:adr_author:    Simon Beck
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2026-06-15
+:adr_upd_date:  2026-06-15
+:adr_status:    draft
+:adr_tags:      framework, framework-2-0, stdlib, crossplane, oci
+
+include::partial$adr-meta.adoc[]
+
+== Summary
+
+Define how `slap` resolves, validates and consumes the Framework 2.0 stdlib of Crossplane pipeline functions. The stdlib is a versioned artifact (local directory or OCI image) loaded at convert time. It supplies the per-step function references, the per-step function inputs and the schema fragments that extend the generated XRD. Its resolved function set drives a generated Crossplane `Configuration` package meta.
+
+This ADR follows ADR 0001 (converter) and replaces the placeholder dummy-renderer behaviour described there for any kind the stdlib provides.
+
+== Context
+
+ADR 0001 set the converter shape but left the framework-owned pipeline steps as in-tree dummy renderers. Extracting the framework-owned logic requires:
+
+* A declarative description of what the framework provides per step kind (function reference, version constraint, function input).
+* A way to ship that description versioned and decoupled from `slap` releases, so service maintainers pin a stdlib release without rebuilding the CLI.
+* A way to extend the maintainer's XRD with framework-owned schema (e.g. `size`, `monitoring`) that lives next to the maintainer's `service` definition.
+* A way to derive the function dependency list for the generated package so the emitted `xpkg/` can be converted to a Crossplane package.
+
+Constraints feeding the decision:
+
+* Maintainers are not Go developers and should not need to rebuild `slap` to update the stdlib.
+* Must run offline once the stdlib has been fetched at least once (caching by digest).
+* The converter must not silently overwrite maintainer schema with framework schema.
+* `meta.stdlib` is authored as an OCI reference in the `ServiceBundle` (see ADR 0001 `pkg/servicebundle.Meta`).
+
+== Decision
+
+The stdlib is implemented under `pkg/converter/stdlib` and wired into `ServiceBundleConverter.Convert`. The implementation is anchored on the following decisions.
+
+=== Stdlib manifest is a versioned typed YAML
+
+Example layout:
+
+[source]
+----
+slaplib/
+├── stdlib.yaml
+├── schemas/
+│   ├── size.yaml
+│   └── monitoring.yaml
+└── templates/
+    ├── provisioning.kcl
+    ├── networking.kcl
+    ├── backup.kcl
+    ├── monitoring.kcl
+    └── maintenance.kcl
+----
+
+Example `stdlib.yaml`:
+
+[source,yaml]
+----
+apiVersion: slapper.appslap.io/v1alpha1            # <1>
+kind: Stdlib
+metadata:
+  name: slaplib
+  version: 0.0.2                                   # <2>
+steps:
+  - kind: provisioning                             # <3>
+    function:
+      name: xpkg.upbound.io/crossplane-contrib/function-kcl  # <4>
+      versionConstraint: ">=v0.10.0"               # <5>
+    inputFile: templates/provisioning.kcl          # <6>
+  - kind: networking
+    function:
+      name: xpkg.upbound.io/crossplane-contrib/function-kcl
+      versionConstraint: ">=v0.10.0"
+    inputFile: templates/networking.kcl
+  - kind: backup
+    function:
+      name: xpkg.upbound.io/crossplane-contrib/function-kcl
+      versionConstraint: ">=v0.10.0"
+    inputFile: templates/backup.kcl
+  - kind: monitoring
+    function:
+      name: xpkg.upbound.io/crossplane-contrib/function-kcl
+      versionConstraint: ">=v0.10.0"
+    inputFile: templates/monitoring.kcl
+  - kind: maintenance
+    function:
+      name: xpkg.upbound.io/crossplane-contrib/function-kcl
+      versionConstraint: ">=v0.10.0"
+    inputFile: templates/maintenance.kcl
+schemaFragments:                                   # <7>
+  size: schemas/size.yaml                          # <8>
+  monitoring: schemas/monitoring.yaml
+----
+<1> Format version. `Validate` rejects anything other than `slapper.appslap.io/v1alpha1` / `Stdlib`.
+<2> Informational. The cache is keyed by the OCI descriptor digest, not by this field.
+<3> One entry per `servicebundle.PipelineStepKind`. Duplicates fail validation.
+<4> Crossplane Function package reference. Aggregated across all steps into the generated `crossplane.yaml`.
+<5> Carried verbatim into `dependsOn[].version`. Conflicting constraints for the same function across steps fail conversion.
+<6> Path to a file containing the function input.
+<7> Optional. Each entry adds an OpenAPI v3 subtree under `spec.parameters.<key>` in the generated XRD.
+<8> Path inside the artifact. Collisions with `service` or with another fragment key fail the conversion.
+
+Rationale: a typed manifest gives the loader something to validate before it touches the pipeline registry, and the `apiVersion`/`kind` pair lets us version the format independently from `slap` releases.
+
+=== Tagged-union `Source`: local path or OCI image
+
+`stdlib.Source` is a tagged union with two concrete variants:
+
+* `LocalSource string`: a directory on disk. Used for development and tests.
+* `OCISource{Ref, CacheDir, PlainHTTP}`: an OCI image reference.
+
+`Load(ctx, src)` dispatches on the variant. Adding a new source (e.g. HTTP tarball, git) is additive: implement `source()` and a `loadX` function.
+
+=== OCI loader uses go-containerregistry with a digest-keyed cache
+
+The OCI loader uses `go-containerregistry` and reads the default Docker authentication.
+
+Resolution path:
+
+1. If `Ref` carries a digest and `<cacheDir>/<registry>/<repo>/<digest>/stdlib.yaml` exists, load from cache.
+2. Otherwise `crane.Head` resolves the tag to a digest, and the cache layout is consulted again.
+3. On miss: `crane.Pull` into a temp dir under the repo cache root, then atomic rename into `<digest>/`.
+
+Tar extraction (`untar`) rejects absolute paths and `..` traversal, and silently skips symlinks, hardlinks, char/block devices and FIFOs. Only regular files and directories are written.
+
+`DefaultCacheDir()` returns `<user-cache>/slapper/stdlib`.
+
+Rationale: digest-keyed caching avoids excessive pulling and makes subsequent conversions reproducible. Tar hardening is mandatory because we extract third-party artifacts.
+
+We chose `go-containerregistry` over `oras-go` because the prior `oras` integration was very opinionated about the structure of image layers.
+
+=== Stdlib renderer overrides the in-tree dummy
+
+The stdlib renderer transparently replaces the in-tree `dummyRenderer` for each kind. Dummies remain only for kinds the stdlib does not provide and as the no-stdlib fallback.
+
+The renderer reads `entry.InputFile` and emits the composition step as:
+
+[source,yaml]
+----
+step: <kind>
+functionRef:
+  name: <pipeline.DeriveFunctionName(entry.Function.Name)>
+input: <decoded YAML>
+----
+
+The function input is embedded as a nested object (what Crossplane's runtime expects), not as a raw string. Each function will have its own input object schema.
+
+=== Schema fragments merge into the XRD's parameters
+
+After XRD generation, it's possible to inject additional changes into the XRD.
+
+* Collisions between fragments, or with `service`, fail the conversion. No silent overwrite.
+* Multi-version XRDs are not supported (also a Crossplane limitation).
+
+Rationale: this keeps the maintainer's service-specific schema cleanly separated from framework-owned schema and makes drift between the two structurally visible.
+
+=== Function dependencies drive a Crossplane `Configuration` meta
+
+The converter creates a `crossplane.yaml` so the rendered artifacts can be converted to a valid Crossplane package.
+
+[source,yaml]
+----
+apiVersion: meta.pkg.crossplane.io/v1
+kind: Configuration
+metadata:
+  name: <bundle.meta.name>
+spec:
+  dependsOn:
+    - function: <name>
+      version: <versionConstraint>
+----
+
+Written as `<output>/crossplane.yaml`, alongside `xrd.yaml` and `composition.yaml`.
+
+Conflicting version constraints for the same function across steps are a hard error rather than a best-effort merge. They will need explicit resolution from the service maintainer.
+
+=== CLI flags and source precedence
+
+`slap convert` exposes:
+
+* `--stdlib-path,-p`: load stdlib from a local directory (development override).
+* `--no-stdlib`: skip stdlib resolution entirely. In-tree dummies are used; no `crossplane.yaml` is emitted. Logs a `Warn` if `meta.stdlib` is set so the maintainer notices the suppression.
+* `--stdlib-cache-dir,-d`: OCI cache root, default `stdlib.DefaultCacheDir()`.
+* `--output,-o`: output directory, default `xpkg/`.
+
+Source precedence: `--no-stdlib` > `--stdlib-path` > `meta.stdlib` > none. `--no-stdlib` and `--stdlib-path` are mutually exclusive. The converter forwards `cmd.Context()` into the loader so OCI pulls honour cancellation and deadlines.
+
+== Consequences
+
+Positive:
+
+* Stdlib is shipped independently of `slap`. Maintainers pin `meta.stdlib` to an OCI tag or digest; updating the framework does not require a CLI release.
+* Digest-keyed cache makes repeat conversions offline, fast and reproducible. CI configures `--stdlib-cache-dir` once and benefits across runs.
+* Stdlib + custom function references collapse into a single `Configuration` meta, so the emitted `xpkg/` is convertable into a Crossplane package without hand-maintaining `crossplane.yaml`.
+* Schema-fragment collisions surface at convert time instead of silently overwriting maintainer schema or, worse, failing later at XRD admission.
+* Source tagged union makes new resolution backends additive (HTTP tarball, git, etc.).
+
+Negative / neutral:
+
+* OCI resolution trusts the registry's tag→digest mapping at `HEAD` time. There is no signature or attestation verification on the pulled artifact yet; integrity rests on registry TLS and (when used) digest-pinned refs.
+* `--no-stdlib` skips Configuration meta emission entirely. The resulting `xpkg/` is not a valid Crossplane package; the flag is documented as a debugging escape hatch only.
+* Stdlib step inputs are YAML documents and are embedded as nested objects. Non-YAML payloads (e.g. raw KCL source) must be wrapped by the manifest author into a YAML envelope.
+* `BuildDependencies` errors on conflicting version constraints; it does not attempt constraint intersection. Resolving the constraint against a real package manager (constraint solving, install) is out of scope and left to Crossplane.
+* Multi-version XRDs are not supported by `MergeFrameworkFragments`. Adding a second version requires extending the merge logic.
+* `PlansSection` in the manifest is a stub. Default plans are not yet wired into the generated XRD; a follow-up will decide whether the stdlib owns plan defaults or the bundle does.
+* Tar extraction skips symlinks/hardlinks/devices unconditionally. Viable for our use-case.
