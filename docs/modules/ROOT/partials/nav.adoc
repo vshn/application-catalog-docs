@@ -150,6 +150,7 @@ include::partial$nav-adrs.adoc[]
 *** xref:framework/runbooks/GuaranteedUptimeTarget.adoc[]
 *** xref:framework/runbooks/AppCatHighAvailableStatefulsetWarning.adoc[]
 *** xref:framework/runbooks/AppCatHighAvailableDeploymentWarning.adoc[]
+*** xref:framework/runbooks/AppCatSLIExporterDown.adoc[]
 
 * Framework 2.0
 ** ADRs

@@ -1,0 +1,89 @@
+= Alert: AppCatSLIExporterDown
+:page-aliases: how-tos/appcat/AppCatSLIExporterDown.adoc
+
+== icon:glasses[] Overview
+
+This alert fires when the AppCat SLI exporter is unavailable.
+The SLI exporter runs as a controller in the `syn-appcat-slos` namespace on the service cluster and continuously probes all managed AppCat services.
+Its probe results underpin all AppCat SLO calculations and alerts.
+
+If the exporter is down, SLO dashboards show no results because the query returns an empty dataset - SLA violations go undetected.
+
+*AppCatSLIExporterDown* fires when Prometheus cannot scrape the SLI exporter for 5 minutes (`up` == 0 or absent).
+
+== icon:bug[] Steps for Debugging
+
+*Check if the Deployment is scaled to 0*
+[source,bash]
+----
+kubectl -n syn-appcat-slos get deployment appcat-sliexporter-controller-manager
+----
+
+If `READY` is `0/1`, scale it back up:
+[source,bash]
+----
+kubectl -n syn-appcat-slos scale deployment appcat-sliexporter-controller-manager --replicas=1
+----
+
+*Check pod status and logs*
+[source,bash]
+----
+kubectl -n syn-appcat-slos get pods
+kubectl -n syn-appcat-slos describe pod -l control-plane=controller-manager
+kubectl -n syn-appcat-slos logs -l control-plane=controller-manager -c manager --tail=100
+kubectl -n syn-appcat-slos logs -l control-plane=controller-manager -c kube-rbac-proxy --tail=50
+----
+
+Look for reconciliation errors, kubeconfig issues, or crash loops in the manager container.
+If the kube-rbac-proxy container is crashing, Prometheus scrapes will fail even though the exporter itself is healthy.
+
+*Check if the metrics endpoint is reachable*
+
+Do port-forward:
+[source,bash]
+----
+kubectl -n syn-appcat-slos port-forward svc/appcat-sliexporter-controller-manager-metrics-service 8443:8443
+----
+
+Check probes exists:
+[source,bash]
+----
+TOKEN=$(kubectl -n syn-appcat-slos create token appcat-sliexporter-controller-manager) &&
+curl -sk -H "Authorization: Bearer $TOKEN" https://localhost:8443/metrics | grep appcat_probes
+----
+
+*Check Prometheus scrape status*
+
+Access the Prometheus UI via port-forward:
+[source,bash]
+----
+kubectl -n openshift-monitoring port-forward svc/prometheus-operated 9090
+----
+
+Then open http://localhost:9090 in your browser, navigate to Status → Targets and search for `appcat-sliexporter`.
+The target should be `UP`. If it shows `DOWN`, the scrape is failing - check the error message.
+
+== icon:wrench[] Steps for Remediation
+
+*Pod is crash-looping*
+
+Check the logs for the root cause. Common causes:
+
+* Missing RBAC permissions - check if the `appcat-sliexporter-appcat-sli-exporter` ClusterRole is present and bound.
+* OOM kill - check memory limits in the deployment and the node pressure; adjust `resources.limits.memory` in the component parameters if needed.
+
+*Prometheus target is DOWN*
+
+* Verify the ServiceMonitor `appcat-sliexporter-controller-manager-metrics-monitor` is present in `syn-appcat-slos`.
+* Verify the Service `appcat-sliexporter-controller-manager-metrics-service` exists and selects the correct pods.
+* Check TLS: the kube-rbac-proxy sidecar handles HTTPS on port 8443. If the proxy is unhealthy, the scrape will fail.
+Check the sidecar logs:
++
+[source,bash]
+----
+kubectl -n syn-appcat-slos logs -l control-plane=controller-manager -c kube-rbac-proxy --tail=50
+----
+
+== icon:book[] References
+
+* https://github.com/vshn/appcat/tree/master/pkg/sliexporter[AppCat SLI exporter source code]
