@@ -26,7 +26,7 @@ Constraints feeding the decision:
 * Schema authoring in raw OpenAPI v3 is verbose and error-prone; kro's `SimpleSchema` already solves this for the kro project and produces a valid OpenAPI v3 subschema.
 * The stdlib of pipeline functions (provisioning, networking, backup, monitoring, maintenance) is shipped out-of-tree as a versioned artifact; the converter must be able to resolve and load it (see ADR 0002). Custom steps remain supported so maintainers can extract new functions for the stdlib.
 * Composition pipelines mix framework-owned steps (the stdlib) with per-service custom steps. Both must coexist in one declarative pipeline.
-* Crossplane's XRD controller auto-injects standard XR `spec`/`status` fields when generating the CRD, but only those it considers standard. Fields written by composition functions (e.g. `status.ready`) are *not* auto-injected and the SSA typed-patch path rejects them unless declared.
+* Crossplane's XRD controller auto injects standard XR `spec`/`status` fields when generating the CRD, but only those it considers standard. Fields written by composition functions (for example `status.ready`) are *not* auto injected and the SSA typed-patch path rejects them unless declared.
 
 
 == Decision
@@ -55,7 +55,7 @@ This is useful to model an API in Go, without having a single huge Go struct.
 
 === Minimal XR status stub plus explicit `status.ready`
 
-The XRD's `openAPIV3Schema.properties.status` is left as `{ type: object, x-kubernetes-preserve-unknown-fields: true }` so Crossplane can auto-inject `conditions`, `connectionDetails`, etc. into the materialised CRD. We additionally declare `status.ready: boolean` because (a) Crossplane does not auto-inject it and (b) the SSA typed-patch path rejects undeclared status fields written by composition functions.
+The XRD's `openAPIV3Schema.properties.status` is left as `{ type: object, x-kubernetes-preserve-unknown-fields: true }` so Crossplane can auto inject `conditions`, `connectionDetails`, etc. into the materialised CRD. We additionally declare `status.ready: boolean` because (a) Crossplane does not auto inject it and (b) the SSA typed-patch path rejects undeclared status fields written by composition functions.
 
 === Crossplane v2 namespaced XRD
 
@@ -78,6 +78,6 @@ Negative / neutral:
 * Tagged-union encoding means every new `Renderer`/`PipelineStep`/`CredentialValue` variant requires a new Go struct, factory and unit test.
 * The placeholder dummy renderers emit valid-but-meaningless KCL ConfigMaps. With `--no-stdlib`, a generated Composition will *deploy* but the framework-owned steps do nothing useful. This is acceptable as a debugging escape hatch.
 * `FuncRef.VersionConstraint` is parsed and carried on the bundle struct; propagation into the generated package manifests is handled by the stdlib pipeline (see ADR 0002). Package management of the referenced Function CR is out of scope for the converter and will be handled by a future package-install step.
-* `status.ready` is the only explicitly declared status field. Future composition functions that write other status fields (e.g. `status.host`, `status.endpoint`) must either rely on the open `x-kubernetes-preserve-unknown-fields` slot (sufficient for read-only display) or extend the converter to declare them.
+* `status.ready` is the only explicitly declared status field. Future composition functions that write other status fields (for example `status.host`, `status.endpoint`) must either rely on the open `x-kubernetes-preserve-unknown-fields` slot (sufficient for read-only display) or extend the converter to declare them.
 * The XRD ships as Crossplane v2 (Namespaced, no Claim). Services that need the classic Claim/XR split are not supported by the converter and must hand-author the XRD; this is a deliberate scope cut.
 
