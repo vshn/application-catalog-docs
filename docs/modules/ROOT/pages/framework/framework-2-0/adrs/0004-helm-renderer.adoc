@@ -49,13 +49,13 @@ Paths use dotted segments. The first segment selects a registered _root_ (curren
 
 === The helm root exposes literal and KCL-quoted views
 
-The helm root publishes the bundle's renderer fields under stable paths (e.g. `renderer.spec.repository`, `renderer.spec.chart`, `renderer.spec.version`, `renderer.spec.values`). Alongside each scalar field, a sibling `.kcl` view returns the same value already formatted as a KCL literal. A computed `renderer.values.kcl` view returns the merged `values` tree (see below) as a KCL expression.
+The helm root publishes the bundle's renderer fields under stable paths (for example `renderer.spec.repository`, `renderer.spec.chart`, `renderer.spec.version`, `renderer.spec.values`). Alongside each scalar field, a sibling `.kcl` view returns the same value already formatted as a KCL literal. A computed `renderer.values.kcl` view returns the merged `values` tree (see below) as a KCL expression.
 
 The two flavours exist because placeholders land in different syntactic positions inside the function input. A placeholder that sits at a YAML position only needs the raw value; one that sits inside a KCL source string needs the value quoted and escaped the way KCL expects. Asking the template author to wrap values in the right syntax themselves would push the escaping problem back into the textual-templating space we deliberately avoided.
 
 === `valueMapping` connects claim fields to chart values
 
-`valueMapping` is a list of `{claimPath, target}` pairs. `claimPath` is a leading-dot dotted path into the claim (e.g. `.spec.parameters.size.replicas`); `target` is a dotted path into the helm values tree. The merger deep-clones `values`, then for each mapping writes a marker into the values tree at `target` recording that the field is not a literal but a KCL expression referring to the observed XR field. The merged tree is then emitted as KCL by the `pkg/converter/kcl` emitter and exposed as `renderer.values.kcl`.
+`valueMapping` is a list of `{claimPath, target}` pairs. `claimPath` is a leading-dot dotted path into the claim (for example `.spec.parameters.size.replicas`); `target` is a dotted path into the helm values tree. The merger deep-clones `values`, then for each mapping writes a marker into the values tree at `target` recording that the field is not a literal but a KCL expression referring to the observed XR field. The merged tree is then emitted as KCL by the `pkg/converter/kcl` emitter and exposed as `renderer.values.kcl`.
 
 Rationale: maintainers think in terms of "this claim field drives this chart value", not in terms of KCL expressions. The merger lets them express that intent declaratively. Producing the result as KCL (rather than as a JSON patch or a CEL expression) matches the function the stdlib runs at composition time.
 
@@ -117,7 +117,7 @@ spec:
     release.spec.forProvider.values = {$slapperRef: renderer.values.kcl}
 ----
 
-After conversion, the chart fields are inlined as KCL string literals, and `values` becomes a KCL expression where `cluster.instances` and `cluster.storage.size` resolve to `oxr.spec.parameters.size.replicas` and `oxr.spec.parameters.size.disk` respectively. The remaining default values (e.g. `fullnameOverride: pg`) are emitted as literals.
+After conversion, the chart fields are inlined as KCL string literals, and `values` becomes a KCL expression where `cluster.instances` and `cluster.storage.size` resolve to `oxr.spec.parameters.size.replicas` and `oxr.spec.parameters.size.disk` respectively. The remaining default values (for example `fullnameOverride: pg`) are emitted as literals.
 
 Rendered composition step (abbreviated):
 
