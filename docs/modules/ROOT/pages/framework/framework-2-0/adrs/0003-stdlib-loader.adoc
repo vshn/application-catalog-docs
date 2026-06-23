@@ -22,7 +22,7 @@ ADR 0001 set the converter shape but left the framework-owned pipeline steps as 
 
 * A declarative description of what the framework provides per step kind (function reference, version constraint, function input).
 * A way to ship that description versioned and decoupled from `slap` releases, so service maintainers pin a stdlib release without rebuilding the CLI.
-* A way to extend the maintainer's XRD with framework-owned schema (e.g. `size`, `monitoring`) that lives next to the maintainer's `service` definition.
+* A way to extend the maintainer's XRD with framework-owned schema (for example `size`, `monitoring`) that lives next to the maintainer's `service` definition.
 * A way to derive the function dependency list for the generated package so the emitted `xpkg/` can be converted to a Crossplane package.
 
 Constraints feeding the decision:
@@ -105,14 +105,14 @@ schemaFragments:                                   # <7>
 
 Rationale: a typed manifest gives the loader something to validate before it touches the pipeline registry, and the `apiVersion`/`kind` pair lets us version the format independently from `slap` releases.
 
-=== Tagged-union `Source`: local path or OCI image
+=== Tagged-union `Source`: Local path or OCI image
 
 `stdlib.Source` is a tagged union with two concrete variants:
 
 * `LocalSource string`: a directory on disk. Used for development and tests.
 * `OCISource{Ref, CacheDir, PlainHTTP}`: an OCI image reference.
 
-`Load(ctx, src)` dispatches on the variant. Adding a new source (e.g. HTTP tarball, git) is additive: implement `source()` and a `loadX` function.
+`Load(ctx, src)` dispatches on the variant. Adding a new source (for example HTTP tarball, git) is additive: implement `source()` and a `loadX` function.
 
 === OCI loader uses go-containerregistry with a digest-keyed cache
 
@@ -202,7 +202,7 @@ Negative / neutral:
 
 * OCI resolution trusts the registry's tag→digest mapping at `HEAD` time. There is no signature or attestation verification on the pulled artifact yet; integrity rests on registry TLS and (when used) digest-pinned refs.
 * `--no-stdlib` skips Configuration meta emission entirely. The resulting `xpkg/` is not a valid Crossplane package; the flag is documented as a debugging escape hatch only.
-* Stdlib step inputs are YAML documents and are embedded as nested objects. Non-YAML payloads (e.g. raw KCL source) must be wrapped by the manifest author into a YAML envelope.
+* Stdlib step inputs are YAML documents and are embedded as nested objects. Non-YAML payloads (for example raw KCL source) must be wrapped by the manifest author into a YAML envelope.
 * `BuildDependencies` errors on conflicting version constraints; it does not attempt constraint intersection. Resolving the constraint against a real package manager (constraint solving, install) is out of scope and left to Crossplane.
 * Multi-version XRDs are not supported by `MergeFrameworkFragments`. Adding a second version requires extending the merge logic.
 * `PlansSection` in the manifest is a stub. Default plans are not yet wired into the generated XRD; a follow-up will decide whether the stdlib owns plan defaults or the bundle does.
