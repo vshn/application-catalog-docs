@@ -296,7 +296,7 @@ type VSHNBillingStatus struct {
     // +optional
     CurrentMonthlyPrice *resource.Quantity `json:"currentMonthlyPrice,omitempty"`
 
-    // Unit is the unit of measurement for consumption (e.g. "GiB", "minutes").
+    // Unit is the unit of measurement for consumption ("GiB", "minutes").
     // +optional
     Unit string `json:"unit,omitempty"`
 

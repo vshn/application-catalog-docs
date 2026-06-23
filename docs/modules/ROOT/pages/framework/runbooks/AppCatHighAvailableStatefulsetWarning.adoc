@@ -1,5 +1,5 @@
-= Alert rule: AppCatHighAvailableStatefulsetWarning
 :page-aliases: how-tos/appcat/vshn/AppCatHighAvailableStatefulsetWarning.adoc
+= Alert rule: AppCatHighAvailableStatefulsetWarning
 
 == icon:glasses[] Overview
 
@@ -15,5 +15,5 @@ Step three:: Describe the affected statefulset.
 +
 [source,bash]
 ----
-kubectl -n <instance-namespace> describe sts <statefulset-name>
+kubectl --as=system:admin -n <instance-namespace> describe sts <statefulset-name>
 ----

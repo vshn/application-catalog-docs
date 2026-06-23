@@ -1,5 +1,5 @@
-= Alert rules: VSHNRedis
 :page-aliases: how-tos/appcat/AppCatRedis.adoc
+= Alert rules: VSHNRedis
 
 == icon:glasses[] Overview
 
@@ -29,13 +29,13 @@ Failover is automatic. If the master goes down, Sentinel promotes a replica to b
 *Check pod health*
 [source,bash]
 ----
-kubectl -n $instanceNamespace get pods
+kubectl --as=system:admin -n $instanceNamespace get pods
 ----
 
 *Connect to Sentinel*
 [source,bash]
 ----
-kubectl exec -n $instanceNamespace -it $redisPod -- \
+kubectl --as=system:admin exec -n $instanceNamespace -it $redisPod -- \
   redis-cli \
     -h 127.0.0.1 \
     -p 26379 \
@@ -84,7 +84,7 @@ If quorum cannot be reached, failover will not occur.
 *Connect to Redis*
 [source,bash]
 ----
-kubectl exec -n $instanceNamespace -it $redisPod -- \
+kubectl --as=system:admin exec -n $instanceNamespace -it $redisPod -- \
   redis-cli \
     -h 127.0.0.1 \
     -p 6379 \
@@ -119,7 +119,7 @@ Expected:
 .Restart the Redis StatefulSet to trigger a new master election.
 [source,bash]
 ----
-kubectl -n $instanceNamespace rollout restart statefulset redis-node
+kubectl --as=system:admin -n $instanceNamespace rollout restart statefulset redis-node
 ----
 Verify a new master via Sentinel:
 [source,bash]
@@ -158,7 +158,7 @@ Then trigger failover:
 
 [source,bash]
 ----
-kubectl exec -n $instanceNamespace -it $redisPod -- \
+kubectl --as=system:admin exec -n $instanceNamespace -it $redisPod -- \
   redis-cli \
     -h 127.0.0.1 \
     -p 26379 \

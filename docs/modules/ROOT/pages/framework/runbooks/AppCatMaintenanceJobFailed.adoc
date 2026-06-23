@@ -1,5 +1,5 @@
-= Alert rule: AppCatMaintenanceJobFailed
 :page-aliases: how-tos/appcat/AppCatMaintenanceJobFailed.adoc
+= Alert rule: AppCatMaintenanceJobFailed
 
 == icon:glasses[] Overview
 
@@ -16,23 +16,23 @@ For most services, the maintenance CronJob lives in the control namespace:
 
 [source,bash]
 ----
-kubectl -n $controlNamespace get jobs
-kubectl -n $controlNamespace logs job/$failedJobName
+kubectl --as=system:admin -n $controlNamespace get jobs
+kubectl --as=system:admin -n $controlNamespace logs job/$failedJobName
 ----
 
 Operator-based services like PostgreSQL have their maintenance in the instance namespace:
 
 [source,bash]
 ----
-kubectl -n $instanceNamespace get jobs
-kubectl -n $instanceNamespace logs job/$failedJobName
+kubectl --as=system:admin -n $instanceNamespace get jobs
+kubectl --as=system:admin -n $instanceNamespace logs job/$failedJobName
 ----
 
 If the job pod is gone, describe the CronJob to see recent execution history:
 
 [source,bash]
 ----
-kubectl -n $instanceNamespace describe cronjob/maintenancejob
+kubectl --as=system:admin -n $instanceNamespace describe cronjob/maintenancejob
 ----
 
 === Most probable causes

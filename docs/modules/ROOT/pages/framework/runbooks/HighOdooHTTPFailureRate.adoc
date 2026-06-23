@@ -1,0 +1,77 @@
+:page-aliases: how-tos/appcat/HighOdooHTTPFailureRate.adoc
+= Alert rule: HighOdooHTTPFailureRate
+
+== icon:glasses[] Overview
+
+This alert fires when the AppCat metered billing cloud collector fails to send usage data to Odoo.
+The collector periodically fetches usage from cloud provider APIs (Exoscale DBaaS, Exoscale Object Storage, Cloudscale Object Storage) and pushes it to the Odoo billing backend.
+The metric `billing_cloud_collector_http_requests_odoo_failed_total` is non-zero for 1 minute, indicating persistent HTTP failures against the Odoo billing backend.
+
+When Odoo is unreachable, the collector cannot push usage data and the data for that collection interval is lost, causing billing gaps for those cloud services.
+
+See also: xref:framework/runbooks/HighProviderHTTPFailureRate.adoc[HighProviderHTTPFailureRate] for failures reaching cloud providers.
+
+== icon:bug[] Steps for Debugging
+
+The collectors run in `syn-appcat`:
+
+[source,bash]
+----
+NAMESPACE='syn-appcat'
+----
+
+Find the billing collector pods:
+
+[source,bash]
+----
+kubectl --as=system:admin -n $NAMESPACE get pods -l automated-billing=true
+----
+
+Check the logs for HTTP error details:
+
+[source,bash]
+----
+kubectl --as=system:admin -n $NAMESPACE logs -l automated-billing=true --tail=100 | grep -i "odoo\|error\|failed"
+----
+
+Verify the Odoo endpoint configuration.
+ConfigMaps are named `<collector>-env` (for example `cloudscale-env`, `exoscale-dbaas-env`, `exoscale-objectstorage-env`):
+
+[source,bash]
+----
+kubectl --as=system:admin -n $NAMESPACE get configmap | grep -E 'exoscale|cloudscale'
+kubectl --as=system:admin -n $NAMESPACE get configmap cloudscale-env -o yaml | grep -E 'ODOO_URL|ODOO_OAUTH'
+----
+
+Test connectivity from within the cluster.
+The pods have `ODOO_URL` and `ODOO_OAUTH_TOKEN_URL` set as environment variables via `envFrom`:
+
+[source,bash]
+----
+COLLECTOR_POD=$(kubectl --as=system:admin -n $NAMESPACE get pods -l automated-billing=true -o name | head -1 | cut -d/ -f2)
+kubectl --as=system:admin -n $NAMESPACE exec $COLLECTOR_POD -- sh -c 'curl -sI "$ODOO_URL"'
+kubectl --as=system:admin -n $NAMESPACE exec $COLLECTOR_POD -- sh -c 'curl -sI "$ODOO_OAUTH_TOKEN_URL"'
+----
+
+== icon:wrench[] Steps for Remediation
+
+*Odoo is temporarily unavailable:*
+
+The collector will retry automatically once Odoo recovers. Monitor the metric until it drops to zero.
+
+*OAuth credentials are invalid or expired:*
+
+Secrets are named `credentials-<collector>` (for example `credentials-cloudscale`, `credentials-exoscale-dbaas`).
+They contain `ODOO_OAUTH_CLIENT_ID` and `ODOO_OAUTH_CLIENT_SECRET`. Rotate the credentials in the component-appcat configuration and re-deploy.
+
+*Network policy blocks egress to Odoo:*
+
+Check if a NetworkPolicy in the namespace is blocking outbound traffic to the Odoo URL. Update the policy if needed.
+
+*Odoo URL changed:*
+
+Verify the `ODOO_URL` in the collector ConfigMap matches the current Odoo endpoint. Update via the component-appcat configuration if it has changed.
+
+== icon:book[] References
+
+* xref:framework/billing.adoc[AppCat Billing Architecture]

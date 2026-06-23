@@ -1,0 +1,87 @@
+:page-aliases: how-tos/appcat/CrossplaneDown.adoc
+= Alert rule: CrossplaneDown
+
+== icon:glasses[] Overview
+
+This alert fires when any Crossplane controller pod in the Crossplane namespace is not reachable by Prometheus for 10 minutes.
+
+Crossplane is the core orchestration engine for AppCat services.
+When it is down, no new service instances can be provisioned, existing compositions stop reconciling, and any pending changes (scale, update, delete) are blocked.
+
+The alert fires when `up{namespace="...", job=~"^crossplane-.+$"} != 1` for 10 minutes.
+
+NOTE: This alert is only active on clusters where `appcat.crossplane.monitoring.enabled: true`.
+It is disabled by default.
+
+== icon:bug[] Steps for Debugging
+
+Set the namespace from the alert labels:
+
+[source,bash]
+----
+NAMESPACE='syn-crossplane'
+POD='<pod-from-alert>'
+----
+
+Check pod status:
+
+[source,bash]
+----
+kubectl --as=system:admin -n $NAMESPACE get pods -l release=appcat
+kubectl --as=system:admin -n $NAMESPACE describe pod $POD
+----
+
+Check pod logs:
+
+[source,bash]
+----
+kubectl --as=system:admin -n $NAMESPACE logs $POD --tail=100
+kubectl --as=system:admin -n $NAMESPACE logs $POD --previous --tail=100
+----
+
+If the pod is not running, check node pressure or eviction events:
+
+[source,bash]
+----
+kubectl --as=system:admin -n $NAMESPACE get events --sort-by=.lastTimestamp | tail -30
+kubectl --as=system:admin get nodes
+----
+
+Check if the Crossplane deployment is healthy:
+
+[source,bash]
+----
+kubectl --as=system:admin -n $NAMESPACE get deployment
+kubectl --as=system:admin -n $NAMESPACE rollout status deployment/crossplane
+kubectl --as=system:admin -n $NAMESPACE rollout status deployment/crossplane-rbac-manager
+----
+
+Verify the Prometheus scrape target is configured:
+
+[source,bash]
+----
+kubectl --as=system:admin -n $NAMESPACE get servicemonitor crossplane
+kubectl --as=system:admin -n $NAMESPACE get service crossplane-metrics
+----
+
+== icon:wrench[] Steps for Remediation
+
+*Pod is crash-looping:*
+
+. Check logs for the root cause (missing CRD, permission denied, OOM).
+. If OOMKilled, increase memory limits via the component parameters.
+. If a CRD is missing, check that the Crossplane ArgoCD application is fully synced.
+
+*Pod stuck in Pending:*
+
+. Check node resources and taints.
+. Verify PodDisruptionBudget is not blocking eviction.
+
+*Deployment scaled to 0:*
+
+Check why it was scaled down (ArgoCD application health, recent Commodore push). As a temporary measure to restore service while investigating, scale it back up manually - note that ArgoCD will revert this if autosync is enabled:
+
+[source,bash]
+----
+kubectl --as=system:admin -n $NAMESPACE scale deployment/crossplane --replicas=1
+----
