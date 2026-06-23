@@ -159,7 +159,6 @@ include::partial$nav-adrs.adoc[]
 *** xref:framework/runbooks/CrossplaneResourceNotReady.adoc[]
 *** xref:framework/runbooks/HighOdooHTTPFailureRate.adoc[]
 *** xref:framework/runbooks/HighProviderHTTPFailureRate.adoc[]
-*** xref:framework/runbooks/runbook-process.adoc[]
 
 * Framework 2.0
 ** ADRs
