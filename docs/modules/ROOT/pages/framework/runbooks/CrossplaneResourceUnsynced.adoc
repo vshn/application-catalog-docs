@@ -1,0 +1,85 @@
+:page-aliases: how-tos/appcat/CrossplaneResourceUnsynced.adoc
+= Alert rule: CrossplaneResourceUnsynced
+
+== icon:glasses[] Overview
+
+This alert fires when a Crossplane-managed resource has not reconciled successfully for 20 minutes.
+The `status_synced` field of the resource is not `ReconcileSuccess`, meaning the Crossplane provider or composition function was unable to bring the resource to the desired state.
+
+Affected resource types include Crossplane Claims, Composites (XRs), and managed resources (MRs).
+A stuck resource usually means the underlying cloud API call is failing, a composition logic error occurred, or a provider pod is unhealthy.
+
+The alert fires when `crossplane_resource_info{status_synced!="ReconcileSuccess"} == 1` for 20 minutes.
+
+== icon:bug[] Steps for Debugging
+
+The alert labels include the resource name, kind, claim name, and claim namespace:
+
+[source,bash]
+----
+RESOURCE_NAME='<name-from-alert>'
+RESOURCE_KIND='<kind-from-alert>'
+CLAIM_NAME='<claim_name-from-alert>'
+CLAIM_NAMESPACE='<claim_namespace-from-alert>'
+----
+
+Find the resource and check its status conditions (XRs and MRs are cluster-scoped; Claims need `-n`):
+
+[source,bash]
+----
+kubectl --as=system:admin get $RESOURCE_KIND $RESOURCE_NAME -o yaml | grep -A 30 'conditions:'
+# if the resource is a Claim:
+kubectl --as=system:admin -n $CLAIM_NAMESPACE get $RESOURCE_KIND $RESOURCE_NAME -o yaml | grep -A 30 'conditions:'
+----
+
+Check the provider pod logs. Identify the relevant provider from the resource's `api_version` label, find the corresponding pod, and check its logs:
+
+[source,bash]
+----
+kubectl --as=system:admin -n syn-crossplane get pods | grep provider
+PROVIDER_POD='<pod-matching-the-relevant-provider>'
+kubectl --as=system:admin -n syn-crossplane logs $PROVIDER_POD --tail=200 | grep $RESOURCE_NAME
+----
+
+Check the Crossplane function pod logs for composition errors.
+Function logs are structured JSON - each reconciliation logs the composition steps and any errors for the resource under the `"resource"` field.
+Filter by resource name to find relevant entries, then look for errors:
+
+[source,bash]
+----
+kubectl --as=system:admin -n syn-crossplane logs -l pkg.crossplane.io/function --tail=500 | grep $RESOURCE_NAME
+kubectl --as=system:admin -n syn-crossplane logs -l pkg.crossplane.io/function --tail=500 | grep $RESOURCE_NAME | grep ERROR
+----
+
+== icon:wrench[] Steps for Remediation
+
+*Transient cloud API error:*
+
+Crossplane will retry automatically. If the alert persists more than 30 minutes, check the cloud provider status page.
+
+*Composition logic error:*
+
+Check if a recent component-appcat or appcat release introduced a breaking change. Rollback the component if confirmed.
+
+*Provider unhealthy:*
+
+Restart the specific provider deployment:
+
+[source,bash]
+----
+kubectl --as=system:admin -n syn-crossplane get deployment | grep <provider-name>
+kubectl --as=system:admin -n syn-crossplane rollout restart deployment/<provider-deployment>
+----
+
+*Force re-reconciliation:*
+
+Annotate the resource to trigger an immediate reconcile:
+
+[source,bash]
+----
+kubectl --as=system:admin annotate $RESOURCE_KIND $RESOURCE_NAME crossplane.io/paused=true --overwrite
+kubectl --as=system:admin annotate $RESOURCE_KIND $RESOURCE_NAME crossplane.io/paused- --overwrite
+# if the resource is a Claim:
+kubectl --as=system:admin -n $CLAIM_NAMESPACE annotate $RESOURCE_KIND $RESOURCE_NAME crossplane.io/paused=true --overwrite
+kubectl --as=system:admin -n $CLAIM_NAMESPACE annotate $RESOURCE_KIND $RESOURCE_NAME crossplane.io/paused- --overwrite
+----

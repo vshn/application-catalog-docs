@@ -1,0 +1,81 @@
+:page-aliases: how-tos/appcat/HighProviderHTTPFailureRate.adoc
+= Alert rule: HighProviderHTTPFailureRate
+
+== icon:glasses[] Overview
+
+This alert fires when the AppCat metered billing cloud collector fails to fetch usage data from cloud providers (Exoscale DBaaS, Exoscale Object Storage, Cloudscale Object Storage).
+The metric `billing_cloud_collector_http_requests_provider_failed_total` is non-zero for 1 minute, indicating persistent HTTP failures when calling provider APIs.
+
+When provider APIs are unreachable, the collector cannot report cloud service usage and the data for that collection interval is lost, causing billing gaps for those cloud services.
+
+See also: xref:framework/runbooks/HighOdooHTTPFailureRate.adoc[HighOdooHTTPFailureRate] for failures reaching the Odoo billing backend.
+
+== icon:bug[] Steps for Debugging
+
+The collectors run in `syn-appcat`:
+
+[source,bash]
+----
+NAMESPACE='syn-appcat'
+----
+
+Find the billing collector pods:
+
+[source,bash]
+----
+kubectl --as=system:admin -n $NAMESPACE get pods -l automated-billing=true
+----
+
+Check the logs for provider API errors:
+
+[source,bash]
+----
+kubectl --as=system:admin -n $NAMESPACE logs -l automated-billing=true --tail=100 | grep -i "provider\|exoscale\|cloudscale\|error\|failed"
+----
+
+Identify which provider is failing by checking the pod name or log lines for the provider name (`exoscale-dbaas`, `exoscale-objectstorage`, `cloudscale`).
+
+Test connectivity to the affected provider API from within the cluster.
+Select the pod for the failing provider (named after the provider, `cloudscale-`, `exoscale-dbaas-`):
+
+[source,bash]
+----
+COLLECTOR_POD=$(kubectl --as=system:admin -n $NAMESPACE get pods -l automated-billing=true -o name | grep <provider-name> | cut -d/ -f2)
+# For Exoscale
+kubectl --as=system:admin -n $NAMESPACE exec $COLLECTOR_POD -- curl -sI https://api.exoscale.com
+# For Cloudscale
+kubectl --as=system:admin -n $NAMESPACE exec $COLLECTOR_POD -- curl -sI https://api.cloudscale.ch
+----
+
+Verify the provider API credentials are present in the secret.
+Secrets are named `credentials-<collector>` (`credentials-cloudscale`, `credentials-exoscale-dbaas`):
+
+[source,bash]
+----
+kubectl --as=system:admin -n $NAMESPACE get secret | grep credentials
+----
+
+== icon:wrench[] Steps for Remediation
+
+*Cloud provider API is temporarily unavailable:*
+
+Check the provider status page. The collector will retry on the next collection interval. Monitor the metric until it drops to zero.
+
+*API credentials invalid or rotated:*
+
+Check the provider credentials secret (`credentials-<collector>`).
+For Exoscale the secret contains `EXOSCALE_API_KEY` / `EXOSCALE_API_SECRET`; for Cloudscale it contains `CLOUDSCALE_API_TOKEN`.
+Rotate the keys via the component-appcat configuration and re-deploy the collector.
+
+*Network policy blocks egress to provider APIs:*
+
+Verify that NetworkPolicies allow outbound HTTPS from the billing namespace to the provider endpoints.
+
+*Rate limiting by the provider:*
+
+If the collector is hitting API rate limits, increase the `collectIntervalMinutes` or `collectIntervalHours` in the component configuration to reduce request frequency.
+
+== icon:book[] References
+
+* xref:framework/billing.adoc[AppCat Billing Architecture]
+* xref:framework/cloud-usage-reporting.adoc[Cloud Usage Reporting]

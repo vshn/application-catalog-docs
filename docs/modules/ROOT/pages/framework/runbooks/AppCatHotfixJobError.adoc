@@ -1,0 +1,55 @@
+:page-aliases: how-tos/appcat/AppCatHotfixJobError.adoc
+= Alert rule: AppCatHotfixJobError
+
+== icon:glasses[] Overview
+
+This alert fires when the AppCat hotfix Kubernetes Job fails.
+The hotfixer job runs once per release to apply in-place migrations or patches across managed service instances that cannot wait for the regular maintenance window.
+If it fails, hotfixes are not rolled out and affected instances may remain in an outdated or broken state until the job succeeds.
+
+The alert fires when `kube_job_failed{job_name=~"appcat-hotfixer.*"} > 0` for 1 minute.
+
+== icon:bug[] Steps for Debugging
+
+Set the namespace from the alert labels:
+
+[source,bash]
+----
+NAMESPACE='<namespace-from-alert>'
+----
+
+Find the failed job and its logs:
+
+[source,bash]
+----
+kubectl --as=system:admin -n $NAMESPACE get jobs | grep appcat-hotfixer
+kubectl --as=system:admin -n $NAMESPACE logs job/<job-name>
+----
+
+If the pod is gone, check events for details:
+
+[source,bash]
+----
+kubectl --as=system:admin -n $NAMESPACE get events --sort-by=.lastTimestamp | grep appcat-hotfixer | tail -20
+----
+
+Common causes:
+
+* *OOMKilled* - the hotfixer pod ran out of memory. Check pod resource limits in the Job spec.
+* *Image pull failure* - the appcat image could not be pulled. Check image tag and registry availability.
+* *Logic error in hotfixer* - a bug in the hotfixer code. Check the logs for a Go panic or error message.
+
+== icon:wrench[] Steps for Remediation
+
+Once the root cause is identified:
+
+. Fix the underlying issue (image, logic error, etc.).
+. Delete the failed job so the component can re-create it on the next sync:
++
+[source,bash]
+----
+kubectl --as=system:admin -n $NAMESPACE delete job <failed-job>
+----
+. Trigger a Commodore compile and push to re-deploy the hotfixer job.
+
+If the hotfixer is not critical for this release, coordinate with the team to skip it by removing the hotfix version pin from the component configuration.

@@ -1,5 +1,5 @@
-= AppCat Rollback
 :page-aliases: how-tos/appcat/AppCatRollback.adoc
+= AppCat Rollback
 
 For on-call engineers responding to an AppCat release issue.
 Use this script to quickly revert affected Claims to a previous CompositionRevision and restore them once the issue is resolved.
@@ -517,11 +517,11 @@ NAME=my-postgres
 NAMESPACE=my-namespace
 
 echo "Selector (REV label) in claim:"
-kubectl get "$TYPE" "$NAME" -n "$NAMESPACE" -o jsonpath='{.spec.compositionRevisionSelector.matchLabels}'
+kubectl --as=system:admin get "\$TYPE" "$NAME" -n "$NAMESPACE" -o jsonpath='{.spec.compositionRevisionSelector.matchLabels}'
 
 echo ""
 echo "Watch claim for reconciliation:"
-kubectl get "$TYPE" "$NAME" -n "$NAMESPACE" -w
+kubectl --as=system:admin get "\$TYPE" "$NAME" -n "$NAMESPACE" -w
 ----
 
 == Discover available revisions

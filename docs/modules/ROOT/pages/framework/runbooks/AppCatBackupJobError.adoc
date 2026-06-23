@@ -1,5 +1,5 @@
-= Alert rule: AppCatBackupJobError
 :page-aliases: how-tos/appcat/AppCatBackupJobError.adoc
+= Alert rule: AppCatBackupJobError
 
 == icon:glasses[] Overview
 
@@ -13,8 +13,8 @@ To figure out what went wrong with the backup, connect to the K8s cluster and lo
 .Find failed job
 [source,bash]
 ----
-kubectl -n $instanceNamespace get jobs
-kubectl -n $instanceNamespace logs job/$failedJobName
+kubectl --as=system:admin -n $instanceNamespace get jobs
+kubectl --as=system:admin -n $instanceNamespace logs job/$failedJobName
 ----
 
 NOTE: The most probable cause for failing backups is unreachable Object Storage or permission issues.

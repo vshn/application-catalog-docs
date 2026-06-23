@@ -1,5 +1,5 @@
-= Alert rule: AppCatHighAvailableDeploymentWarning
 :page-aliases: how-tos/appcat/vshn/AppCatHighAvailableDeploymentWarning.adoc
+= Alert rule: AppCatHighAvailableDeploymentWarning
 
 == icon:glasses[] Overview
 
@@ -14,6 +14,6 @@ Step three:: Describe the affected deployment.
 +
 [source,bash]
 ----
-kubectl -n <instance-namespace> describe deployment <deployment-name>
+kubectl --as=system:admin -n <instance-namespace> describe deployment <deployment-name>
 ----
 +

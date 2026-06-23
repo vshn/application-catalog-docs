@@ -333,7 +333,7 @@ sequenceDiagram
     participant WRK as Worker Cluster / Zone
 
     EU->>CCP: Create Claim
-    Note over EU, CCP: E.g. VSHNPostgreSQL
+    Note over EU, CCP: for example VSHNPostgreSQL
     CCP->>CCP: Validate Claim
     CCP->>CSPCP: Create Claim
     Note over CCP, CSPCP: Wrapped in "Object"

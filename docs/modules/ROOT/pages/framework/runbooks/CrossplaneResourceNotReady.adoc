@@ -1,0 +1,71 @@
+:page-aliases: how-tos/appcat/CrossplaneResourceNotReady.adoc
+= Alert rule: CrossplaneResourceNotReady
+
+== icon:glasses[] Overview
+
+This alert fires when a Crossplane-managed resource has not reached `Available` status for 15 minutes.
+The `status_ready` field is not `Available`, meaning Crossplane considers the resource provisioned but unhealthy or still initialising.
+
+This is distinct from xref:framework/runbooks/CrossplaneResourceUnsynced.adoc[CrossplaneResourceUnsynced]: a resource can be synced (no reconcile error) yet still not ready (the underlying service is unhealthy or the readiness check fails).
+
+Common causes include: a downstream service that fails its health check, a misconfigured composition that sets readiness conditions incorrectly, or a provider that cannot verify the resource state.
+
+The alert fires when `crossplane_resource_info{status_ready!="Available"} == 1` for 15 minutes.
+
+== icon:bug[] Steps for Debugging
+
+The alert labels contain the resource name, kind, claim name, and claim namespace:
+
+[source,bash]
+----
+RESOURCE_NAME='<name-from-alert>'
+RESOURCE_KIND='<kind-from-alert>'
+CLAIM_NAME='<claim_name-from-alert>'
+CLAIM_NAMESPACE='<claim_namespace-from-alert>'
+----
+
+Check the resource status and readiness conditions (XRs and MRs are cluster-scoped; Claims need `-n`):
+
+[source,bash]
+----
+kubectl --as=system:admin get $RESOURCE_KIND $RESOURCE_NAME -o yaml | grep -A 30 'conditions:'
+# if the resource is a Claim:
+kubectl --as=system:admin -n $CLAIM_NAMESPACE get $RESOURCE_KIND $RESOURCE_NAME -o yaml | grep -A 30 'conditions:'
+----
+
+Check if the underlying service pods are running (for VSHN services):
+
+[source,bash]
+----
+INSTANCE_NAMESPACE=$(kubectl --as=system:admin -n $CLAIM_NAMESPACE get $RESOURCE_KIND $RESOURCE_NAME -o jsonpath='{.status.instanceNamespace}')
+kubectl --as=system:admin -n $INSTANCE_NAMESPACE get pods
+kubectl --as=system:admin -n $INSTANCE_NAMESPACE get events --sort-by=.lastTimestamp | tail -20
+----
+
+Inspect the composition function logs for readiness evaluation errors:
+
+[source,bash]
+----
+kubectl --as=system:admin -n syn-crossplane logs -l pkg.crossplane.io/function --tail=100 | grep $RESOURCE_NAME
+----
+
+== icon:wrench[] Steps for Remediation
+
+*Underlying service pod is unhealthy:*
+
+Check what is running in the instance namespace and restart the unhealthy workload:
+
+[source,bash]
+----
+kubectl --as=system:admin -n $INSTANCE_NAMESPACE get pods
+kubectl --as=system:admin -n $INSTANCE_NAMESPACE rollout restart statefulset
+kubectl --as=system:admin -n $INSTANCE_NAMESPACE rollout restart deployment
+----
+
+*Readiness check is misconfigured in the composition:*
+
+Check recent changes to the composition functions. If a code change broke the readiness condition, rollback the appcat or component-appcat version.
+
+*Transient state (resource just provisioned):*
+
+Wait for the 15-minute `for` period to expire. Crossplane may resolve this automatically.
