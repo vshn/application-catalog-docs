@@ -1,4 +1,4 @@
-= ADR 0003 - Slapper Helm Renderer for the Provisioning Step
+= ADR 0004 - Slapper Helm Renderer for the Provisioning Step
 
 :adr_author:    Simon Beck
 :adr_owner:     Schedar
@@ -16,7 +16,7 @@ Add a `renderer` stanza to the `ServiceBundle` that tells `slap` how the provisi
 
 == Context
 
-ADR 0001 introduced the converter, ADR 0002 introduced the stdlib that owns the per-step function inputs. Until now, the provisioning step received a fixed function input from the stdlib with no service-specific data threaded through it. That works for the dummy placeholder but does not produce a real, installable composition: the maintainer needs to say _what_ to deploy.
+xref:framework/framework-2-0/adrs/0001-api-converter.adoc[ADR 0001] introduced the converter, xref:framework/framework-2-0/adrs/0003-stdlib-loader.adoc[ADR 0003] introduced the stdlib that owns the per-step function inputs. Until now, the provisioning step received a fixed function input from the stdlib with no service-specific data threaded through it. That works for the dummy placeholder but does not produce a real, installable composition: the maintainer needs to say _what_ to deploy.
 
 Two questions had to be answered:
 
@@ -59,7 +59,7 @@ The two flavours exist because placeholders land in different syntactic position
 
 Rationale: maintainers think in terms of "this claim field drives this chart value", not in terms of KCL expressions. The merger lets them express that intent declaratively. Producing the result as KCL (rather than as a JSON patch or a CEL expression) matches the function the stdlib runs at composition time.
 
-A `valueMapping[].target` may include or omit a leading dot; both are accepted. `claimPath` must start with a dot — this is the syntactic cue that it refers to the claim/XR tree and removes ambiguity with chart-value paths.
+A `valueMapping[].target` may include or omit a leading dot; both are accepted. `claimPath` must start with a dot, this is the syntactic cue that it refers to the claim/XR tree and removes ambiguity with chart-value paths.
 
 === Architecture
 
@@ -77,7 +77,7 @@ The boundaries matter: `template` and `kcl` are reusable for future renderer typ
 
 === `--no-stdlib` keeps the dummy renderer
 
-`--no-stdlib` remains a debug-only escape hatch (per ADR 0002). The in-tree dummy provisioning renderer continues to ignore the `renderer` stanza. When a bundle has a `renderer` set and `--no-stdlib` is passed, the converter logs a warning so the maintainer notices that their renderer config is being skipped.
+`--no-stdlib` remains a debug-only escape hatch (per xref:framework/framework-2-0/adrs/0003-stdlib-loader.adoc[ADR 0003]). The in-tree dummy provisioning renderer continues to ignore the `renderer` stanza. When a bundle has a `renderer` set and `--no-stdlib` is passed, the converter logs a warning so the maintainer notices that their renderer config is being skipped.
 
 == Working example
 
