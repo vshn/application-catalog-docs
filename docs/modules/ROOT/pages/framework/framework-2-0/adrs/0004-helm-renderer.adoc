@@ -1,0 +1,162 @@
+= ADR 0004 - Slapper Helm Renderer for the Provisioning Step
+
+:adr_author:    Simon Beck
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2026-06-22
+:adr_upd_date:  2026-06-22
+:adr_status:    draft
+:adr_tags:      framework, framework-2-0, helm, renderer, crossplane
+
+include::partial$adr-meta.adoc[]
+
+== Summary
+
+Add a `renderer` stanza to the `ServiceBundle` that tells `slap` how the provisioning step should materialise the workload. The first supported renderer is `helm`: it carries a chart reference, default values, and a mapping from claim fields onto chart values. At convert time, slapper feeds that data into a stdlib-shipped template and emits the resulting Crossplane composition step.
+
+== Context
+
+xref:framework/framework-2-0/adrs/0001-api-converter.adoc[ADR 0001] introduced the converter, xref:framework/framework-2-0/adrs/0003-stdlib-loader.adoc[ADR 0003] introduced the stdlib that owns the per-step function inputs. Until now, the provisioning step received a fixed function input from the stdlib with no service-specific data threaded through it. That works for the dummy placeholder but does not produce a real, installable composition: the maintainer needs to say _what_ to deploy.
+
+Two questions had to be answered:
+
+* Where does the workload definition live? In the bundle (so maintainers can change it without a stdlib release), or in the stdlib (so it is reusable across services)?
+* How does maintainer data get injected into a stdlib-owned function input without resorting to string templating, which would collide with KCL, Helm, CEL and Go-template syntax already present in those inputs?
+
+The decision below splits responsibility: the bundle owns the workload data, the stdlib owns the surrounding function input, and a small structural placeholder mechanism connects the two.
+
+== Decision
+
+=== A `renderer` stanza is mandatory on every bundle
+
+`ServiceBundle.Renderer` is required. For v1 only `type: helm` is implemented; `plain_manifests` is reserved as a future type. The helm variant requires `repository`, `chart` and `version`, plus optional default `values` and a `valueMapping` list. The pipeline must also contain exactly one `provisioning` step. Both checks run before any artifact is built, so a misconfigured bundle fails fast with a clear error rather than producing a half-rendered composition.
+
+Rationale: making `renderer` mandatory keeps the bundle self-describing. Discovering the renderer type at convert time means the stdlib can ship one template per renderer type instead of trying to be renderer-agnostic.
+
+=== The stdlib ships one template per renderer type
+
+`StepEntry` gains an `inputTemplates` map keyed by renderer type. The provisioning entry must use `inputTemplates` (not `inputFile`); every other step continues to use `inputFile`. The converter picks `inputTemplates[bundle.renderer.type]` and errors out if the stdlib does not ship a template for the requested type.
+
+This keeps the stdlib in charge of the function-input shape (it knows which function consumes it and how) while letting the bundle pick which shape applies.
+
+=== Substitution is structural, not textual
+
+To inject maintainer data into the function input we introduce a structural placeholder: a single-key YAML map of the form `{$slapperRef: <path>}`. A small resolver walks the parsed YAML tree and replaces any node matching that shape with the value at `<path>`. The resolver does not recurse into resolved values, so a placeholder that resolves to a string containing `{$slapperRef: ...}`-looking text is left alone.
+
+Why structural rather than textual: function inputs frequently contain `{{ ... }}` (Helm, Go template), `${...}` (KCL string interpolation), and CEL. Adding another textual templating layer on top would force authors to manage escapes across overlapping syntaxes. A single-key map is unambiguous: it is either present and gets replaced, or it isn't.
+
+Paths use dotted segments. The first segment selects a registered _root_ (currently only `renderer`); the rest is interpreted by that root. Unknown roots and missing required fields are hard errors; missing optional fields return an empty value of the appropriate kind.
+
+=== The helm root exposes literal and KCL-quoted views
+
+The helm root publishes the bundle's renderer fields under stable paths (for example `renderer.spec.repository`, `renderer.spec.chart`, `renderer.spec.version`, `renderer.spec.values`). Alongside each scalar field, a sibling `.kcl` view returns the same value already formatted as a KCL literal. A computed `renderer.values.kcl` view returns the merged `values` tree (see below) as a KCL expression.
+
+The two flavours exist because placeholders land in different syntactic positions inside the function input. A placeholder that sits at a YAML position only needs the raw value; one that sits inside a KCL source string needs the value quoted and escaped the way KCL expects. Asking the template author to wrap values in the right syntax themselves would push the escaping problem back into the textual-templating space we deliberately avoided.
+
+=== `valueMapping` connects claim fields to chart values
+
+`valueMapping` is a list of `{claimPath, target}` pairs. `claimPath` is a leading-dot dotted path into the claim (for example `.spec.parameters.size.replicas`); `target` is a dotted path into the helm values tree. The merger deep-clones `values`, then for each mapping writes a marker into the values tree at `target` recording that the field is not a literal but a KCL expression referring to the observed XR field. The merged tree is then emitted as KCL by the `pkg/converter/kcl` emitter and exposed as `renderer.values.kcl`.
+
+Rationale: maintainers think in terms of "this claim field drives this chart value", not in terms of KCL expressions. The merger lets them express that intent declaratively. Producing the result as KCL (rather than as a JSON patch or a CEL expression) matches the function the stdlib runs at composition time.
+
+A `valueMapping[].target` may include or omit a leading dot; both are accepted. `claimPath` must start with a dot, this is the syntactic cue that it refers to the claim/XR tree and removes ambiguity with chart-value paths.
+
+=== Architecture
+
+[source]
+----
+pkg/converter/
+├── template/         placeholder resolver (generic, no helm/KCL knowledge)
+├── kcl/              KCL literal emitter (generic, no bundle knowledge)
+├── renderer/helm/    helm root + values merger
+├── stdlib/           picks template by renderer type, runs resolver
+└── converter.go      bundle-level validation, wires renderer into stdlib
+----
+
+The boundaries matter: `template` and `kcl` are reusable for future renderer types, and `renderer/helm` is the only package that knows the bundle's helm shape.
+
+=== `--no-stdlib` keeps the dummy renderer
+
+`--no-stdlib` remains a debug-only escape hatch (per xref:framework/framework-2-0/adrs/0003-stdlib-loader.adoc[ADR 0003]). The in-tree dummy provisioning renderer continues to ignore the `renderer` stanza. When a bundle has a `renderer` set and `--no-stdlib` is passed, the converter logs a warning so the maintainer notices that their renderer config is being skipped.
+
+== Working example
+
+Bundle excerpt:
+
+[source,yaml]
+----
+renderer:
+  type: helm
+  repository: https://charts.cnpg.io/
+  chart: cluster
+  version: 0.4.0
+  values:
+    fullnameOverride: pg
+    cluster:
+      instances: 1
+      storage:
+        size: 1Gi
+  valueMapping:
+    - claimPath: .spec.parameters.size.replicas
+      target: cluster.instances
+    - claimPath: .spec.parameters.size.disk
+      target: cluster.storage.size
+----
+
+Stdlib template (`templates/provisioning-helm.yaml`, abbreviated):
+
+[source,yaml]
+----
+spec:
+  source: |
+    release.spec.forProvider.chart = {
+      repository = {$slapperRef: renderer.spec.repository.kcl}
+      name       = {$slapperRef: renderer.spec.chart.kcl}
+      version    = {$slapperRef: renderer.spec.version.kcl}
+    }
+    release.spec.forProvider.values = {$slapperRef: renderer.values.kcl}
+----
+
+After conversion, the chart fields are inlined as KCL string literals, and `values` becomes a KCL expression where `cluster.instances` and `cluster.storage.size` resolve to `oxr.spec.parameters.size.replicas` and `oxr.spec.parameters.size.disk` respectively. The remaining default values (for example `fullnameOverride: pg`) are emitted as literals.
+
+Rendered composition step (abbreviated):
+
+[source,yaml]
+----
+- step: provisioning
+  functionRef:
+    name: function-kcl
+  input:
+    apiVersion: krm.kcl.dev/v1alpha1
+    kind: KCLInput
+    spec:
+      source: |
+        release.spec.forProvider.chart = {
+          repository = "https://charts.cnpg.io/"
+          name       = "cluster"
+          version    = "0.4.0"
+        }
+        release.spec.forProvider.values = {
+          cluster = {
+            instances = oxr.spec.parameters.size.replicas
+            storage = {size = oxr.spec.parameters.size.disk}
+          }
+          fullnameOverride = "pg"
+        }
+----
+
+== Consequences
+
+Positive:
+
+* Maintainers describe the workload once, in the bundle, in a form they already understand (a chart + values + a small mapping).
+* The function input shape stays owned by the stdlib, so changes there do not require every service to be re-authored.
+* Structural placeholders sidestep the escaping problem that would arise from layering a textual template engine on top of inputs that already contain KCL/Helm/CEL.
+* `template` and `kcl` are renderer-agnostic, so adding `plain_manifests` later is mostly a new root + a new template, not a new substitution mechanism.
+
+Negative / neutral:
+
+* Only `helm` is implemented in v1. Bundles that need `plain_manifests` today have to wait.
+* The placeholder mechanism is one more concept maintainers reading stdlib templates have to understand; the payoff is they only see it in stdlib templates, not in their own bundles.
+* The KCL emitter is deliberately small and rejects Go types it does not know how to render. Stdlib authors adding new value shapes may need to extend it.
+* `--no-stdlib` silently bypasses the whole mechanism. The warning log is the only signal; the resulting `xpkg/` is not installable, which matches the flag's documented debug-only intent.

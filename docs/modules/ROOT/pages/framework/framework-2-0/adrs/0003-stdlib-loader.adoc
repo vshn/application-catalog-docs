@@ -1,4 +1,4 @@
-= ADR 0002 - Slapper Stdlib Loader
+= ADR 0003 - Slapper Stdlib Loader
 
 :adr_author:    Simon Beck
 :adr_owner:     Schedar
