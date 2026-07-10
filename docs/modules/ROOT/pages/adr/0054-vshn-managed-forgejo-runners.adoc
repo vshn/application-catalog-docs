@@ -19,7 +19,7 @@ The resulting credential is written as a Kubernetes Secret, which the `forgejo-r
 ====
 
 [WARNING]
-.Rejected — implementation paused due to shared-cluster security concerns
+.Rejected - implementation paused due to shared-cluster security concerns
 ====
 Work on this feature was started (see https://github.com/vshn/appcat/pull/684[appcat#684]) but paused after a security review identified that running privileged pods on a shared cluster cannot be made safe without additional infrastructure changes.
 The design is sound and may be revisited; the required prerequisites are documented in the <<path-forward>> section.
@@ -322,10 +322,10 @@ This means:
 
 * A compromised job can access the host filesystem, load kernel modules, and read other pods' secrets from `/proc`.
 * On a shared node, all other tenants co-scheduled there are reachable.
-* There is no hypervisor boundary — all containers share the host kernel, so kernel exploits are not contained.
+* There is no hypervisor boundary - all containers share the host kernel, so kernel exploits are not contained.
 
 The only true isolation boundary is the privileged runner pod itself.
-Anything running inside it — including unprivileged job containers — is within the blast radius of a node compromise.
+Anything running inside it - including unprivileged job containers - is within the blast radius of a node compromise.
 This makes DinD on a shared cluster an unacceptable risk without additional VM-level isolation.
 ====
 
@@ -387,7 +387,7 @@ What remains is to expose runner enablement and sizing on the claim instead of a
 
 During implementation (https://github.com/vshn/appcat/pull/684[appcat#684]) a security review identified that the design cannot be made safe on a shared cluster without infrastructure prerequisites that were not in place.
 
-The core problem is that any runner topology that requires a privileged pod — including DinD — places an unacceptable trust boundary on a shared cluster:
+The core problem is that any runner topology that requires a privileged pod - including DinD - places an unacceptable trust boundary on a shared cluster:
 
 * A privileged pod has full access to the node: host filesystem, other pods' secrets via `/proc`, network traffic on the node, and the ability to load kernel modules.
 * The DinD sidecar does not isolate job containers from this blast radius (see the DinD security note above).
