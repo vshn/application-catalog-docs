@@ -1,0 +1,23 @@
+= Framework 2.0 Services
+:navtitle: services
+
+[NOTE]
+.Summary
+====
+Framework 2.0 expects clearly defined ownership roles for each service. Role definitions are available in https://kb.vshn.ch/app-catalog/framework/framework-2-0/personas.html[Framework 2.0 Personas]
+This page summarises the Framework 2.0 services and who holds which role for the service.
+====
+
+== MariaDB
+
+* **Service User:** End customers using services
+* **Service Maintainer:** VSHN team AppCat
+* **Service Operator:** VSHN team AppCat
+* **Framework Engineer:** VSHN team AppCat
+
+== LiteLLM
+
+* **Service User:** End customers using services
+* **Service Maintainer:** VSHN team Nunki
+* **Service Operator:** VSHN team Nunki
+* **Framework Engineer:** VSHN team AppCat
