@@ -1,5 +1,5 @@
 = Framework 2.0 Services
-:navtitle: services
+:navtitle: Services
 
 [NOTE]
 .Summary
@@ -15,7 +15,14 @@ This page summarises the Framework 2.0 services and who holds which role for the
 * **Service Operator:** VSHN team AppCat
 * **Framework Engineer:** VSHN team AppCat
 
-== LiteLLM
+== OpenBao
+
+* **Service User:** End customers using services
+* **Service Maintainer:** VSHN team Nunki
+* **Service Operator:** VSHN team Nunki
+* **Framework Engineer:** VSHN team AppCat
+
+== MongoDB
 
 * **Service User:** End customers using services
 * **Service Maintainer:** VSHN team Nunki
