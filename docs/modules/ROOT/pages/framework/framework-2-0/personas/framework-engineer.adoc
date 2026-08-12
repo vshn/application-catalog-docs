@@ -5,13 +5,14 @@ Framework Engineers maintain the platform infrastructure, composition functions,
 
 == Requirements
 
-As a Framework Engineer I can:
+As a Framework Engineer I:
 
-* Maintain the generic Go composition function that handles all services
-* Maintain any third-party or custom composition functions for specific purposes
-* Maintain KCL type schemas and profiles that Service Maintainers use
-* Manage platform components (Crossplane, providers, AppCat components, third-party operators like CNPG)
-* Maintain automated CI/CD pipelines for testing, building, and deployment
-* Document architecture decisions in ADRs
-* Maintain platform and generic runbooks
-* Create and maintain architecture diagrams
+* Maintain the framework's core infrastructure and tooling
+** Own the documentation and runbooks for the framework
+* Supports service maintainers and operators in their work by creating guides, runbooks, and troubleshooting documentation
+* Provides 3rd level platform support for service maintainers and operators
+* Resolves conflicts between shared resources and services
+** Has the final say on allowed service permissions and resource usage
+* Manage platform components and integrations
+** S3, backup infrastructure, monitoring, logging, etc.
+** Load balancing, ingress, and TLS termination

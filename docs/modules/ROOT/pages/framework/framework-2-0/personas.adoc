@@ -11,7 +11,7 @@ The framework addresses the needs of different stakeholders in the platform ecos
 * **Service User**: End customers using services
 * **Service Maintainer**: Engineers adding and configuring services
 * **Service Operator**: Operations team managing service instances
-* **Framework Engineer**: Platform AppCat team maintaining core infrastructure
+* **Framework Engineer**: Platform AppCat team maintaining core infrastructure and resolving conflicts between shared resources
 
 == Personas
 

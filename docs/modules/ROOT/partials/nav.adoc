@@ -162,10 +162,12 @@ include::partial$nav-adrs.adoc[]
 ** xref:framework/framework-2-0/testing.adoc[]
 ** xref:framework/framework-2-0/services.adoc[]
 ** ADRs
-***  xref:framework/framework-2-0/adrs/0001-api-converter.adoc[]
-***  xref:framework/framework-2-0/adrs/0002-claim-lifecycle-and-provisioner-clap.adoc[]
-*** xref:framework/framework-2-0/adrs/0003-stdlib-loader.adoc[]
-*** xref:framework/framework-2-0/adrs/0004-helm-renderer.adoc[]
+*** xref:framework/framework-2-0/adrs/0005-package-format.adoc[]
+*** xref:framework/framework-2-0/adrs/0006-change-tracking.adoc[]
+*** xref:framework/framework-2-0/adrs/0007-helm-tooling.adoc[]
+*** xref:framework/framework-2-0/adrs/0008-harness-depedencies.adoc[]
+*** xref:framework/framework-2-0/adrs/0009-improve-wrapper-chart-ux.adoc[]
+*** xref:framework/framework-2-0/adrs/0010-s3-bucket-provisioning.adoc[]
 
 * Control Plane
 ** xref:control-plane/central-control-plane-arch.adoc[]

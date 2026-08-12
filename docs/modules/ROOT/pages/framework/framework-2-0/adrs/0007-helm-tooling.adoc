@@ -1,0 +1,93 @@
+= ADR0007 - Helm Tooling
+
+:adr_author:    Sebastian Widmer
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2026-08-12
+:adr_upd_date:  -
+:adr_status:    draft
+:adr_tags:      framework, framework-2-0, helm, crossplane, package, distribution, gitops, fluxcd, argocd, k3s-helm-controller
+
+## Problem Statement
+
+We decided to use Helm as the package format for services in xref:adr/0005-package-format.adoc[].
+We decided to build our own change tracking system for services in xref:adr/0006-change-tracking.adoc[].
+
+We need a controller that renders and applies Helm charts to the cluster and would optimally make handling of OCI repositories and Helm charts easier.
+
+## High level goals
+
+* A controller that renders and applies Helm charts
+* Atomic rollouts and upgrades of Helm charts
+* Support for Helm features such as hooks, CRDs, and sub-charts
+
+## Proposals
+
+### ArgoCD
+
+ArgoCD is a Continuous Delivery tool for Kubernetes that can manage Helm charts.
+It renders Helm charts and applies them to the cluster.
+It has a lot of features and is very flexible.
+It comes with a well designed, multi-tenancy capable Web UI and a CLI tool.
+
+ArgoCD needs to be backed by a Git repository.
+This does not fit well with user-self-serviced services that are managed by the change tracking system.
+
+It renders charts on apply and translates Helm hooks into ArgoCD hooks.
+There can be some friction between Helm and ArgoCD hooks, they do not work exactly the same way and some Helm hooks are not supported by ArgoCD.
+
+ArgoCD is rather heavy weight with many managed components and a lot of moving parts.
+
+The author is not sure if we can pre-render Helm charts for diff tracking in earlier stages of the change tracking system.
+
+### K3s Helm controller
+
+The K3s Helm controller is a lightweight controller that renders and applies Helm charts.
+Rancher uses the controller to bootstrap their K3s clusters.
+
+It executes Kubernetes jobs to render Helm charts and applies them to the cluster.
+
+Due to the controller just calling Helm commands inside a container it supports all Helm features and is rather flexible.
+
+As of the time of writing this ADR the controller does not yet support Helm 4.x.
+
+The error reporting does not seem as robust as ArgoCD or FluxCD.
+The CRD basically reports, queued, ok, or failed and the logs of the Helm job need to be inspected for more details.
+
+### FluxCD GitOps framework
+
+The FluxCD GitOps framework is a Continuous Delivery framework for Kubernetes that can manage Helm charts.
+
+It was a fully featured Helm controller with awesome documentation.
+The controller is very up to date and supports Helm 4.x.
+It supports all Helm features known to the author.
+It is very well designed, has options for sharding on big clusters, and is very flexible.
+
+FluxCD additionally provides controllers for easier handling of OCI repositories and legacy chart repositories.
+Those controllers handle authentication, signature verification, caching, and versioning of Helm charts and OCI images.
+
+The controllers have a lightweight footprint on the cluster and are very modular.
+
+FluxCD makes no assumptions of underlying Git repositories and can be used with any Git repository.
+
+Using the FluxCD GitOps framework allows us to implement a lightweight change tracking system without having to worry about registry and Helm specific details.
+
+### Crossplane
+
+Crossplane has a Helm function that can render and apply Helm charts.
+The author did not further investigate what features are supported because they were put off by the complexity and bad documentation.
+
+### Build our own Helm controller
+
+Building our own Helm controller would allow us the most flexibility and control over the features we want to support.
+We would need to implement a lot of features that are already implemented by the other controllers.
+The maintenance burden would be high and we would need to keep up with Helm releases and changes.
+
+## Decision
+
+We decided to use the FluxCD GitOps framework for Helm chart rendering and applying.
+
+It allows us to leverage the existing controllers for Helm and OCI repositories and focus on implementing the change tracking system for services.
+It is extremely well maintained and documented.
+
+We implemented a PoC of the change tracking system using the FluxCD GitOps framework and it was very well suited for our needs.

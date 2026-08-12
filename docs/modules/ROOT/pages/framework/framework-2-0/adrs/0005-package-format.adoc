@@ -1,0 +1,137 @@
+= ADR0005 - Service Package Format
+
+:adr_author:    Sebastian Widmer
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2026-08-12
+:adr_upd_date:  -
+:adr_status:    draft
+:adr_tags:      framework, framework-2-0, helm, crossplane, package, distribution
+
+## Problem Statement
+
+Framework 1.0 made it very hard to bring in new services into the framework.
+Service maintainers had to touch the framework codebase and make changes to it in order to add their service.
+All services were bundled into a single Crossplane function and could only be released all together.
+Changes between releases are very intransparent and error prone.
+
+Service maintainers need to be able to bring their services into the framework without having to touch the framework codebase.
+This requires a well defined package format or API that allows service maintainers to package their services and distribute them to the framework.
+The framework should allow service maintainers to bring in their existing service packages and release them independently of the framework and other services.
+
+We should have full visibility into the changes during development and before, during and after a release of a service package.
+We should be able to do tiered releases of services and the framework.
+Most of our customers have a test cluster and/or test services that are on a different release cycle than the production services.
+
+## High level goals
+
+* Allow service maintainers to bring their services into the framework without having to touch the framework codebase
+* Allow service maintainers to bring in their existing service packages
+* Services can be released independently of the framework and other services
+** Reduce release blast radius
+* Reduce friction for service maintainers
+* Keep "Googleability" and familiarity in mind
+
+## Proposals
+
+### Helm Packages
+
+We use Helm as the package format for services.
+Additional metadata is added to the Helm chart to allow the framework to understand the service and its requirements.
+
+The values.yaml file is used to define the service API and is rendered into a Claim CRD by the framework.
+
+.Chart example
+[source,yaml]
+....
+--- # Chart.yaml
+apiVersion: v2
+name: VSHN Redis
+
+type: application
+
+version: 3.1.0
+appVersion: 1.31.2
+
+annotations:
+  crd.bundle.appcat.io/kind: "VSHNRedis"
+  crd.bundle.appcat.io/plural: "vshnredises"
+--- # values.yaml
+'#replicaCount':
+  description: Number of Redis replicas
+  enum: [1, 3]
+replicaCount: 1
+--- # resulting Claim CR
+apiVersion: v3.vshnredis.appcat.io/bundle
+kind: VSHNRedis
+spec:
+  version: 3.1.0
+  values:
+    replicaCount: 3
+....
+
+Multiple versions of a service can be released and maintained independently.
+
+Breaking changes to the service API are handled by including the major version in the group of the Claim CRD.
+The tooling would validate that no breaking changes are made to the service API between minor and patch versions of the same major version.
+
+. Example of breaking change to the service API:
+[source]
+....
+vshnpostgres:v1.3.4
+vshnpostgres:v1.3.5
+vshnpostgres:v1.4.0
+vshnpostgres:v1.4.1 -> {apiVersion: v1.vshnpostgres.appcat.io/bundle}
+vshnpostgres:v2.0.0
+vshnpostgres:v2.0.1 -> {apiVersion: v2.vshnpostgres.appcat.io/bundle}
+vshnkafka:v2.2.3 -> {apiVersion: v2.vshnkafka.appcat.io/bundle}
+vshnkafka:v3.0.0 -> {apiVersion: v3.vshnkafka.appcat.io/bundle}
+....
+
+The tooling exposes the available versions of a service and allows the service operator to choose which version to use for a service instance.
+
+### Crossplane Packages
+
+Services are packaged and distributed as independent Crossplane packages.
+
+Crossplane since 2.x is basically controller-runtime but with a GRPC based plugin system instead of Go written reconciler code.
+This base design would fit our needs somewhat well.
+The service maintainers would use KCL to define their service.
+In most cases the KCL would wrap a Helm chart.
+
+Crossplane has a huge learning curve and is not as widely used as Helm.
+It is much more flexible than Helm but the flexibility also allows for more mistakes and misconfigurations.
+Their documentation is utter garbage and the tooling is not very user friendly in general.
+The author has a strong dislike for Crossplane and would not recommend it to anyone.
+Some of our partners also expressed a dislike for Crossplane and would not want to use it inside or outside of the framework.
+It's mostly a black box and it would be hard to have many revisions of the services and diffing between them.
+
+We in the past made the experience of Crossplane having trouble scaling with many Kubernetes manifests.
+This might have improved with Crossplane 2.x but we have not sufficiently tested it yet.
+
+Due to all of the above reasons we decided to not test Crossplane as a package format for services.
+
+### Project Syn Components
+
+Project Syn is a well established tool at VSHN and is used to package and distribute many of our internal services.
+It keeps an inventory of all the components and allows to independently release and maintain them.
+It has native multi-tenancy and support for Helm and multiple renderers.
+
+Changes are rolled out on a pull principle and it might be hard to exactly know the rollout state of a service.
+Everything needs to be tracked in a Git repository.
+
+Catalog compiles don't scale super well with many components and we would need to have some adapters between self-service APIs and the Git repository.
+
+Project Syn does not help with building Kubernetes CRDs/APIs for the services.
+
+Project Syn is too static for our needs and we would need to build a lot of tooling around it to make it work for us.
+
+## Decision
+
+We will use Helm as the package format for services.
+
+It is widely used and well known in the Kubernetes ecosystem.
+It has very good controllers and tooling and is well supported by the community.
+
+It is very transparent.
+Changes can be previewed with `helm template` and diffed with `helm diff`.
