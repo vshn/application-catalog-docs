@@ -215,7 +215,7 @@ Any other request is passed through to the Kubernetes API server without any mod
 
 ##### Proxy injection
 
-Controller runtime controllers auto-connect to the Kubernetes API server with four parameters provided by Kubernetes: `KUBERNETES_SERVICE_HOST`, `KUBERNETES_SERVICE_PORT`, `/var/run/secrets/kubernetes.io/serviceaccount/token` and `/var/run/secrets/kubernetes.io/serviceaccount/ca.crt` ({1}[Reference]).
+Controller runtime controllers automatically connect to the Kubernetes API server with four parameters provided by Kubernetes: `KUBERNETES_SERVICE_HOST`, `KUBERNETES_SERVICE_PORT`, `/var/run/secrets/kubernetes.io/serviceaccount/token` and `/var/run/secrets/kubernetes.io/serviceaccount/ca.crt` ({1}[Reference]).
 
 Those variables are injected into every pod by Kubernetes but can be overridden with a mutating admission webhook or policy:
 

@@ -10,7 +10,7 @@ As a Service Maintainer I:
 
 * Create Helm charts for new services, or adapt existing Helm charts to the framework
 * Design the UX and API for service users by defining the CRD schema
-* Define actions the users can take on service instances (e.g., backup, restore, upgrade)
+* Define actions the users can take on service instances (for example: backup, restore, upgrade)
 * Provide 3rd level support for service operators
 * Define SLI metrics, alerts, and monitoring for service instances
 
