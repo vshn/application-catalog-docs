@@ -168,6 +168,7 @@ include::partial$nav-adrs.adoc[]
 *** xref:framework/framework-2-0/adrs/0008-harness-depedencies.adoc[]
 *** xref:framework/framework-2-0/adrs/0009-improve-wrapper-chart-ux.adoc[]
 *** xref:framework/framework-2-0/adrs/0010-s3-bucket-provisioning.adoc[]
+*** xref:framework/framework-2-0/adrs/0011-crd-controller-architecture.adoc[]
 
 * Control Plane
 ** xref:control-plane/central-control-plane-arch.adoc[]
