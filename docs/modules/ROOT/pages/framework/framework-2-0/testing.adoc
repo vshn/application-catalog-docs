@@ -1,6 +1,10 @@
 = Testing Strategy
 :navtitle: Testing
 
+⚠️ This has some content from older Framework 2.0 PoCs and still needs to be updated to reflect the current Framework 2.0 design.
+Please read with caution.
+
+
 [NOTE]
 .Summary
 ====

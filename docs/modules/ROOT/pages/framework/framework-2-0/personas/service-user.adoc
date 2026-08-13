@@ -1,15 +1,19 @@
 = Service User
 :navtitle: Service User
 
-Service Users are end customers who provision and use services via the Servala portal.
-They need visibility into their running instances without direct cluster access.
+Service Users are end customers who provision and use services through the Kubernetes API or through a UI (web based or cli based).
 
 == Requirements
+
+As a Service User I:
+
+* Provision and manage service instances through the Kubernetes API or a UI
 
 As a Service User I can:
 
 * Access service-specific metrics (CPU, memory, connections, throughput)
+* See real-time service health and SLI indicators
 * View application logs for troubleshooting
 * Understand current and projected costs
-* Retrieve credentials and endpoints easily
-* See real-time service health and SLI indicators
+* Retrieve credentials and endpoints
+* Get 1st level support from a dedicated support team

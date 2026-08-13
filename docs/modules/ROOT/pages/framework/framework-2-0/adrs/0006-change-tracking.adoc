@@ -1,0 +1,90 @@
+= ADR0006 - Change Tracking
+
+:adr_author:    Sebastian Widmer
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2026-08-12
+:adr_upd_date:  -
+:adr_status:    draft
+:adr_tags:      framework, framework-2-0, helm, crossplane, package, distribution, gitops
+
+## Problem Statement
+
+Framework 2.0 should be agnostic if the service is cattle or pets.
+It should enable service maintainers and operators to manage services with a low amount of customization and services with a high amount of customization.
+It should support low-risk services and high-risk services that need manual reviews before upgrades.
+Not every cluster is the same and it's not always guaranteed that the test instances are exactly the same as the production instances.
+
+We want to make service operating and development as transparent as possible.
+We want to be able to see what changed between service releases and framework releases.
+
+We want to be able to do tiered releases of services and the framework.
+
+## Constraints
+
+* We decided to use Helm as the package format for services.
+
+## High level goals
+
+* Support service maintainers and operators by allowing full change visibility from development to production clusters.
+* Allow manual reviews of service upgrades and framework upgrades.
+* Allow tiered automated releases of services and the framework.
+* Keep components as modular as possible to reduce the blast radius of changes.
+
+## Proposal
+
+### Change tracking system
+
+Everything is implemented as a Kubernetes controller and the state of the system is stored in Kubernetes CRDs.
+
+All controller components are managed and versioned by Project Syn.
+Project Syn is a GitOps Framework and cluster inventory system already in use by VSHN.
+It allows fine-grained control over the controller versions and makes changes visible in Git.
+
+Since Project Syn is too static for user self-serviced services, we will implement a change tracking system for the services in the Kubernetes API.
+A snapshot is created from every claim change consisting of the claim values and the OCI image digest of the chosen service package.
+
+The snapshots have an approval timestamp, the revision with the highest approval timestamp is considered the current revision of the service instance.
+If the user chooses automatic approval, the snapshot is automatically approved and the service instance is upgraded to the new revision.
+If the user chooses manual approval, the snapshot is created but not approved and the service instance stays on the current revision until the user approves the snapshot.
+
+.Example of a snapshot
+[source,yaml]
+....
+apiVersion: helmetica.io/v1
+kind: InstanceRevision
+metadata:
+  name: openbao-575054097ed46993793f314edc7880050c8319593c99114cba1cb2abb3d3e0ec <1>
+spec:
+  approvedAt: "2026-08-04T12:37:47Z" <2>
+  ociUrl: oci://ghcr.io/openbao/charts/openbao
+  values:
+    csi:
+      agent:
+        enabled: false
+      enabled: false
+    global:
+      openshift: true
+    injector:
+      enabled: "false"
+    server:
+      authDelegator:
+        enabled: false
+      dataStorage:
+        size: 1Gi
+      image:
+        repository: openbao/openbao-ubi
+  version: 0.28.6@sha256:b3a8d99a56ffa36174b3848917ca849311f890d3bc2214245c88c270a54d0795 <3>
+....
+<1> The name of the snapshot is a hash of the URL, values, and version.
+<2> The timestamp when the snapshot was approved.
+Can be empty if the snapshot was created but not approved yet.
+<3> The OCI image digest of the service package that was used to create the snapshot.
+
+### Change UI
+
+All personas are provided a UI to view the change history of a service instance.
+It allows diffing between snapshots, including their rendered Helm outputs, and shows the approval status of each snapshot.
+It allows approving snapshots and rolling back to previous snapshots.
+
+image::change-track-ui.png[PoC change tracking UI]

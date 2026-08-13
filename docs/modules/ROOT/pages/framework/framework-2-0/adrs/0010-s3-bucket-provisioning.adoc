@@ -1,0 +1,30 @@
+= ADR0010 - S3 Bucket Provisioning
+
+:adr_author:    Unqualified Uakari
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2026-XX-XX
+:adr_upd_date:  -
+:adr_status:    TBD
+:adr_tags:      framework, framework-2-0, s3, COSI, crossplane, CSP, controller-runtime, storage, bucket, security
+
+## Problem Statement
+
+We need S3 buckets for each service instance to store backups.
+
+## High level goals
+
+- Automated provisioning of S3 buckets for each service instance.
+- Permission best practices for S3 buckets, including least privilege access and secure access policies.
+
+## Proposals
+
+### COSI
+
+### Crossplane S3 Providers
+
+### Our own controller
+
+## Decision
+
+We decided to implement COSI for S3 bucket provisioning.

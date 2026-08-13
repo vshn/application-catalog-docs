@@ -1,6 +1,9 @@
 = Framework 2.0 Decision Index
 :navtitle: Framework 2.0
 
+From Helm chart to service in 5 minutes.
+Every change transparent.
+
 [NOTE]
 .What this covers
 ====
@@ -9,34 +12,52 @@ Entry point for Framework 2.0 decisions. Links to persona solutions and individu
 
 == TL;DR: Framework 2.0 Architecture
 
-Framework 2.0 enables adding managed services (Redis, PostgreSQL, etc.) without writing Go code.
-Service Maintainers define services in xref:adr/0044-configuration-language-kcl-vs-cue.adoc[KCL] - a type-safe configuration language that includes parameter schemas, validation rules, and mappings from user parameters to Helm chart values.
-xref:adr/0045-service-orchestration-crossplane-2-0.adoc[Crossplane] orchestrates everything using a single generic composition function (written in Go) that loads the KCL configured manifests at runtime, merges it with user parameters, and generates Kubernetes resources - primarily HelmReleases that deploy the actual service charts.
+Framework 2.0 enables adding managed services (Redis, PostgreSQL, Keycloak, etc.) without writing code in most cases.
+Service Maintainers define services using annotated Helm charts.
 
-KCL is the key: it separates service-specific logic from framework code.
-Framework Engineers maintain one composition function that works for all services, while Service Maintainers add new services by writing KCL configurations.
-xref:adr/0046-secret-management-framework-2-0.adoc[Connection secrets] flow through Crossplane's native mechanism to user namespaces.
-xref:adr/0047-service-maintenance-and-upgrades-framework-2-0.adoc[Maintenance and upgrades] use Kubernetes CronJobs that switch Crossplane composition revisions during maintenance windows for controlled rollouts.
+CRDs are directly generated from Helm charts and deployed to the cluster by the framework.
+The service users interact with the generated CRDs to provision and manage service instances.
+Every change to the service is snapshotted and versioned by the framework, enabling transparency, rollbacks, and safe upgrades.
 
-image::simple-architecture-2-0.png[Architecture, link="https://miro.com/app/board/uXjVJiczJH0=/",align=center]
+Many upstream Helm charts work out of the box, additional maturity levels (backup, monitoring, etc.) can be added by Service Maintainers using a wrapper chart and some framework-specific library charts.
+
+We aim at keeping the framework as modular as possible, so we can upgrade and replace individual components while keeping the blast radius of changes as small as possible.
+
+image::helmetica-draft.drawio.svg[Architecture in progress]
 
 [NOTE]
 ====
-Follow how the architecture is evolving on https://miro.com/app/board/uXjVJiczJH0=[Miro Board].
-Also a https://github.com/vshn/appcat-poc[Proof of Concept] is available to support the architecture
+The new framework is under active development in the Github organization https://github.com/helmetica-framework.
 ====
 
-== Persona Solutions
+== Personas
 
-* xref:framework/framework-2-0/personas.adoc[Framework 2.0 Persona Solutions] - Detailed solutions for Service Users, Service Maintainers, Service Operators, and Framework Engineers
+* xref:framework/framework-2-0/personas.adoc[Framework 2.0 Personas] - Requirements and definitions for Service Users, Service Maintainers, Service Operators, Framework Engineers.
 
 == Documentation
 
-* xref:framework/framework-2-0/testing.adoc[Testing Strategy] - Comprehensive five-layer testing approach for Framework 2.0
+* xref:framework/framework-2-0/testing.adoc[Testing Strategy] - ⚠️ [Outdated] Comprehensive five-layer testing approach for Framework 2.0
 
 == Architecture Decision Records
 
-* xref:adr/0044-configuration-language-kcl-vs-cue.adoc[ADR 0044 - Configuration Language: KCL vs CUE]
-* xref:adr/0045-service-orchestration-crossplane-2-0.adoc[ADR 0045 - Service Orchestration: Crossplane 2.x]
-* xref:adr/0046-secret-management-framework-2-0.adoc[ADR 0046 - Secret Management]
-* xref:adr/0047-service-maintenance-and-upgrades-framework-2-0.adoc[ADR 0047 - Service Maintenance and Upgrades]
+* xref:framework/framework-2-0/adrs/0005-package-format.adoc[]
+* xref:framework/framework-2-0/adrs/0006-change-tracking.adoc[]
+* xref:framework/framework-2-0/adrs/0007-helm-tooling.adoc[]
+* xref:framework/framework-2-0/adrs/0008-harness-depedencies.adoc[]
+* xref:framework/framework-2-0/adrs/0009-improve-wrapper-chart-ux.adoc[]
+* xref:framework/framework-2-0/adrs/0010-s3-bucket-provisioning.adoc[]
+* xref:framework/framework-2-0/adrs/0011-crd-controller-architecture.adoc[]
+
+=== Archive
+
+The following ADRs are artifacts from older PoCs. They are preserved for historical context.
+
+* xref:adr/0044-configuration-language-kcl-vs-cue.adoc[]
+* xref:adr/0045-service-orchestration-crossplane-2-0.adoc[]
+* xref:adr/0046-secret-management-framework-2-0.adoc[]
+* xref:adr/0047-service-maintenance-and-upgrades-framework-2-0.adoc[]
+
+* xref:/framework/framework-2-0/adrs/archive/0001-api-converter.adoc[]
+* xref:/framework/framework-2-0/adrs/archive/0002-claim-lifecycle-and-provisioner-clap.adoc[]
+* xref:/framework/framework-2-0/adrs/archive/0003-stdlib-loader.adoc[]
+* xref:/framework/framework-2-0/adrs/archive/0004-helm-renderer.adoc[]
