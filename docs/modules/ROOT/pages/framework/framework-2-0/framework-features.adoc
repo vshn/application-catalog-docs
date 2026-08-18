@@ -18,7 +18,7 @@ As a user of the service I can:
 * connect to the service in a secure way
 
 
-== Iteration: Backup
+== Backup
 
 As a user of the service I can:
 
