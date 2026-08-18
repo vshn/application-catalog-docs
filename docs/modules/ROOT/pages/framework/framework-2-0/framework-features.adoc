@@ -1,0 +1,91 @@
+= Framework 2.0 Features
+
+Implementing and maintaining a service is iterative work.
+The idea is to release early and release often, without having the urge to have all features available right from the beginning.
+
+This page outlines the features that the Framework 2.0 provides for its services. The feature development is ongoing.
+For each * xref:reference/application-catalog-docs/docs/modules/ROOT/pages/framework/framework-2-0/services.adoc[service] it is the responsibility of the respective * xref:reference/application-catalog-docs/docs/modules/ROOT/pages/framework/framework-2-0/personas/service-maintainer.adoc[service maintainer] to make the framework features available to the  * xref:reference/application-catalog-docs/docs/modules/ROOT/pages/framework/framework-2-0/personas/service-user.adoc[service user]. 
+
+The available features for each service will be listed under https://products.docs.vshn.ch/products/appcat/services_index.html[VSHN Application Catalog^].
+
+== Provisioning
+
+As a service maintainer I can:
+
+* define service provisioning
+* propagate user changes
+* ensure deprovisioning
+* expose credentials and networking
+
+
+== Backup
+
+As a service maintainer I can:
+
+* provision buckets for backups
+* get a default k8up backup, to be customized or disabled
+* define service specific backup operations
+
+The backup includes e2e tests.
+
+= Planned Framework 2.0 Features
+
+== Restore
+
+As a service maintainer I can:
+
+* define service specific restore operations
+
+== Logs
+
+As a service maintainer I can:
+
+* propagate service logs
+
+== Metrics
+
+As a service maintainer I can:
+
+* propagate the raw metrics of a service
+* craft diagrams of the available metrics
+* define the SLO, SLA and SLI for the service
+
+== Alerting
+
+As a service maintainer I can:
+
+* define alerts for the service
+* get pre-wired capacity alerts for the pods
+* define runbooks that get automatically published
+
+== Maintenance
+
+As a service maintainer I can:
+
+* define schedulable maintenance jobs
+
+== Version Upgrade
+
+As a service maintainer I can:
+
+* define the upgrade path fo the service
+* provide automatic migrations
+
+== Scaling
+
+As a service maintainer I can:
+
+* I get tooling to help resize PVCs and STS
+* helpers for scaling out a service
+
+== User Management
+
+As a service maintainer I can:
+
+* expose and abstract the service's user management
+
+== Billing
+
+As a service maintainer I can:
+
+* pre-wired billing tooling to simplify collecting and reporting service data
