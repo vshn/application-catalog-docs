@@ -1,0 +1,29 @@
+= Framework 2.0 Features
+
+Implementing and maintaining a service is iterative work.
+The idea is to release early and release often, without having the urge to have all features available right from the beginning.
+
+This page outlines the features that the Framework 2.0 provides for its services. The feature development is ongoing.
+For each * xref:reference/application-catalog-docs/docs/modules/ROOT/pages/framework/framework-2-0/services.adoc[service] it is the responsibility of the respective * xref:reference/application-catalog-docs/docs/modules/ROOT/pages/framework/framework-2-0/personas/service-maintainer.adoc[service maintainer] to make the framework features available to the  * xref:reference/application-catalog-docs/docs/modules/ROOT/pages/framework/framework-2-0/personas/service-user.adoc[service user]. 
+
+The available features for each service will be listed under https://products.docs.vshn.ch/products/appcat/services_index.html[VSHN Application Catalog^].
+
+== Provisioning
+
+As a user of the service I can:
+
+* create a service instance
+* update the configuration of a service instance
+* delete a service instance
+* connect to the service in a secure way
+
+
+== Iteration: Backup
+
+As a user of the service I can:
+
+* enable Backup on a service instance
+* disable Backup on a service instance
+* request a restore for a service instance
+
+The backup includes e2e tests.
