@@ -22,9 +22,9 @@ As a service maintainer of AppCat 2.0 I can:
 
 As a user of the service I can:
 
-* enable Backup on a service instance
-* disable Backup on a service instance
-* request a restore for a service instance
+* provision buckets for backups
+* get a default k8up backup, to be customized or disabled
+* define service specific backup and restore operations
 
 The backup includes e2e tests.
 
