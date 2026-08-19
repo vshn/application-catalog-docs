@@ -160,6 +160,7 @@ include::partial$nav-adrs.adoc[]
 *** xref:framework/framework-2-0/personas/service-operator.adoc[]
 *** xref:framework/framework-2-0/personas/framework-engineer.adoc[]
 ** xref:framework/framework-2-0/testing.adoc[]
+** xref:framework/framework-2-0/framework-features.adoc[]
 ** xref:framework/framework-2-0/services.adoc[]
 ** ADRs
 *** xref:framework/framework-2-0/adrs/0005-package-format.adoc[]
