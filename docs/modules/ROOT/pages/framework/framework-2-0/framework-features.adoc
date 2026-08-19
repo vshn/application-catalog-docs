@@ -20,7 +20,7 @@ As a service maintainer of AppCat 2.0 I can:
 
 == Backup
 
-As a user of the service I can:
+As a service maintainer of AppCat 2.0 I can:
 
 * provision buckets for backups
 * get a default k8up backup, to be customized or disabled
