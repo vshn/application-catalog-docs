@@ -27,3 +27,69 @@ As a user of the service I can:
 * request a restore for a service instance
 
 The backup includes e2e tests.
+
+= Planned Framework 2.0 Features
+
+== Restore
+
+As a user of the service I can:
+
+* manually restore data for a service instance
+
+== Logs
+
+As a user of the service I can:
+
+* access logs of a service instance
+
+== Metrics
+
+As an engineer of the service I can:
+
+* see the raw metrics of a service instance
+* access a dashboard showing pre-crafted diagrams of the available metrics
+
+As a user of the service I can:
+
+* see the SLA reports
+
+== Alerting
+
+As a user of the service I can:
+
+* enable alerting on pre-defined SLIs to VSHN so that VSHN can resolve incidents with priority
+* enable alerting on the capacity of the instances to an alert channel of my choice so that I can prevent incidents
+
+As an engineer of the service I can:
+
+* access operations runbooks so that I can resolve issues
+
+== Maintenance
+
+As a user of the service I can:
+
+* enable regular maintenance on a service instance
+
+== Version Upgrade
+
+As a user of the service I can:
+
+* upgrade the service instance version
+
+== Scaling
+
+As a user of the service I can:
+
+* adjust the size of the service (provision replicas/instances)
+
+== User Management
+
+As a user of the service I can:
+
+* manage roles, grants and databases
+
+== Billing
+
+As a user of the service I can:
+
+* automatically receive service bills
