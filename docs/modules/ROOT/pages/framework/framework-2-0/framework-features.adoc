@@ -10,7 +10,7 @@ The available features for each service will be listed under https://products.do
 
 == Provisioning
 
-As a user of the service I can:
+As a service maintainer of AppCat 2.0 I can:
 
 * create a service instance
 * update the configuration of a service instance
