@@ -1,0 +1,85 @@
+# ADR0012 - Testing Concept
+
+:adr_author:    Simon Beck
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2026-08-18
+:adr_upd_date:  -
+:adr_status:    draft
+:adr_tags:      framework, framework-2-0, helm, e2e-testing, testing
+
+## Problem Statement
+
+All parts of the framework have to be tested.
+Each part needs different tooling and approaches to make testing easier.
+Apart from the tooling to be used, special considerations have to be made in various parts of the framework to make testing as seamless as possible.
+
+## High level goals
+
+- Make sure multiple versions of a service with breaking changes can be deployed and tested on the same cluster
+- Specifying the tooling
+- Defining what should be tested and how
+
+## Proposals
+
+### Parallel testing
+
+One of the biggest issues with working with Operators and CRDs in K8s is that they are singletons.
+While there are ways to make breaking changes seamless(er), it's too much effort for simple tests.
+
+Chrysopoeia generates distinct API groups based on the name of the `CustomResourceDefinitionSource`.
+Chainsaw tests in the reagent (service chart) repositories leverage this behaviour by adding an ID part to the generated sources.
+That ID is the `values.yaml`'s content hashed together with the claim namespace.
+Since Chainsaw generates a random namespace for each of the tests, every single e2e test run will have its own set of CRDs to work with.
+This is even true when Chainsaw runs tests for the same version in parallel in various namespaces.
+
+### Tooling
+
+There are multiple layers to testing and each one needs one or multiple tools to help with it.
+
+[options="header"]
+|===
+| Layer | Part of Framework | Tooling
+
+| E2E
+| controllers and reagents
+| Chainsaw
+
+| Integration
+| controllers
+| envtest
+
+| Integration
+| reagents
+| TBD
+
+| Unit
+| controllers
+| go unit tests
+
+| Unit
+| reagents
+| Helm unittests and golden tests
+
+|===
+
+https://github.com/kyverno/chainsaw[Chainsaw] is the more powerful successor to Kuttl, which was previously used.
+It fixes most of the pain points of Kuttl which makes it a very comfortable tool to do e2e tests with K8s.
+
+https://book.kubebuilder.io/reference/envtest.html[envtest] is the de-facto integration test tooling for kubebuilder projects.
+It helps spin up enough K8s to test parts of a controller.
+
+https://github.com/helm-unittest/helm-unittest[Helm unittests] provide unit testing for Helm charts.
+The concept is similar to Chainsaw and Kuttl.
+It renders the chart and provides assertion and matching rules to check the output against.
+
+### What and how to test
+
+Reagents bring a default CI setup which triggers a default Chainsaw test on each PR.
+The default Chainsaw test works out of the box and simply checks if the Helm chart installs or not.
+A service maintainer can then add service-specific asserts or even whole new steps to test advanced topics, like scaling, backup or restore.
+Either unittests or golden tests should be maintained for each service.
+
+Controllers should have integration and unit tests.
+These should run on every PR via CI and on the release CI as well.
+Chainsaw e2e tests should be added to controllers if sensible.

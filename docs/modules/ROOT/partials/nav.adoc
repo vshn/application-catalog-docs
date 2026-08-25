@@ -159,7 +159,6 @@ include::partial$nav-adrs.adoc[]
 *** xref:framework/framework-2-0/personas/service-maintainer.adoc[]
 *** xref:framework/framework-2-0/personas/service-operator.adoc[]
 *** xref:framework/framework-2-0/personas/framework-engineer.adoc[]
-** xref:framework/framework-2-0/testing.adoc[]
 ** xref:framework/framework-2-0/services.adoc[]
 ** ADRs
 *** xref:framework/framework-2-0/adrs/0005-package-format.adoc[]
@@ -169,6 +168,7 @@ include::partial$nav-adrs.adoc[]
 *** xref:framework/framework-2-0/adrs/0009-improve-wrapper-chart-ux.adoc[]
 *** xref:framework/framework-2-0/adrs/0010-s3-bucket-provisioning.adoc[]
 *** xref:framework/framework-2-0/adrs/0011-crd-controller-architecture.adoc[]
+*** xref:framework/framework-2-0/adrs/0012-testing.adoc[]
 
 * Control Plane
 ** xref:control-plane/central-control-plane-arch.adoc[]
