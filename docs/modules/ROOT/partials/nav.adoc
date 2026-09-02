@@ -170,6 +170,7 @@ include::partial$nav-adrs.adoc[]
 *** xref:framework/framework-2-0/adrs/0010-s3-bucket-provisioning.adoc[]
 *** xref:framework/framework-2-0/adrs/0011-crd-controller-architecture.adoc[]
 *** xref:framework/framework-2-0/adrs/0012-testing.adoc[]
+*** xref:framework/framework-2-0/adrs/0013-automatic-maintenance.adoc[]
 
 * Control Plane
 ** xref:control-plane/central-control-plane-arch.adoc[]
