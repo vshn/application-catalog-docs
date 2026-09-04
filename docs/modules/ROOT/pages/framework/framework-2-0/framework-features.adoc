@@ -17,6 +17,12 @@ As a service maintainer I can:
 * ensure deprovisioning
 * expose credentials and networking
 
+== Scaling
+
+As a service maintainer I can:
+
+* I get tooling to help resize PVCs and STS
+* helpers for scaling out a service
 
 == Backup
 
@@ -27,20 +33,6 @@ As a service maintainer I can:
 * define service specific backup operations
 
 The backup includes e2e tests.
-
-= Planned Framework 2.0 Features
-
-== Restore
-
-As a service maintainer I can:
-
-* define service specific restore operations
-
-== Logs
-
-As a service maintainer I can:
-
-* propagate service logs
 
 == Metrics
 
@@ -64,19 +56,26 @@ As a service maintainer I can:
 
 * define schedulable maintenance jobs
 
+= Planned Framework 2.0 Features
+
+== Restore
+
+As a service maintainer I can:
+
+* define service specific restore operations
+
+== Logs
+
+As a service maintainer I can:
+
+* propagate service logs
+
 == Version Upgrade
 
 As a service maintainer I can:
 
-* define the upgrade path fo the service
+* define the upgrade path of the service
 * provide automatic migrations
-
-== Scaling
-
-As a service maintainer I can:
-
-* I get tooling to help resize PVCs and STS
-* helpers for scaling out a service
 
 == User Management
 
