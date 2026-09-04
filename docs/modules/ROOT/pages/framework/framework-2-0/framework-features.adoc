@@ -74,7 +74,7 @@ As a service maintainer I can:
 
 As a service maintainer I can:
 
-* define the upgrade path fo the service
+* define the upgrade path of the service
 * provide automatic migrations
 
 == User Management
