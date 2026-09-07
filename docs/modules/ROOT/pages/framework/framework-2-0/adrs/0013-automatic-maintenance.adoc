@@ -1,0 +1,202 @@
+= ADR0013 - Automatic Service Maintenance
+
+:adr_author:    Simon Beck
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2026-09-02
+:adr_upd_date:  -
+:adr_status:    draft
+:adr_tags:      framework, framework-2-0, maintenance, upgrades, rituals, adept
+
+## Problem Statement
+
+The framework provisions a service instance and then never touches it again.
+
+Two things go stale from that moment on.
+The service's own housekeeping never runs, so nothing vacuums the database, prunes the caches or rotates whatever the service wants rotated.
+And the chart version never moves, because `spec.version` is defaulted once when the claim is created and is then frozen forever.
+An instance created in March is still running March's version, and its security patches, in September.
+
+A service maintainer has nowhere to say "these commands need to run on my service every week".
+A service user has no way to say "keep me patched".
+And a service operator has no way to say "yes, but not during business hours".
+
+## High level goals
+
+* The framework provides the mechanism, the service maintainer provides the content
+** We do not write anyone's maintenance commands for them
+* An instance stays current on minor and patch versions without anyone editing a claim
+* Major upgrades are never automatic
+* Pinning is achieved by manually setting a version, and pinning does not silently switch off everything else
+* When maintenance happens is a service operator decision, the user may get one or many pre-defined windows
+* An instance that fails its own maintenance is not upgraded
+* No new controller and no new dependency
+* The whole state is readable with `kubectl`
+
+## Proposals
+
+### Who owns maintenance
+
+Maintenance could get a controller of its own, in the way custos owns credentials and ampulla owns backups.
+It could also be split, with adept growing recurring rituals and chrysopoeia growing window-gated updates.
+
+We give it to adept.
+Adept already handles operations: a `Definition` is a job template, an `Action` is one run of it, and it already builds Jobs in the instance namespace under the right ServiceAccount.
+Maintenance is that same idea with a schedule, not a new idea.
+Splitting it across two controllers was the worst of the options, because nothing would own the ordering between the two halves and the windows would have to live in one of them arbitrarily.
+
+### When maintenance runs
+
+AppCat lets each instance name its own day and time.
+That is the most flexible option and the one our users already know, but it means every instance can pick an hour nobody is awake for, and the platform can never batch, stagger or staff anything.
+The opposite extreme, a single cluster-wide window, takes the choice away entirely.
+
+We put a catalog in between.
+The service operator defines a small number of named windows as cluster-scoped objects, and a claim picks one by name.
+
+[source,yaml]
+....
+apiVersion: rituals.helmetica.io/v1
+kind: MaintenanceWindow
+metadata:
+  name: sunday-night
+spec:
+  daysOfWeek: [sunday, monday, tuesday, wednesday, thursday]
+  time: "22:00"
+  duration: 6h
+  timeZone: Europe/Zurich
+....
+
+`kubectl get maintenancewindows` lists all available windows.
+Instances sharing a window are spread across it by an offset derived from the instance itself, the same trick ferment already uses to stop every backup in the cluster starting in the same minute.
+
+The window is expressed as days, a time and a duration rather than as a raw cron expression.
+It is the vocabulary users already have from AppCat, and it is the only form the framework can reliably shift an instance's offset within.
+
+An instance that names no window falls into a default one, the way an ampulla `BackupPolicy` falls back to the operator's default bucket classes.
+Maintenance being on unless you opt out is the right default for a framework whose job includes shipping security patches.
+
+### How a maintenance run is triggered
+
+Kubernetes CronJobs.
+The alternative we considered was a scheduler inside adept, keeping the next run time in an object's status and requeueing until it came due.
+But we would have to rebuild a large chunk of Kubernete's cronjob logic.
+
+The CronJob is directly derived from the `Definition`'s `JobTemplateSpec`.
+So the CronJob will directly run the logic defined.
+
+Alternatively, the CronJob simply creates an `Action` CR and let's adept handle the rest.
+But the overhead to spawn a job, to create a CR which spawns another job, is too high.
+
+### Integration into an instance
+
+The per-instance contract is a small object the reagent chart renders into the instance namespace, exactly the way ferment already renders a `BackupPolicy`, an `Arcanum` and a `Seal`.
+
+[source,yaml]
+....
+apiVersion: rituals.helmetica.io/v1
+kind: MaintenanceSchedule
+metadata:
+  name: maintenance
+spec:
+  window: sunday-night   # empty takes the operator's default
+  ritual: maintenance    # which Definition to run
+  maintenance:
+    app: true            # passed on to the ritual
+    chart: true          # take newer reagent chart versions
+....
+
+An empty spec is a complete schedule that takes the operator's defaults, in the same spirit as ampulla's policy.
+Going through the chart leaves the Service Maintainer with the most flexibility.
+
+### What an update actually is
+
+There are two different things people mean by "update the service", and each gets its own switch.
+
+The first is the reagent chart version.
+Chrysopoeia already discovers the available versions, and the generated API group is scoped to a single major, so the versions on offer are minor and patch.
+Major version upgrades are out of scope and should always be manual actions.
+
+`spec.version` controls the chart updates.
+Left empty it means "managed, keep me current"; set to a value it means "this exact version and nothing else".
+Stopping chart updates therefore means naming a version, and the claim's status already reports which one is running.
+A pinned instance still runs its ritual, because switching off updates should not switch off housekeeping.
+
+The second is the service's own version inside the instance.
+This is individual for every service, and only the maintainer knows what moving it involves, so it has to be specified in the ritual.
+
+The framework still owns the switch.
+A user should not have to learn a different way to freeze every service they run.
+Ferment ships a `maintenance` block in its values, so the same field sits at the same path on every reagent's claim:
+
+[source,yaml]
+....
+maintenance:
+  window: ""        # empty takes the operator's default
+  suspend: false    # no maintenance at all
+  appVersion: ""    # let the ritual move the service's own version
+....
+
+`appVersion` should behave the same way as `spec.version`.
+If left empty, the ritual should bump the app images to the latest minor/patch versions.
+
+This is where the framework's guarantee ends.
+It guarantees the switch exists, is named the same everywhere, and reaches the ritual.
+It cannot guarantee the ritual honours it, the way it enforces `spec.version` itself.
+So it's in the maintainers responsibility to configure the ritual accordingly.
+It's also feasible that a maintainer simply pins the app version to a chart version, skipping a separate `appVersion`.
+
+### The order of the two halves
+
+Running the update first would let a ritual be written against the version it is about to run under, which is occasionally what you want.
+It also means waiting for a Helm release to settle before firing a job, and deciding what to do when it never settles.
+
+We run the ritual first and only move the version if it succeeded.
+An instance that cannot complete its own maintenance is an instance we should not be upgrading, and a failure then has exactly one meaning: nothing changed, and the next window will try again.
+
+There is no framework-level retry.
+The Job's own `backoffLimit` lives in the maintainer's `Definition`, which is where the knowledge about whether the operation is safe to repeat actually is.
+
+### Where the version intent is written
+
+Something has to record "this instance may move to the newer version now".
+
+Writing it into the claim's `spec.version` is the obvious move and the wrong one.
+Claims are usually managed by the customer's GitOps, so the framework and Argo would both be owners of the same field, and adept would need write access to every claim in the cluster to do it.
+Kubernetes permissions cannot be narrowed to a single annotation, so that grant would also let adept rewrite any claim's spec.
+
+We write it on the instance namespace instead.
+The namespace is created by the framework, not by the customer, so there is no drift for a GitOps tool to fight over, and adept needs only to patch namespaces rather than to hold write access on every service instance in the cluster.
+The claim's status will still reflect, what's available and what is actually running.
+
+## Decision
+
+Adept gains a cluster-scoped `MaintenanceWindow` that a service operator defines, and a `MaintenanceSchedule` that the reagent chart renders next to each instance.
+Adept turns the pair into a Kubernetes CronJob that runs the maintainer's own ritual at a spread-out minute inside the chosen window.
+
+When a run succeeds, adept records on the instance namespace that the instance may take the newest discovered chart version.
+Chrysopoeia picks that up through machinery it already has, and the existing approval and release path does the rest.
+It will write the concrete value into the instance revision, even if the claim has no value set.
+This ensures that each revision is completely self contained.
+An empty `spec.version` means the instance is managed; a set one means it is pinned.
+
+The framework therefore supplies a schedule, a trigger and a version bump.
+What maintenance actually does to a service stays entirely with the service maintainer.
+
+## Consequences
+
+Adept is no longer only an on-demand executor.
+Its scope grows to include a clock and a reach into chrysopoeia's territory, and its documented boundary has to be rewritten.
+
+Chrysopoeia has to stop defaulting `spec.version`, publish the newest available version on the claim's status, and treat a managed version as sticky, so that a user editing their own values never drags a pending version bump along with it.
+
+Ferment gains a `maintenance` block in its values next to `backup`, and finally has to choose a real default image for the ritual scaffolds it ships, which today are placeholders.
+A service with nothing to do at maintenance time is then simply one that never replaced the default no-op ritual, which keeps a single code path rather than a second, CronJob-less one.
+
+The app version switch is optional.
+A maintainer who skips it choses to pin the app version directly to the chart version.
+
+Adept gains permission to patch namespaces.
+That is a smaller grant than write access to every claim in the cluster, but it is still new and worth stating plainly.
+
+Instances that were claimed before this exists carry an explicitly set `spec.version` and will therefore read as pinned.
