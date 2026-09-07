@@ -15,6 +15,13 @@ This page summarises the Framework 2.0 services and who holds which role for the
 * **Service Operator:** VSHN team AppCat
 * **Framework Engineer:** VSHN team AppCat
 
+== Redis
+
+* **Service User:** End customers using services
+* **Service Maintainer:** VSHN team AppCat
+* **Service Operator:** VSHN team AppCat
+* **Framework Engineer:** VSHN team AppCat
+
 == OpenBao
 
 * **Service User:** End customers using services
