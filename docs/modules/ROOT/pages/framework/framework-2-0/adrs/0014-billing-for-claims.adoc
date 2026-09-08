@@ -1,0 +1,146 @@
+= ADR0014 - Billing for Claims
+
+:adr_author:    Simon Beck
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2026-09-18
+:adr_upd_date:  -
+:adr_status:    draft
+:adr_tags:      framework, framework-2-0, billing, chrysopoeia, appcat
+
+## Problem Statement
+
+Instances should get billed.
+There are several factors that can go into the invoiced amount for a user:
+
+- Instance units
+- Instance size and scale
+- Use of Addons
+- Licensed features (connection/user limits)
+
+These have to be reliably collected.
+
+This ADR only covers collecting the data and writing it to S3.
+Sending it to a billing system or ERP is out of scope.
+No ERP-specific metadata such as ServiceID and SalesOrderID (for Odoo) is assumed.
+Prices, product definitions, and invoicing are out of scope.
+
+## High level goals
+
+* Any chrysopoeia claim can be billed without writing Go for it
+** The chart author declares what is billable, in the service chart
+* The scraper only collects data and writes it to S3
+** Adapting the data to an ERP and ensuring the sync between the ERP and the S3 data is the job of another tool (the ERP adapter.)
+** The scraper makes no assumptions on pricing, or rebate structures. This is solved on an ERP or adapter level.
+* No second source of truth for billed items
+* The billing data is readable with `kubectl`, the reported data with any S3 client
+
+## Proposals
+
+### Where the billing data lives
+
+Each instance has its own namespaced `BillingData`.
+The service chart renders it into the instance namespace, together with the rest of the instance.
+
+NOTE: The CRD lives in the `libra.helmetica.io` group.
+**Libra**: the balance, the scale an alchemist uses to weigh out each substance.
+
+### How the values get into the billing data
+
+The chart fills in the `BillingData` with normal Helm templating.
+The scraper gets finished values and does not need to read the claim.
+Cel expressions from Helmetica's service charts can still be used to pre-process the values.
+
+[source,yaml]
+....
+apiVersion: libra.helmetica.io/v1
+kind: BillingData
+metadata:
+  name: default
+  namespace: instanceNamespace
+spec:
+  # Metadata relevant for all items
+  # Freeform, can contain any arbitrary fields
+  metadata:
+    clusterName: "APPUiO Cloud"
+    claimName: myClaim
+    claimNamespace: myTenantNamespace
+    sla: "{{ if and (gt (int .Values.replicaCount) 1) (eq .Values.sla "guaranteed") }}guaranteed{{ else }}besteffort{{ end }}"
+  items:
+  {{- if not .Values.redis.enabled }}
+    - value: {{ .Values.replicaCount | quote }}
+      name: replicas
+  {{- else }}
+    - value: {{ .Values.storage.size }}
+      name: storage
+  {{- end }}
+....
+
+Template errors show up when the chart is rendered, before anything reaches the cluster.
+The chart author can check the output with `helm template`.
+
+### Where the collected data goes
+
+The scraper could call the billing system itself.
+It would then have to bring its own queue, retry, backoff and event history.
+And do assumptions about the actual billing system itself.
+
+The scraper writes the billable items to an S3 bucket instead.
+One object per `BillingData` per watched change, holding the item list and the timestamp of the run.
+Failed sends to the bucket get retried and tracked via controller-runtime mechanisms.
+The bucket is the handover point and the record of what was reported.
+Another tool reads those objects and sends them on.
+It owns the queue, the retries, the backoff and the deletion grace period.
+That tool is out of scope for this ADR.
+
+Splitting it this way lets the scraper keep running while the billing system is down.
+A failed send can be replayed from the bucket without asking the cluster again.
+The bucket contains historical data about the billing.
+
+### How billing data is found
+
+The scraper watches all `BillingData` objects in the cluster with one normal watch.
+It does not need dynamic watches per claim type.
+
+The chart ships its own `BillingData`.
+A chart bump brings a new `BillingData` that matches the new values.
+Billing keeps going without an edit to any central config.
+
+## Decision
+
+AppCat brings a namespaced `BillingData` CRD.
+Each service chart renders at least one `BillingData` per instance with Helm templating.
+It defines what gets billed for that instance.
+A service usually only needs one `BillingData`.
+
+The scraper reads those objects and writes the resulting items to S3.
+Another tool reads the bucket and sends the data on.
+That tool is out of scope for this ADR.
+
+The existing billing controller is not touched.
+It keeps reporting Crossplane composed services the way it does today.
+
+Computing resource reporting, such as memory, is deliberately left out:
+* APPUiO Cloud has its own resource reporting.
+* Private cluster resources are already directly billed by the CSP to the customer.
+* Other shared platforms, such as Servala, bill on static computing plans.
+
+## Consequences
+
+The billing system now gets data from two senders: the billing controller for composed services, and the new tool for claims.
+Both have to agree on the event shape and on the deletion grace period.
+
+Every service chart has to render a `BillingData`.
+A chart without one is not billed.
+
+The bucket is new infrastructure.
+It has to exist before billing works, and it needs backup and a retention setting.
+
+The system is only loosely coupled with the billing system through an adapter.
+Since data fed into the billing system comes from a static event log or ledger it is easy to run multiple ERPs in parallel, testing is made easier.
+A new ERP (version) does not need any changes on the clusters.
+
+The billing event log is no longer fully visible with `kubectl`.
+Chasing a missing invoice means looking in the bucket as well as in the cluster.
+
+Related: xref:framework/framework-2-0/adrs/0011-crd-controller-architecture.adoc[]
