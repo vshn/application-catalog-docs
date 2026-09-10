@@ -163,7 +163,7 @@ Claims are usually managed by the customer's GitOps, so the framework and Argo w
 We write it into `status.version` instead.
 The resolution logic is simple.
 If there's a value in `spec.version`, it takes precedence, otherwise `status.version` is written to the revision.
-If both are not set, default to the latest available.
+If both are not set, the `status.version` is updated with the latest available.
 
 ## Decision
 
