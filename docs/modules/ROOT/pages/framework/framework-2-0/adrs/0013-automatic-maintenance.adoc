@@ -95,7 +95,7 @@ The per-instance contract is a small object the reagent chart renders into the i
 [source,yaml]
 ....
 apiVersion: rituals.helmetica.io/v1
-kind: MaintenanceDefinition
+kind: Maintenance
 metadata:
   name: maintenance
 spec:
