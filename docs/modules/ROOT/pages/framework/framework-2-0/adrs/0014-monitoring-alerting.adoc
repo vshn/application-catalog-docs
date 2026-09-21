@@ -1,0 +1,227 @@
+= ADR0014 - Monitoring and Alerting
+
+:adr_author:    Sebastian Widmer
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2026-09-10
+:adr_upd_date:  -
+:adr_status:    draft
+:adr_tags:      framework, framework-2-0, monitoring, alerting
+
+## Problem Statement
+
+Even the most stable software can go wrong.
+The framework needs to provide a mechanism to monitor the state of the system and alert the service operator or the service user when something is wrong.
+
+We decided early in the development of the framework that we would like to use as many features of the upstream Helm charts as possible, and thus might want to re-use Prometheus rules and monitors where possible.
+
+Alerting is a more sensitive topic, and we want alerts to be as fine-tuneable as possible.
+There are two different audiences for alerts: the service operator and the service user.
+The service user might get alerts about required sizing changes, while the service operator might get alerts about the health of the system.
+
+Helmetica runs on Kubernetes, but the monitoring APIs are not standardized.
+The first two-point-five Platforms we support will be OpenShift, plus its TEMU variant OKE, and VSHN MAKO (based on Thalos).
+
+Monitoring can get quite resource intensive, and we'd like to know how much resources are used for Helmetica.
+We do not want to impact platform Prometheus instances.
+
+OpenShift comes with a built-in Prometheus and Alertmanager, and has multi-tenant alerting support through User Workload Monitoring (UWM).
+OKE sadly does not allow the use of UWM, an issue we had before on customer clusters.
+OpenShift has it's own Prometheus Operator, which only watches official OpenShift namespaces.
+We need to bring our own Prometheus Operator to the cluster, and make sure the CRDs are compatible with the OpenShift Prometheus Operator.
+
+VSHN MAKO does not have a full multi-tenant Prometheus.
+MAKO has the Prometheus Operator installed and the MAKO team supports us adding additional Prometheus instances.
+
+Full Prometheus multi-tenancy support is rather complex and we won't target that for the first release of the framework.
+
+## High level goals
+
+* Support for metrics and alerting in the framework.
+** Implementation through Prometheus and Alertmanager for familiarity and re-use of existing Helm charts.
+* Support for OpenShift, OKE, and VSHN MAKO.
+** Standardized setup hiding most of the complexity of multiple platforms.
+** Low overhead and ops load for the framework operator.
+* Separate alerting channels for service operator and service user.
+** Simple email alerting for service users, with the ability to configure the email address.
+
+## Non-goals
+
+* Full multi-tenant Prometheus support for all platforms.
+* Prometheus and Alertmanager UIs.
+
+## Proposals
+
+### Proposal 1: Write our own Prometheus Operator
+
+Writing our own Prometheus Operator, or forking upstream Prometheus Operator is in my opinion the cleanest solution to be completely independent of the platform.
+It is a lot of work implementing and designing it.
+It adds a big maintenance burden, and removes familiarity and google-ability.
+
+The entry can be eased with good library Helm charts and might allow us further optimizations in the future.
+
+### Proposal 2: Use Platform specific operator, Prometheus and Alertmanager instances
+
+On OpenShift, we would use the built-in User Workload Monitoring (UWM) Prometheus and Alertmanager instances.
+On OKE, we would install our own Prometheus Operator, Prometheus and Alertmanager instances.
+On VSHN MAKO, we use the built-in Prometheus Operator, and install our own Prometheus and Alertmanager instances.
+
+We might add some glue operators to support both UWM and non-UWM Prometheus instances, but this adds complexity and maintenance burden.
+Framework operators would need a good understanding of the different Prometheus and Alertmanager instances, and how to configure them.
+
+### Proposal 3: Use upstream Prometheus Operator and bring our own Prometheus and Alertmanager instances
+
+The upstream Prometheus Operator is well built and can be set to only watch certain namespaces.
+On OpenShift, we would install our own Prometheus Operator, Prometheus and Alertmanager instances.
+Helmetica namespaces will be labeled (`openshift.io/user-monitoring=false`) to be ignored by the OpenShift Prometheus Operator, and the framework Prometheus Operator will watch only Helmetica namespaces.
+We handle OKE and OpenShift exactly the same way.
+
+The MAKO team is committed to let us use the built-in Prometheus Operator on MAKO, so we don't need to install our own Prometheus Operator there.
+
+The Helmetica framework would bring Prometheus and Alertmanager CRs scoped to the Helmetica namespaces `chrysopoeia.io/instance: ""`.
+
+We should have all metrics the service maintainers expect available.
+There is some tradeoff between resource usage and the amount of metrics we expose.
+I'd propose to start with most metrics and drop the non-important ones once we have some real usage data from service maintainers.
+
+### Proposal 4: Use alternative monitoring and alerting solutions
+
+We could use alternative monitoring and alerting solutions, like Grafana Cloud, Datadog, or New Relic.
+This would be a big departure from the upstream Helm charts.
+We currently do not have any experience with any alternative Kubernetes native monitoring and alerting solutions, and would need to evaluate them first.
+
+VSHN already has quite some Prometheus experience and we would like to leverage that, instead of learning a new monitoring and alerting solution.
+
+## Decision
+
+We will implement Proposal 3, and use the upstream Prometheus Operator to bring our own Prometheus and Alertmanager instances.
+
+### Rationale
+
+Proposal 3 allows us to leverage the well-established upstream Prometheus Operator while still maintaining control over our Prometheus and Alertmanager instances.
+It is a good compromise between standardization, familiarity, and independence from the platform.
+
+Having our own Prometheus also allows for easier resource tracking of the framework.
+
+Installing the correct version of the Prometheus Operator on OpenShift is a somewhat tricky but OpenShift is starting to migrate to its own Prometheus CRDs and it will get easier in the future to bring the upstream Prometheus Operator to OpenShift.
+
+### Implementation Details
+
+#### System metrics
+
+Metrics from the system (kubelet, kube-state-metrics, node_exporter) will need to be ingested into the dedicated monitoring stack.
+
+The operator does this automatically for the kubelet at least.
+We'll need to check if this is enough or if we need additional metrics.
+We might want to customize the ingestions and drop some metrics when we have some usage data from service maintainers.
+
+#### Library Helm Charts
+
+We try to omit creating a specialized monitoring operator and will support all helpers through library Helm charts.
+
+The Helm chart should support a top-level `alerting` key in the values.yaml, which can be used to configure the Prometheus and Alertmanager instances.
+
+.values.yaml definition
+[source,yaml]
+----
+'#alerting':
+  export: false
+alerting:
+  '#email':
+    export: true
+    description: |
+      The email address to send alerts to. If not set, no email alerts will be sent.
+  operator:
+    email: ops@vshn.net
+----
+
+.`HelmRelease` platform injected values
+[source,yaml]
+----
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: service
+  namespace: x-e540f0d4-namespace-service
+spec:
+  values: <1>
+    alerting:
+      email: ops@customer.net
+  valuesFrom:
+  - name: kubernetes-information <2>
+    targetPath: _helmetica_.kubernetes
+    # values: <3>
+    #   distribution: openshift4
+    #   k8s_version: 1.36.2
+  - name: alerting-email
+    targetPath: _helmetica_.alertingEmailConfig
+    # values:
+    #   authPassword:
+    #     key: password
+    #     name: helx-vshn-shared-mailgun
+    #   authUsername: appcat@appuio.cloud
+    #   from: appcat@appuio.cloud
+    #   requireTLS: true
+    #   sendResolved: true
+    #   smarthost: smtp.eu.mailgun.org:465
+----
+<1> Values set by the service user.
+<2> Values injected by Helmetica.
+<3> Example.
+Will most likely be injected with a secret reference.
+
+.`AlertmanagerConfig` template in library chart (shortened)
+[source,yaml]
+----
+{{ if .Values.alerting.email }}
+apiVersion: monitoring.coreos.com/v1beta1
+kind: AlertmanagerConfig
+metadata:
+  name: customer-email
+spec:
+  receivers:
+  - emailConfigs:
+    - {{ dict "to" .Values.alerting.email | merge .Values._helmetica_.alertingEmailConfig }}
+    name: customer-email
+{{ end }}
+----
+
+.Generated manifest
+[source,yaml]
+----
+apiVersion: monitoring.coreos.com/v1beta1
+kind: AlertmanagerConfig
+metadata:
+  name: customer-email
+spec:
+  receivers:
+  - emailConfigs:
+    - authPassword:
+        key: password
+        name: helx-vshn-shared-mailgun
+      authUsername: appcat@appuio.cloud
+      from: appcat@appuio.cloud
+      requireTLS: true
+      sendResolved: true
+      smarthost: smtp.eu.mailgun.org:465
+      to: ops@customer.net
+    name: customer-email
+  route:
+    groupBy:
+    - alertname
+    groupInterval: 5m
+    groupWait: 10s
+    receiver: mailgun
+    repeatInterval: 1h
+----
+
+The first version will support a helper to make it easy to send Alertmanager Email alerts.
+The emails will be sent from a shared VSHN SendGrid account, the required SendGrid keys will be injected into the Helm chart using additional platform values in the Flux HelmReleases.
+
+The Helm charts can also render its own Alertmanager receivers if more complex alerting is required.
+
+## Resources
+
+* https://prometheus-operator.dev[Prometheus Operator]
+* https://docs.okd.io/4.22/support/troubleshooting/investigating-monitoring-issues.html#investigating-why-user-defined-metrics-are-unavailable_investigating-monitoring-issues[`openshift.io/user-monitoring=false`]
+* https://fluxcd.io/flux/components/helm/helmreleases/#values-references[FluxCD: Helm Releases / Values references]
