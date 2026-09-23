@@ -1,0 +1,180 @@
+= ADR0014 - Billing for Claims
+
+:adr_author:    Simon Beck
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2026-09-18
+:adr_upd_date:  -
+:adr_status:    draft
+:adr_tags:      framework, framework-2-0, billing, chrysopoeia, appcat
+
+## Problem Statement
+
+Instances should get billed.
+There are several factors that can go into the invoiced amount for a user:
+
+- Instance units
+- Instance size and scale
+- Use of Addons
+- Licensed features (connection/user limits)
+
+In addition there's required information for Odoo to invoice the instances correctly:
+
+- ServiceID
+- SalesOrderID
+
+These have to be reliably reported to Odoo.
+
+This ADR only covers what gets reported.
+Prices, product definitions and how Odoo turns items into an invoice are out of scope.
+
+## High level goals
+
+* Any chrysopoeia claim can be billed without writing Go for it
+** The operator declares what is billable, per claim type
+* Claims reach Odoo through one component only, the new billing tool
+** Events, retries, resend and the deletion grace period live there
+* No second source of truth for billed items
+* A chart major bump must never silently stop billing
+* The rules are readable with `kubectl`, the reported data with any S3 client
+
+## Proposals
+
+### Where the billing rules live
+
+All billing rules live in one cluster wide `BillingConfig`.
+The service operator owns it.
+
+An earlier draft also had a per namespace object shipped with the service chart.
+Two objects producing the same item list means a merge order to define and no single place to read what an instance reports.
+We dropped it and keep the global one only.
+
+The operator also has to provide:
+
+- SalesOrderID
+- ServiceID
+
+The ServiceID can be automatically derived from the service name.
+The SalesOrderID needs to be provided by the service operator.
+
+### How the values are read out of a claim
+
+We use CEL, with the `cel:` prefix chrysopoeia already uses in wrapper charts, so both have the same syntax.
+Expressions see two roots, `claim` and the claim's `namespace`.
+
+A rule could be one expression returning the whole item list.
+That is the most flexible but the least reviewable.
+We use item templates instead, where every field is either a literal or an expression, and an optional `when` decides whether the item is billed at all.
+`itemsRule` stays as an escape hatch for a service that really has to build the whole list itself.
+It is mutually exclusive with `items`.
+
+Each rule pins the claim `apiVersion` and `kind` it applies to.
+
+### How SalesOrderID gets injected
+
+SalesOrderID can either be global for a cluster, or depend on the instance's tenant.
+It's either a static value or again a cel expression.
+With the cel expression, it's possible to provide services to multiple tenants on the same cluster.
+
+[source,yaml]
+....
+apiVersion: vshn.appcat.vshn.io/v1
+kind: BillingConfig
+metadata:
+  name: default
+spec:
+  salesOrderID: MyOrg
+  # or with cel
+  # salesOrderID: "cel: claim.metadata.annotations.myannotation"
+  metadata:
+    clusterName: "APPUiO Cloud"
+  rules:
+    - claim:
+        apiVersion: v6.podinfo.helmetica-bundles.io/bundle
+        kind: PodInfo
+      items:
+        - when: "cel: !claim.spec.redis.enabled"
+          value: "cel: string(claim.spec.replicaCount)"
+          itemDescription: "cel: 'APPUiO Managed - Namespace: ' + claim.metadata.namespace"
+          itemGroupDescription: "cel: claim.metadata.name"
+          productID: "cel: 'appcat-vshn-podinfo-' + (claim.spec.replicaCount > 1 && has(claim.spec.sla) && claim.spec.sla == 'guaranteed' ? 'guaranteed' : 'besteffort')"
+        - when: "cel: claim.spec.redis.enabled"
+          value: "1"
+    - claim:
+        apiVersion: v1.myservice.helmetica-bundles/bundle
+        kind: MyService
+      # Mutually exclusive to items.
+      # The field should contain a full list of items for the service
+      itemsRule: "cel: claim.metadata.annotations.myannotation"
+....
+
+A rule that does not compile names the offending field and starts no watch.
+The operator can evaluate the expressions before the config ever hits the cluster.
+
+### How a claim reaches Odoo
+
+The scraper could call Odoo itself.
+It would then have to bring its own queue, retry, backoff and event history.
+
+The scraper writes the billable items to an S3 bucket instead.
+One object per claim per run, holding the item list, the salesOrderID, the instanceID and the timestamp of the run.
+The bucket is the handover point and the record of what was reported.
+
+A second tool reads those objects and sends them to Odoo.
+It owns the queue, the retries, the backoff and the deletion grace period.
+It is the only component that reports claims to Odoo.
+
+Splitting it this way lets the scraper keep running while Odoo is down.
+A failed send can be replayed from the bucket without asking the cluster again.
+The bucket contains historical data about the billing.
+
+### How claims are found
+
+Chrysopoeia creates these CRDs at runtime, so a watch declared at startup cannot cover them.
+
+Polling each rule's claims on an interval needs no watch machinery at all and would be good enough for billing, where nothing is latency sensitive.
+We still take dynamic watches, one per rule, because chrysopoeia already runs exactly this pattern in its `DynamicReconcilerManager` and the behaviour is worth having consistent across the framework.
+A watch starts when the rule's CRD is established and stops with the rule, informer included.
+
+Each rule pins one explicit `apiVersion` and `kind`.
+Chrysopoeia puts the chart major into the API group, so a bump to `v7` is a new group that needs its own rule.
+Matching by kind across majors would survive the bump without an edit, and would quietly apply the old rule to a chart whose values have moved.
+We prefer the bump to be loud: the stale rule reports `ClaimCRDNotFound` once its CRD is gone, and a gauge, `appcat_billing_claim_rule_ready`, is there to alert on.
+
+### InstanceID uniqueness
+
+Each reported instance needs a stable key.
+We build it from the claim name plus a short hash of its group, kind, namespace and name, which keeps it unique cluster wide.
+The same key names the object in the bucket.
+The Odoo `instanceID` needs to be unique per instance.
+It is composed of that key, the productID and the cluster name.
+This should guarantee a unique value over all clusters.
+
+## Decision
+
+AppCat brings one cluster wide `BillingConfig`.
+It defines what gets billed, per claim type.
+
+The scraper evaluates those rules and writes the resulting items to S3.
+A new tool reads the bucket and reports to Odoo.
+It turns items into create, scale and delete events, retries them, and honours the deletion grace period.
+
+Claims do not produce `BillingService` objects.
+The existing billing controller is not touched.
+It keeps reporting Crossplane composed services the way it does today.
+
+APPUiO Cloud is deliberately left out.
+
+## Consequences
+
+Odoo now gets data from two senders: the billing controller for composed services, and the new tool for claims.
+Both have to agree on the event shape and on the deletion grace period.
+If they drift, an instance gets billed twice or not at all.
+
+The bucket is new infrastructure.
+It has to exist before billing works, and it needs backup and a retention setting.
+
+Billing state is no longer fully visible with `kubectl`.
+Chasing a missing invoice means looking in the bucket as well as in the cluster.
+
+Related: xref:framework/framework-2-0/adrs/0011-crd-controller-architecture.adoc[]
