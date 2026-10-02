@@ -86,7 +86,7 @@ It would then have to bring its own queue, retry, backoff and event history.
 And do assumptions about the actual billing system itself.
 
 The scraper writes the billable items to an S3 bucket instead.
-One object per `BillingData` per watched change, holding the item list and the timestamp of the run.
+One object per `BillingData` per watched change, holding the item list and the timestamp of the observation.
 Failed sends to the bucket get retried and tracked via controller-runtime mechanisms.
 The bucket is the handover point and the record of what was reported.
 Another tool reads those objects and sends them on.
