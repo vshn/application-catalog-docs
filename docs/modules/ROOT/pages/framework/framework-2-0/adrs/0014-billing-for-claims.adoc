@@ -109,9 +109,9 @@ Billing keeps going without an edit to any central config.
 ## Decision
 
 AppCat brings a namespaced `BillingData` CRD.
-Each service chart renders at least one `BillingData` per instance with Helm templating.
-It defines what gets billed for that instance.
-A service usually only needs one `BillingData`.
+Each service chart renders at least one `BillingData` manifest per instance with Helm templating.
+It defines what gets billed for that instance by reporting key, value tuples.
+A service usually only needs one manifest.
 
 The scraper reads those objects and writes the resulting items to S3.
 Another tool reads the bucket and sends the data on.
