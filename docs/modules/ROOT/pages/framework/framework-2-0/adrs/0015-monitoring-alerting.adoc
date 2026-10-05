@@ -216,7 +216,7 @@ spec:
 ----
 
 The first version will support a helper to make it easy to send Alertmanager Email alerts.
-The emails will be sent from a shared VSHN SendGrid account, the required SendGrid keys will be injected into the Helm chart using additional platform values in the Flux HelmReleases.
+The emails will be sent from a shared VSHN Mailgun account, the required Mailgun keys will be injected into the Helm chart using additional platform values in the Flux HelmReleases.
 
 The Helm charts can also render its own Alertmanager receivers if more complex alerting is required.
 
