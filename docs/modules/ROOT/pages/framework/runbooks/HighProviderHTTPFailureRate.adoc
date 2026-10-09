@@ -3,7 +3,7 @@
 
 == icon:glasses[] Overview
 
-This alert fires when the AppCat metered billing cloud collector fails to fetch usage data from cloud providers (Exoscale DBaaS, Exoscale Object Storage, Cloudscale Object Storage).
+This alert fires when the AppCat metered billing cloud collector fails to fetch usage data from cloud providers (Exoscale Object Storage, Cloudscale Object Storage).
 The metric `billing_cloud_collector_http_requests_provider_failed_total` is non-zero for 1 minute, indicating persistent HTTP failures when calling provider APIs.
 
 When provider APIs are unreachable, the collector cannot report cloud service usage and the data for that collection interval is lost, causing billing gaps for those cloud services.
@@ -33,10 +33,10 @@ Check the logs for provider API errors:
 kubectl --as=system:admin -n $NAMESPACE logs -l automated-billing=true --tail=100 | grep -i "provider\|exoscale\|cloudscale\|error\|failed"
 ----
 
-Identify which provider is failing by checking the pod name or log lines for the provider name (`exoscale-dbaas`, `exoscale-objectstorage`, `cloudscale`).
+Identify which provider is failing by checking the pod name or log lines for the provider name (`exoscale-objectstorage`, `cloudscale`).
 
 Test connectivity to the affected provider API from within the cluster.
-Select the pod for the failing provider (named after the provider, `cloudscale-`, `exoscale-dbaas-`):
+Select the pod for the failing provider (named after the provider, `cloudscale-`, `exoscale-objectstorage-`):
 
 [source,bash]
 ----
@@ -48,7 +48,7 @@ kubectl --as=system:admin -n $NAMESPACE exec $COLLECTOR_POD -- curl -sI https://
 ----
 
 Verify the provider API credentials are present in the secret.
-Secrets are named `credentials-<collector>` (`credentials-cloudscale`, `credentials-exoscale-dbaas`):
+Secrets are named `credentials-<collector>` (`credentials-cloudscale`, `credentials-exoscale-objectstorage`):
 
 [source,bash]
 ----
