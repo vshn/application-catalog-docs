@@ -4,7 +4,7 @@
 == icon:glasses[] Overview
 
 This alert fires when the AppCat metered billing cloud collector fails to send usage data to Odoo.
-The collector periodically fetches usage from cloud provider APIs (Exoscale DBaaS, Exoscale Object Storage, Cloudscale Object Storage) and pushes it to the Odoo billing backend.
+The collector periodically fetches usage from cloud provider APIs (Exoscale Object Storage, Cloudscale Object Storage) and pushes it to the Odoo billing backend.
 The metric `billing_cloud_collector_http_requests_odoo_failed_total` is non-zero for 1 minute, indicating persistent HTTP failures against the Odoo billing backend.
 
 When Odoo is unreachable, the collector cannot push usage data and the data for that collection interval is lost, causing billing gaps for those cloud services.
@@ -35,7 +35,7 @@ kubectl --as=system:admin -n $NAMESPACE logs -l automated-billing=true --tail=10
 ----
 
 Verify the Odoo endpoint configuration.
-ConfigMaps are named `<collector>-env` (for example `cloudscale-env`, `exoscale-dbaas-env`, `exoscale-objectstorage-env`):
+ConfigMaps are named `<collector>-env` (for example `cloudscale-env`, `exoscale-objectstorage-env`):
 
 [source,bash]
 ----
@@ -61,7 +61,7 @@ The collector will retry automatically once Odoo recovers. Monitor the metric un
 
 *OAuth credentials are invalid or expired:*
 
-Secrets are named `credentials-<collector>` (for example `credentials-cloudscale`, `credentials-exoscale-dbaas`).
+Secrets are named `credentials-<collector>` (for example `credentials-cloudscale`, `credentials-exoscale-objectstorage`).
 They contain `ODOO_OAUTH_CLIENT_ID` and `ODOO_OAUTH_CLIENT_SECRET`. Rotate the credentials in the component-appcat configuration and re-deploy.
 
 *Network policy blocks egress to Odoo:*

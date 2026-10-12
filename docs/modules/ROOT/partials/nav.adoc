@@ -38,11 +38,6 @@
 ** xref:service/forgejo-codey/architecture.adoc[]
 ** xref:service/forgejo-codey/restore.adoc[]
 
-* xref:service/exoscale-dbaas/index.adoc[]
-** xref:service/exoscale-dbaas/price-api.adoc[]
-** Runbooks
-*** xref:service/exoscale-dbaas/runbooks/restore_dbaas.adoc[]
-
 * CSP: Exoscale
 ** xref:csp/exoscale/osbapi.adoc[]
 

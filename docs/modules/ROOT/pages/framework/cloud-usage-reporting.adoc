@@ -24,10 +24,10 @@ The usage reporting process involves two main steps, where data is gathered, pro
 
 == Billing Collector for Cloud Services
 
-The billing collector for cloud services collects data from Cloudscale and Exoscale providers. It gathers Object Storage and DBaaS usage data from the respective cloud providers.
+The billing collector for cloud services collects data from Cloudscale and Exoscale providers. It gathers Object Storage usage data from the respective cloud providers.
 
 From https://www.cloudscale.ch/[Cloudscale], we collect Object Storage usage data.
-From https://www.exoscale.com/[Exoscale], we collect Object Storage and DBaaS usage data.
+From https://www.exoscale.com/[Exoscale], we collect Object Storage usage data.
 
 The default parameters for how often data is collected or transferred depend on the specific cloud provider.
 
@@ -40,17 +40,13 @@ The following default configuration applies to Exoscale:
 billing:
   exoscale:
     enabled: false
-    dbaas:
-      enabled: false
-      collectIntervalMinutes: 15 <1>
     objectStorage:
       enabled: false
-      collectIntervalHours: 23 <2>
-      billingHour: 6 <3>
+      collectIntervalHours: 23 <1>
+      billingHour: 6 <2>
 ----
-<1> The DBaaS instances are checked every 15 minutes to see if they still exist.
-<2> The Object Storage is checked daily for existence and general usage metrics.
-<3> The time of day when Object Storage usage data is collected.
+<1> The Object Storage is checked daily for existence and general usage metrics.
+<2> The time of day when Object Storage usage data is collected.
 
 === Cloudscale
 

@@ -220,7 +220,6 @@ This is the _only_ billing path for:
 
 * `ObjectBucket` resources on Cloudscale (via `buckets.cloudscale.crossplane.io`)
 * `ObjectBucket` resources on Exoscale (via `buckets.exoscale.crossplane.io`)
-* Exoscale DBaaS (via `postgresqls.exoscale.crossplane.io`) - deprecated, no new instances should exist
 
 NOTE: APPUiO Managed cloud resources (cloud resources used inside an APPUiO Managed cluster) are billed differently and do not go through this collector.
 
@@ -246,17 +245,13 @@ billing:
 billing:
   exoscale:
     enabled: false
-    dbaas:
-      enabled: false
-      collectIntervalMinutes: 15 # <1>
     objectStorage:
       enabled: false
-      collectIntervalHours: 23   # <2>
-      billingHour: 6             # <3>
+      collectIntervalHours: 23   # <1>
+      billingHour: 6             # <2>
 ----
-<1> DBaaS instances are checked every 15 minutes.
-<2> Object Storage existence is checked daily.
-<3> Time of day when usage data is collected.
+<1> Object Storage existence is checked daily.
+<2> Time of day when usage data is collected.
 
 The complete configuration for both providers is in https://github.com/vshn/component-appcat/blob/master/class/defaults.yml[component-appcat defaults.yml].
 
