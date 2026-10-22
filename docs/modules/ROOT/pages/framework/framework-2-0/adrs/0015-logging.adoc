@@ -1,0 +1,72 @@
+= ADR0015 - Logging
+
+:adr_author:    Sebastian Widmer
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2026-10-22
+:adr_upd_date:  -
+:adr_status:    draft
+:adr_tags:      framework, framework-2-0, logging, logs, multi-tenancy
+
+## Problem Statement
+
+Logs make developers happy.
+They help to debug issues and might bring some insights into how the application is performing.
+
+Kubernetes default logging support is bound to the pod lifetime, after a pod is restarted logs of this pod are gone.
+Since nodes have limited amounts of disk-space logs might be deleted even earlier.
+There is no standard long term log support in Kubernetes.
+
+Ideally we'd support multi-tenancy so we can give external service maintainers, service operators, or users access to logs of services they maintain, use, or operate.
+
+## High level goals
+
+* Long term log storage
+* Multi-tenancy support for service maintainer, users, and operators
+
+## Proposals
+
+### Use platform logging
+
+Both OpenShift 4 and VSHN Managed Talos bring their own logging stack with long-term storage.
+OKE does not bring logging.
+
+The OCP stack is natively multi-tenant, the framework would just need to setup the permissions correctly.
+We might write a small operator that sets up permissions according to the bundles and claims.
+For less dynamic software in the framework we could manage those permissions in the GitOps repos manually.
+
+VSHN Managed Talos is not multi-tenant but still can be used for internal service maintainers.
+If we get external service maintainers we could still manually export logs for them to check.
+
+### Install our own multi-tenant log stack
+
+We install our own logging stack.
+Either Loki or VictoriaLogs come to mind.
+Whatever stack we choose needs integration to the target Kubernetes platform and will need maintenance.
+
+With our own stack we could handle permissions how we want, probably each claim is a tenant and we do the RBAC in a small operator for the differing audiences.
+We'd need some visualization tool on top such as Grafana, including some platform integrated OIDC.
+Grafana does not support multi-tenancy without an Enterprise version or some proxy in front as far as I know.
+
+While possible and most probably the best way for feature parity on all Kubernetes distributions this is quite an engineering feat and would probably need at least 6 weeks of an engineers time.
+It also adds maintenance burden and increases the scope of the framework further.
+
+## Decision
+
+We decided to use the platform logging.
+With the current engineering power we'd rather improve the framework core before we add a new big project to our plate.
+When Helmetica core is more finished and we have more experiences with the audiences we can still implement the stack at a later date.
+
+Schedar currently is the biggest service maintainer and, because they are an internal team, is already able to access logs on both platforms.
+
+On OCP we can manually give permissions for more expensive and enterprisey software with stronger partner integration.
+VSHN Managed Talos is not an enterprise platform so we're fine with not giving externals access to the logs.
+
+## Consequences
+
+We don't get any multi-tenancy features that are platform independent.
+
+We might have to do more Ops work as there might be some log retrieval requests.
+There might be less Ops work since we don't need to resize the stack or check with tenants that log too much for the stack to handle.
+
+We have a smaller maintenance burden for the framework.
