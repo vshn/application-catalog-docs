@@ -92,10 +92,10 @@ We currently do not have any experience with any alternative Kubernetes native m
 
 VSHN already has quite some Prometheus experience and we would like to leverage that, instead of learning a new monitoring and alerting solution.
 
-#### Use VictoraMetrics
+#### Use VictoriaMetrics
 
-VictoraMetrics is a Prometheus compatible monitoring solution, and it seems to be one of the more complete Prometheus replacements.
-It comes with its own operator, and VictoraMetrics promises it can be used as a drop-in replacement for Prometheus.
+VictoriaMetrics is a Prometheus compatible monitoring solution, and it seems to be one of the more complete Prometheus replacements.
+It comes with its own operator, and VictoriaMetrics promises it can be used as a drop-in replacement for Prometheus.
 
 It supports Prometheus ServiceMonitors and PrometheusRules, so charts would work with it.
 
