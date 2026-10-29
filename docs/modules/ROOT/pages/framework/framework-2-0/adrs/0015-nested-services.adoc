@@ -1,0 +1,112 @@
+= ADR0015 - Nested Services
+
+:adr_author:    Simon Beck
+:adr_owner:     Schedar
+:adr_reviewers: Schedar
+:adr_date:      2026-10-29
+:adr_upd_date:  -
+:adr_status:    draft
+:adr_tags:      framework, framework-2-0, nested-services, connection-details
+
+## Problem Statement
+
+Some services need other services to work.
+An application like Keycloak or Nextcloud needs a database.
+
+We need a way to deploy such a service together with the services it depends on.
+
+## High level goals
+
+* A service can use another service from the catalog as a dependency
+* Each service stays a normal, standalone claim
+* No special nesting logic in the framework
+* The user can see and manage every part with `kubectl`
+
+## Proposals
+
+### Coupling via connection details
+
+Every service in the catalog already exposes connection details for its users.
+A service that needs another service consumes these connection details, just like any other user would.
+
+To deploy an application that needs a database, the user creates two claims:
+
+. A claim for the database
+. A claim for the application, which references the connection details of the database
+
+[source,yaml]
+----
+apiVersion: example.io/v1
+kind: PostgreSQL
+metadata:
+  name: keycloak-db
+spec: {}
+---
+apiVersion: example.io/v1
+kind: Keycloak
+metadata:
+  name: keycloak
+spec:
+  values:
+    service:
+      database:
+        connectionSecret: keycloak-db-connection <1>
+----
+<1> Name of the connection details of the database claim.
+The exact field is up to the service maintainer.
+
+Pros:
+
+* No new framework feature needed
+* Each claim has its own lifecycle, backups, maintenance and billing
+* The user can bring their own database, as long as it provides the same connection details
+* Services can be consolidated, for example multiple Nextclouds can use one PostgreSQL
+
+Cons:
+
+* The user has to create and wire up two claims
+* The framework does not know about the dependency, so deleting the database claim breaks the application
+
+### Meta Helm chart
+
+On top of the coupling via connection details, a service maintainer can create a meta Helm chart.
+The meta chart creates both claims and wires them up by itself.
+
+[source,yaml]
+----
+apiVersion: example.io/v1
+kind: KeycloakBundle
+metadata:
+  name: keycloak
+spec:
+  values:
+    database:
+      size: small <1>
+----
+<1> Settings for the database claim are passed through by the meta chart.
+
+Pros:
+
+* The user creates one claim and gets a working setup
+* Uses the same coupling as above, the framework still needs nothing new
+* The meta chart is a normal service package, so it gets the same tooling and tests
+
+Cons:
+
+* One more chart to maintain
+* The meta chart needs to decide which settings of the nested claims it passes through
+
+## Decision
+
+Nested services are coupled only via connection details.
+A service that needs another service gets deployed as separate claims.
+
+Meta Helm charts are allowed as an optional convenience layer.
+They create the claims and wire up the connection details, but they add no new mechanism.
+
+## Consequences
+
+* Service maintainers have to document which connection details their service needs
+* Services that provide connection details should keep the format stable, as other services depend on it
+* Deleting a dependency claim is not prevented by the framework
+* Billing, backups and maintenance work per claim, with no extra work for nested services
