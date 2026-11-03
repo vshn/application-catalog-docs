@@ -1,5 +1,5 @@
-= Framework 2.0 Decision Index
-:navtitle: Framework 2.0
+= Framework 2.0 Helmetica Decision Index
+:navtitle: Framework 2.0 Helmetica
 
 From Helm chart to service in 5 minutes.
 Every change transparent.
