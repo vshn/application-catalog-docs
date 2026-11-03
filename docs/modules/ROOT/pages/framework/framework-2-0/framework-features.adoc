@@ -56,19 +56,25 @@ As a service maintainer I can:
 
 * define schedulable maintenance jobs
 
-= Planned Framework 2.0 Features
+== Logs
+
+As a service maintainer I can:
+
+* access platform logs
+
+== Billing
+
+As a service maintainer I can:
+
+* pre-wired billing tooling to simplify collecting and reporting service data
+
+= Service dependent Framework 2.0 Features
 
 == Restore
 
 As a service maintainer I can:
 
 * define service specific restore operations
-
-== Logs
-
-As a service maintainer I can:
-
-* propagate service logs
 
 == Version Upgrade
 
@@ -82,9 +88,3 @@ As a service maintainer I can:
 As a service maintainer I can:
 
 * expose and abstract the service's user management
-
-== Billing
-
-As a service maintainer I can:
-
-* pre-wired billing tooling to simplify collecting and reporting service data
