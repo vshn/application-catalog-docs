@@ -66,7 +66,7 @@ As a service maintainer I can:
 
 As a service maintainer I can:
 
-* pre-wired billing tooling to simplify collecting and reporting service data
+* wire up the billing relevant fields in a service definition
 
 = Service dependent Framework 2.0 Features
 
