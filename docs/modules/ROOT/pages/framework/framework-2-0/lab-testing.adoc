@@ -1,0 +1,130 @@
+= Testing Helmetica Changes on the Lab
+
+How to deploy branch builds of the https://github.com/helmetica-framework[Helmetica framework] to the lab cluster.
+
+== Testing a controller branch
+
+Build the image with the branch name as tag and push it:
+
+[source,bash]
+----
+GOOS=linux GOARCH=amd64 DOCKER_DEFAULT_PLATFORM=linux/amd64 just IMG_TAG=fix-coliding-secrets build-docker
+docker push ghcr.io/helmetica-framework/custos:fix-coliding-secrets
+----
+
+Point https://github.com/vshn/component-helmetica-framework[component-helmetica-framework] at the image and the branch in the lab cluster's config:
+
+[source,yaml]
+----
+parameters:
+  helmetica_framework:
+    images:
+      custos:
+        tag: fix-coliding-secrets        # the image you pushed
+    custos_crds:
+      kustomize:
+        version: fix/coliding-secrets    # git ref for config/crd
+    custos_controller:
+      kustomize:
+        version: fix/coliding-secrets    # git ref for config/default (RBAC etc.)
+----
+
+Revert to the released versions once the branch is merged.
+
+== Testing a reagent branch
+
+Push the branch build as a prerelease and register it under its own ClaimDefinition.
+It gets its own API group, so the released service is not touched.
+
+=== Push the chart
+
+In the reagent repository, set a prerelease version in `Chart.yaml` (unquoted), for example `version: 0.0.12-change-credential-prefix`, and push:
+
+[source,bash]
+----
+just push
+----
+
+* The version is `<base>-<branch>`, with `/` replaced by `-`.
+  `<base>` is the chart version the branch builds on, for example `0.0.12`.
+* Each push overwrites the same tag.
+  If a push does not roll out, add a counter (`<base>-<branch>.2`) and update `spec.version` in the claim.
+* Don't commit the prerelease version.
+
+=== Register the service and the claim
+
+[source,yaml]
+----
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: redis-v0-dev
+  namespace: syn-helmetica-framework
+spec:
+  interval: 5m
+  provider: generic
+  ref:
+    semver: '>=0.0.0-0' # <1>
+  url: oci://ghcr.io/helmetica-framework/redis
+---
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageRepository
+metadata:
+  name: redis-dev
+  namespace: syn-helmetica-framework
+spec:
+  exclusionList:
+    - ^.*\.sig$
+    - ^sha256-.+$
+  image: ghcr.io/helmetica-framework/redis
+  interval: 5m
+  provider: generic
+---
+apiVersion: chrysopoeia.helmetica.io/v1
+kind: ClaimDefinition
+metadata:
+  name: v0-dev.redis # <2>
+  namespace: syn-helmetica-framework
+spec:
+  crdNames:
+    kind: RedisDev
+    plural: redisdevs
+  reference:
+    apiVersion: source.toolkit.fluxcd.io/v1
+    kind: OCIRepository
+    name: redis-v0-dev
+  versionDiscovery:
+    reference:
+      apiVersion: image.toolkit.fluxcd.io/v1
+      kind: ImageRepository
+      name: redis-dev
+----
+<1> The `-0` lets prerelease versions match.
+<2> Becomes the API group: `v0-dev.redis.helmetica-bundles.io`.
+
+Once the CRD exists (`kubectl get crd | grep v0-dev`), create the claim:
+
+[source,yaml]
+----
+apiVersion: v0-dev.redis.helmetica-bundles.io/bundle
+kind: RedisDev
+metadata:
+  name: test
+  namespace: syn-helmetica-framework
+spec:
+  approval:
+    strategy: Automatic
+  version: 0.0.12-change-credential-prefix
+  values: {}
+----
+
+=== Clean up
+
+. Delete the claim first, so chrysopoeia uninstalls the release.
+. Delete the ClaimDefinition, the OCIRepository and the ImageRepository.
+. Delete the generated CRD. It is not removed with the ClaimDefinition.
++
+[source,bash]
+----
+kubectl delete crd redisdevs.v0-dev.redis.helmetica-bundles.io
+----
