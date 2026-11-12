@@ -156,6 +156,7 @@ include::partial$nav-adrs.adoc[]
 *** xref:framework/framework-2-0/personas/framework-engineer.adoc[]
 ** xref:framework/framework-2-0/framework-features.adoc[]
 ** xref:framework/framework-2-0/services.adoc[]
+** xref:framework/framework-2-0/lab-testing.adoc[]
 ** ADRs
 *** xref:framework/framework-2-0/adrs/0005-package-format.adoc[]
 *** xref:framework/framework-2-0/adrs/0006-change-tracking.adoc[]
